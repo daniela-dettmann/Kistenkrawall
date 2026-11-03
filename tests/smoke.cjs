@@ -93,6 +93,7 @@ async function main() {
   check(await page.evaluate(() => renderer.info.render.calls > 50), '3D-Szene wird gezeichnet');
   check(await page.evaluate(() => state === 'play' && units.length >= 6), 'Runde läuft mit beiden Teams');
   check(await page.evaluate(() => music && music.playing === 'ruhe'), 'Musik: Bauruhe läuft beim Rundenstart');
+  check(await page.evaluate(() => soundVol === 0.7 && musicVol === 0.1), 'Standardlautstärke: Effekte 70 %, Musik 10 %');
   await page.click('#pauseBtn', { force: true });
   check(await page.evaluate(() => state === 'pause'), 'Pause funktioniert');
   await page.click('#attackNowBtn', { force: true });

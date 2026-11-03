@@ -79,9 +79,9 @@ for(const b of document.querySelectorAll('.sndBtn'))b.addEventListener('click',(
   if(soundOn&&AC)playSound(AC,noiseBuf,'pick',1,master);
 });
 for(const r of document.querySelectorAll('.musVol input'))
-  r.addEventListener('input',()=>{musicVol=+r.value;try{localStorage.setItem('kk-mvol',String(musicVol));}catch(e){}initAudio();syncSoundUI();});
+  r.addEventListener('input',()=>{musicVol=+r.value;try{localStorage.setItem('kk-mvol-v2',String(musicVol));}catch(e){}initAudio();syncSoundUI();});
 for(const r of document.querySelectorAll('.sndVol input')){
-  r.addEventListener('input',()=>{soundVol=+r.value;try{localStorage.setItem('kk-vol',String(soundVol));}catch(e){}initAudio();applyVolume();syncSoundUI();});
+  r.addEventListener('input',()=>{soundVol=+r.value;try{localStorage.setItem('kk-vol-v2',String(soundVol));}catch(e){}initAudio();applyVolume();syncSoundUI();});
   r.addEventListener('change',()=>{if(AC&&soundOn)playSound(AC,noiseBuf,'hit',1,master);});
 }
 syncSoundUI();

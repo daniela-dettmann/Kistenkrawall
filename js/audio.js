@@ -2,8 +2,10 @@
 'use strict';
 /* ---------- Audio ---------- */
 let AC=null,noiseBuf=null,master=null;
-let soundOn=true,soundVol=0.8;
-try{const v=localStorage.getItem('kk-snd');if(v==='0')soundOn=false;const l=parseFloat(localStorage.getItem('kk-vol'));if(l>=0&&l<=1)soundVol=l;}catch(e){}
+// Defaults: effects 70 %, music 10 %. The '-v2' keys start everyone once at these defaults;
+// after that the player's own slider settings are remembered again.
+let soundOn=true,soundVol=0.7;
+try{const v=localStorage.getItem('kk-snd');if(v==='0')soundOn=false;const l=parseFloat(localStorage.getItem('kk-vol-v2'));if(l>=0&&l<=1)soundVol=l;}catch(e){}
 // iOS Safari: treat game audio as real playback so the ring/silent switch does not mute it
 try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
 function applyVolume(){if(master)master.gain.setTargetAtTime(soundOn?soundVol:0,AC.currentTime,0.02);}
@@ -28,8 +30,8 @@ document.addEventListener('visibilitychange',()=>{
 // Which piece runs follows the game: title theme in the menu, groove during the building phase,
 // attack music during a wave (switching at the next bar), a jingle at the end of a round.
 // The music is quieter in the pause menu and ducks a little when lots of effects are playing.
-let music=null,musicVol=0.6,musicBusy=0;
-try{const m=parseFloat(localStorage.getItem('kk-mvol'));if(m>=0&&m<=1)musicVol=m;}catch(e){}
+let music=null,musicVol=0.1,musicBusy=0;
+try{const m=parseFloat(localStorage.getItem('kk-mvol-v2'));if(m>=0&&m<=1)musicVol=m;}catch(e){}
 function wantedMusic(){
   if(state==='menu')return 'menu';
   if(state==='play'||state==='pause')return peaceT>0?'ruhe':'angriff';
