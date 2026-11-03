@@ -24,10 +24,35 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden){if(AC.state==='running')AC.suspend().catch(()=>{});}
   else AC.resume().catch(()=>{});
 });
+/* ---------- Music ---------- */
+// Which piece runs follows the game: title theme in the menu, groove during the building phase,
+// attack music during a wave (switching at the next bar), a jingle at the end of a round.
+// The music is quieter in the pause menu and ducks a little when lots of effects are playing.
+let music=null,musicVol=0.6,musicBusy=0;
+try{const m=parseFloat(localStorage.getItem('kk-mvol'));if(m>=0&&m<=1)musicVol=m;}catch(e){}
+function wantedMusic(){
+  if(state==='menu')return 'menu';
+  if(state==='play'||state==='pause')return peaceT>0?'ruhe':'angriff';
+  return null;   // 'end': the jingle plays, then silence
+}
+function musicJingle(win){if(music&&soundOn)music.play(win?'sieg':'niederlage',{now:true});}
+setInterval(()=>{
+  if(!AC)return;
+  if(!music){try{music=MUSIC.create(AC,AC.destination);music.volume=0;}catch(e){console.error(e);music=false;}}
+  if(!music)return;
+  musicBusy*=0.8;
+  const want=soundOn?wantedMusic():null;
+  const jingle=music.playing&&MUSIC.tracks[music.playing].once;
+  if(want&&music.playing!==want&&!jingle)music.play(want);
+  else if(want&&jingle)music.play(want);              // queued: follows right after the jingle
+  if(!want&&music.playing&&!jingle)music.stop(1.2);
+  music.volume=soundOn?musicVol*(state==='pause'?0.45:1)*(1-0.35*Math.min(1,musicBusy)):0;
+},150);
 function sfx(kind,x,z){
   if(!AC||state!=='play')return;
   let vol=1;if(x!==undefined&&player){const d=Math.hypot(x-player.x,z-player.z);if(d>28)return;vol=1-d/32;}
   if(AC.state!=='running'){AC.resume().catch(()=>{});return;}
   if(!soundOn)return;
   playSound(AC,noiseBuf,kind,vol,master);
+  musicBusy+=0.12*vol;
 }

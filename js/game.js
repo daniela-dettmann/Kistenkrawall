@@ -25,7 +25,7 @@ function newGame(attract){
   if(!attract){setPlayer(units[0]);units[0].role='sammler';camYaw=Math.PI;}
 }
 function endGame(win,why){
-  state='end';fireHeld=false;
+  state='end';fireHeld=false;musicJingle(win);
   $('#hud').hidden=true;$('#menu').hidden=false;
   $('#panelStart').hidden=true;$('#panelPause').hidden=true;$('#panelEnd').hidden=false;
   const t=$('#resultTitle');t.textContent=win?'Sieg!':'Verschrottet';t.className='result '+(win?'win':'lose');
@@ -71,12 +71,15 @@ $('#startBtn').addEventListener('click',startGame);
 function syncSoundUI(){
   for(const b of document.querySelectorAll('.sndBtn')){b.setAttribute('aria-pressed',soundOn?'true':'false');b.textContent=soundOn?'Ton an':'Ton aus';}
   for(const r of document.querySelectorAll('.sndVol input')){r.value=soundVol;r.disabled=!soundOn;}
+  for(const r of document.querySelectorAll('.musVol input')){r.value=musicVol;r.disabled=!soundOn;}
 }
 for(const b of document.querySelectorAll('.sndBtn'))b.addEventListener('click',()=>{
   soundOn=!soundOn;try{localStorage.setItem('kk-snd',soundOn?'1':'0');}catch(e){}
   initAudio();applyVolume();syncSoundUI();
   if(soundOn&&AC)playSound(AC,noiseBuf,'pick',1,master);
 });
+for(const r of document.querySelectorAll('.musVol input'))
+  r.addEventListener('input',()=>{musicVol=+r.value;try{localStorage.setItem('kk-mvol',String(musicVol));}catch(e){}initAudio();syncSoundUI();});
 for(const r of document.querySelectorAll('.sndVol input')){
   r.addEventListener('input',()=>{soundVol=+r.value;try{localStorage.setItem('kk-vol',String(soundVol));}catch(e){}initAudio();applyVolume();syncSoundUI();});
   r.addEventListener('change',()=>{if(AC&&soundOn)playSound(AC,noiseBuf,'hit',1,master);});

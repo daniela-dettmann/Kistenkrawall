@@ -92,6 +92,7 @@ async function main() {
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => renderer.info.render.calls > 50), '3D-Szene wird gezeichnet');
   check(await page.evaluate(() => state === 'play' && units.length >= 6), 'Runde läuft mit beiden Teams');
+  check(await page.evaluate(() => music && music.playing === 'ruhe'), 'Musik: Bauruhe läuft beim Rundenstart');
   await page.click('#pauseBtn', { force: true });
   check(await page.evaluate(() => state === 'pause'), 'Pause funktioniert');
   await page.click('#attackNowBtn', { force: true });
@@ -105,11 +106,15 @@ async function main() {
   check(await page.evaluate(() => AC.state === 'running'), 'Ton kommt nach Unterbrechung beim nächsten Tippen zurück');
   await page.waitForTimeout(3000);
   check(await page.evaluate(() => state === 'play'), 'Spiel läuft nach 3 Sekunden Kampf weiter');
+  check(await page.evaluate(() => music.playing === 'angriff'), 'Musik: Angriffsmusik während der Welle');
   check(await page.$eval('#fail', el => el.hidden), 'kein Fehlerbildschirm');
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
   check(await page.evaluate(() => state === 'pause'), 'pausiert automatisch, wenn die App in den Hintergrund geht');
   await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
   await page.click('#resumeBtn', { force: true });
+  await page.evaluate(() => endGame(true, 'Test.'));
+  await page.waitForTimeout(400);
+  check(await page.evaluate(() => music.playing === 'sieg'), 'Musik: Sieg-Jingle am Rundenende');
 
   console.log('App / offline');
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -147,6 +152,9 @@ async function main() {
   await page.goto(base);
   await page.waitForSelector('#startBtn', { state: 'visible' });
   check((await page.textContent('#verLine')) === 'Version vom 02.01.2026 · aaa111', 'Versionsanzeige im Startmenü');
+  await page.mouse.click(8, 300);
+  await page.waitForTimeout(1200);
+  check(await page.evaluate(() => music && music.playing === 'menu'), 'Musik: Titelthema im Menü');
   setVersion('bbb222');                       // "deploy" a new version
   await page.evaluate(() => window.kkCheckUpdate());
   await page.waitForSelector('#updBar', { state: 'visible', timeout: 60000 }).catch(() => {});

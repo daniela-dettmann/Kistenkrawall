@@ -123,7 +123,7 @@
         <button data-p="7" aria-pressed="false">7 Min</button>
       </div>
     </div>
-<div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><label class="sndVol">Lautstärke <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke"></label></div>
+<div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><div class="sndSliders"><label class="sndVol">Effekte <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Effekte"></label><label class="musVol">Musik <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Musik"></label></div></div>
     <button class="go2" id="helpBtn">Wie wird gespielt?</button>
     <button class="go" id="startBtn">Los geht's</button>
     <p class="ver" id="verLine"></p>
@@ -210,7 +210,7 @@
     <p class="result">Pause</p>
     <button class="go" id="resumeBtn">Weiter</button>
     <button class="go2" id="attackNowBtn" hidden>Nächste Welle jetzt starten</button>
-<div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><label class="sndVol">Lautstärke <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke"></label></div>
+<div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><div class="sndSliders"><label class="sndVol">Effekte <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Effekte"></label><label class="musVol">Musik <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Musik"></label></div></div>
     <button class="go2" id="restartBtn">Neu starten</button>
     <button class="go2" id="quitBtn">Zum Menü</button>
     <button class="go2 upd" id="updPauseBtn" hidden>Aktualisieren (beendet die Runde)</button>
@@ -223,6 +223,7 @@
 <script src="js/world.js"></script>
 <script src="js/content.js"></script>
 <script src="js/sounds.js"></script>
+<script src="js/music.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/units.js"></script>
 <script src="js/combat.js"></script>
