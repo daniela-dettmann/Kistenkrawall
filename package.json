@@ -1,0 +1,11 @@
+{
+  "name": "kistenkrawall",
+  "private": true,
+  "description": "3D-Kistenschlacht im Browser",
+  "scripts": {
+    "test": "node tests/smoke.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

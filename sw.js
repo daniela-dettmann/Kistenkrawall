@@ -1,10 +1,32 @@
 // Kistenkrawall service worker: makes the game installable and playable offline.
-// Bump VERSION whenever index.html or the icons change so players get the update.
-const VERSION = 'kk-v2';
-const SHELL = [
+// VERSION is replaced with the commit hash by the deploy workflow, so every deploy
+// gets a fresh cache automatically. Locally it stays 'kk-dev'.
+const VERSION = 'kk-dev';
+
+// Everything the game needs. tests/smoke.mjs checks that this list matches the files
+// that index.html actually loads, so a new file cannot be forgotten here.
+const PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './css/style.css',
+  './fonts/fonts.css',
+  './fonts/atkinson-hyperlegible-400.woff2',
+  './fonts/atkinson-hyperlegible-700.woff2',
+  './fonts/bowlby-one-sc-400.woff2',
+  './vendor/three.r128.min.js',
+  './js/core.js',
+  './js/render.js',
+  './js/world.js',
+  './js/content.js',
+  './js/sounds.js',
+  './js/audio.js',
+  './js/units.js',
+  './js/combat.js',
+  './js/ai.js',
+  './js/input.js',
+  './js/hud.js',
+  './js/game.js',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -12,16 +34,15 @@ const SHELL = [
   './icons/maskable-512.png',
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
-  './icons/favicon-16.png'
+  './icons/favicon-16.png',
+  './tonstudio.html'
 ];
-const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(VERSION);
-    await cache.addAll(SHELL);
-    // three.js is required to play; fonts are nice-to-have and cached on first use.
-    try { await cache.add(new Request(THREE_URL, { mode: 'cors' })); } catch (e) {}
+    // cache: 'reload' bypasses the browser's HTTP cache, so a new version never stores old files
+    await cache.addAll(PRECACHE.map(url => new Request(url, { cache: 'reload' })));
     await self.skipWaiting();
   })());
 });
@@ -33,40 +54,36 @@ self.addEventListener('activate', event => {
   })());
 });
 
+// Rarely changing, larger files: straight from the cache.
+const CACHE_FIRST = /\/(vendor|fonts|icons)\//;
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
 
-  // The page itself: network first so updates arrive, cache as offline fallback.
-  if (req.mode === 'navigate') {
+  if (CACHE_FIRST.test(url.pathname)) {
     event.respondWith((async () => {
-      try {
-        const res = await fetch(req);
-        const cache = await caches.open(VERSION);
-        cache.put('./index.html', res.clone());
-        return res;
-      } catch (e) {
-        return (await caches.match('./index.html')) || Response.error();
-      }
+      const hit = await caches.match(req);
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res.ok) (await caches.open(VERSION)).put(req, res.clone());
+      return res;
     })());
     return;
   }
 
-  // Everything else (icons, three.js, Google Fonts): cache first, then network.
-  const cacheable = url.origin === self.location.origin ||
-    url.hostname === 'cdnjs.cloudflare.com' ||
-    url.hostname === 'fonts.googleapis.com' ||
-    url.hostname === 'fonts.gstatic.com';
-  if (!cacheable) return;
+  // Page, code and styles: network first so updates arrive right away, cache when offline.
   event.respondWith((async () => {
-    const hit = await caches.match(req);
-    if (hit) return hit;
-    const res = await fetch(req);
-    if (res.ok || res.type === 'opaque') {
-      const cache = await caches.open(VERSION);
-      cache.put(req, res.clone());
+    try {
+      const res = await fetch(req, { cache: 'no-cache' });
+      if (res.ok) (await caches.open(VERSION)).put(req, res.clone());
+      return res;
+    } catch (e) {
+      const hit = await caches.match(req, { ignoreSearch: req.mode === 'navigate' }) ||
+        (req.mode === 'navigate' ? await caches.match('./index.html') : null);
+      return hit || Response.error();
     }
-    return res;
   })());
 });

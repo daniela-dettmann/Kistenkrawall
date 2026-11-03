@@ -1,0 +1,133 @@
+// Smoke test: starts the game in a real browser and fails if anything is broken.
+// Usage: node tests/smoke.cjs [folder]   (default: repository root)
+// Runs in GitHub Actions before every deploy; a failure stops the deploy.
+'use strict';
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
+// Note: CI machines have no GPU, so WebGL is software-rendered at only a few frames per second.
+// Clicks therefore use force (no waiting for 'stable' elements) and waits are generous.
+
+const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..'));
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
+  '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
+
+let failed = 0;
+const ok = msg => console.log('  ok   ' + msg);
+const bad = msg => { failed++; console.log('  FAIL ' + msg); };
+const check = (cond, msg) => (cond ? ok(msg) : bad(msg));
+
+function serve() {
+  const server = http.createServer((req, res) => {
+    let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    if (p.endsWith('/')) p += 'index.html';
+    const file = path.join(ROOT, p);
+    if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found'); }
+    res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' });
+    fs.createReadStream(file).pipe(res);
+  });
+  return new Promise(r => server.listen(0, '127.0.0.1', () => r(server)));
+}
+
+function staticChecks() {
+  console.log('Dateien');
+  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const pre = [...sw.match(/const PRECACHE = \[([\s\S]*?)\];/)[1].matchAll(/'\.\/([^']*)'/g)].map(m => m[1]).filter(Boolean);
+  for (const f of pre) if (!fs.existsSync(path.join(ROOT, f))) bad('sw.js speichert ' + f + ', aber die Datei fehlt');
+  const refs = new Set();
+  for (const page of ['index.html', 'fonts/fonts.css', 'manifest.webmanifest']) {
+    const txt = fs.readFileSync(path.join(ROOT, page), 'utf8'), dir = path.dirname(page);
+    for (const m of txt.matchAll(/(?:src|href)="([^"#:]+)"|url\(([^):]+)\)|"src":\s*"([^"]+)"/g)) {
+      const ref = (m[1] || m[2] || m[3]).replace(/^\.\//, '');
+      if (!/^https?:/.test(ref)) refs.add(path.posix.normalize(path.posix.join(dir, ref)));
+    }
+  }
+  for (const r of refs) {
+    if (!fs.existsSync(path.join(ROOT, r))) bad('verlinkt, aber fehlt: ' + r);
+    else if (!pre.includes(r)) bad(r + ' wird geladen, steht aber nicht in sw.js (PRECACHE) – offline würde es fehlen');
+  }
+  check(!/https?:\/\/(?!threejs\.org)/.test(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')), 'index.html lädt nichts von fremden Servern');
+  ok(refs.size + ' verlinkte Dateien geprüft, ' + pre.length + ' Einträge im Offline-Speicher');
+}
+
+async function main() {
+  staticChecks();
+  const server = await serve();
+  const base = 'http://127.0.0.1:' + server.address().port + '/';
+  const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const ctx = await browser.newContext({ viewport: { width: 960, height: 540 } });
+  await ctx.addInitScript(() => {
+    window.__osc = 0;
+    const C = window.AudioContext;
+    window.AudioContext = class extends C { createOscillator() { window.__osc++; return super.createOscillator(); } };
+  });
+  const page = await ctx.newPage();
+  page.setDefaultTimeout(30000);
+  const errors = [], foreign = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('response', r => { if (r.status() >= 400) errors.push(r.status() + ' ' + r.url()); });
+  page.on('request', r => { if (!r.url().startsWith(base) && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) foreign.push(r.url()); });
+
+  console.log('Spiel');
+  await page.goto(base);
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check(await page.evaluate(() => typeof THREE === 'object' && THREE.REVISION === '128'), 'three.js r128 geladen');
+  check(await page.evaluate(() => document.fonts.check("20px 'Bowlby One SC'")), 'Schrift Bowlby One SC geladen');
+  await page.click('#startBtn', { force: true });
+  await page.waitForSelector('#hud', { state: 'visible' });
+  await page.waitForTimeout(1500);
+  check(await page.evaluate(() => renderer.info.render.calls > 50), '3D-Szene wird gezeichnet');
+  check(await page.evaluate(() => state === 'play' && units.length >= 6), 'Runde läuft mit beiden Teams');
+  await page.click('#pauseBtn', { force: true });
+  check(await page.evaluate(() => state === 'pause'), 'Pause funktioniert');
+  await page.click('#attackNowBtn', { force: true });
+  await page.waitForTimeout(800);
+  check(await page.evaluate(() => window.__osc > 0 && AC && AC.state === 'running'), 'Ton: Angriffssignal wird abgespielt');
+  await page.keyboard.down('Space'); await page.waitForTimeout(1500); await page.keyboard.up('Space');
+  check(await page.evaluate(() => window.__osc > 1), 'Ton: Schüsse werden abgespielt');
+  await page.evaluate(() => AC.suspend());
+  await page.mouse.click(480, 300);
+  await page.waitForTimeout(300);
+  check(await page.evaluate(() => AC.state === 'running'), 'Ton kommt nach Unterbrechung beim nächsten Tippen zurück');
+  await page.waitForTimeout(3000);
+  check(await page.evaluate(() => state === 'play'), 'Spiel läuft nach 3 Sekunden Kampf weiter');
+  check(await page.$eval('#fail', el => el.hidden), 'kein Fehlerbildschirm');
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
+  check(await page.evaluate(() => state === 'pause'), 'pausiert automatisch, wenn die App in den Hintergrund geht');
+  await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
+  await page.click('#resumeBtn', { force: true });
+
+  console.log('App / offline');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForTimeout(500);
+  const cached = await page.evaluate(async () => { const k = await caches.keys(); return k.length ? (await (await caches.open(k[0])).keys()).length : 0; });
+  check(cached >= 25, 'Service Worker hat ' + cached + ' Dateien gespeichert');
+  await ctx.setOffline(true);
+  await page.reload();
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1500);
+  check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50), 'Spiel startet offline');
+  await ctx.setOffline(false);
+
+  console.log('Tonstudio');
+  await page.goto(base + 'tonstudio.html');
+  const before = await page.evaluate(() => window.__osc);
+  await page.click('#snd-shot', { force: true });
+  await page.waitForTimeout(200);
+  check(await page.$$eval('.pad', p => p.length) === 22, '22 Töne im Tonstudio');
+  check(await page.evaluate(b => window.__osc > b, before), 'Tonstudio spielt Töne ab');
+
+  const errs = errors.filter(e => !/net::ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(e));
+  check(errs.length === 0, 'keine JavaScript-Fehler' + (errs.length ? ': ' + errs.join(' | ') : ''));
+  check(foreign.length === 0, 'keine Anfragen an fremde Server' + (foreign.length ? ': ' + foreign.join(', ') : ''));
+
+  await browser.close();
+  server.close();
+  console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlles in Ordnung');
+  process.exit(failed ? 1 : 0);
+}
+
+main().catch(e => { console.log('  FAIL Test abgebrochen: ' + String(e.message || e).split('\n').slice(0, 6).join(' / ')); console.log('\nTest fehlgeschlagen'); process.exit(1); });
