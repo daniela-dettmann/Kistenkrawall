@@ -305,6 +305,7 @@ const MUSIC=(function(){
       cur.next=t0+16*sd;
       if(++cur.bar>=sec.bars.length){cur.bar=0;cur.pos++;
         if(cur.pos>=cur.seq.length){
+          if(tr.once&&pending){const p=pending;pending=null;startTrack(p,cur.next);return true;}
           if(tr.once){const end=cur.next;const bus=cur.bus;cur=null;setTimeout(()=>{try{bus.dry.disconnect();bus.wet.disconnect();}catch(e){}if(listener)listener(null);},(end-ctx.currentTime+3)*1000);return false;}
           cur.pos=(tr.intro||[]).length;
         }}
