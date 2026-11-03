@@ -40,7 +40,9 @@ function staticChecks() {
     const txt = fs.readFileSync(path.join(ROOT, page), 'utf8'), dir = path.dirname(page);
     for (const m of txt.matchAll(/(?:src|href)="([^"#:]+)"|url\(([^):]+)\)|"src":\s*"([^"]+)"/g)) {
       const ref = (m[1] || m[2] || m[3]).replace(/^\.\//, '');
-      if (!/^https?:/.test(ref)) refs.add(path.posix.normalize(path.posix.join(dir, ref)));
+      if (/^https?:/.test(ref)) continue;
+      const norm = path.posix.normalize(path.posix.join(dir, ref));
+      refs.add(norm === '.' ? 'index.html' : norm);   // a link to ./ is the start page
     }
   }
   for (const r of refs) {
