@@ -27,9 +27,15 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html tonstudio.html sw.js manifest.webmanifest .nojekyll css js fonts icons vendor _site/
-          # fresh offline cache for every deploy, no manual version bump needed
-          sed -i "s/const VERSION = 'kk-dev';/const VERSION = 'kk-${GITHUB_SHA::12}';/" _site/sw.js
-          grep -q "kk-${GITHUB_SHA::12}" _site/sw.js
+          # every deploy gets its own version: fresh offline cache, version shown in the
+          # start menu, and version.json lets installed apps notice that an update exists
+          V="${GITHUB_SHA::12}"
+          D="$(date -u +%Y-%m-%d)"
+          sed -i "s/const VERSION = 'kk-dev';/const VERSION = 'kk-$V';/" _site/sw.js
+          sed -i "s/<meta name=\"kk-version\" content=\"dev\" data-date=\"\">/<meta name=\"kk-version\" content=\"$V\" data-date=\"$D\">/" _site/index.html
+          printf '{"version":"%s","date":"%s"}\n' "$V" "$D" > _site/version.json
+          grep -q "kk-$V" _site/sw.js
+          grep -q "content=\"$V\"" _site/index.html
 
       - uses: actions/setup-node@v4
         with:

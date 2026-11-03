@@ -28,6 +28,7 @@ const PRECACHE = [
   './js/input.js',
   './js/hud.js',
   './js/game.js',
+  './js/update.js',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -48,6 +49,11 @@ self.addEventListener('install', event => {
   })());
 });
 
+// The page asks which version this worker holds, to know when an update is fully downloaded.
+self.addEventListener('message', event => {
+  if (event.data === 'version' && event.ports[0]) event.ports[0].postMessage(VERSION);
+});
+
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     for (const key of await caches.keys()) if (key !== VERSION) await caches.delete(key);
@@ -63,6 +69,7 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.endsWith('/version.json')) return;   // always straight from the server
 
   if (CACHE_FIRST.test(url.pathname)) {
     event.respondWith((async () => {
