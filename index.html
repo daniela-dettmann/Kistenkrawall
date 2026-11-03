@@ -7,6 +7,7 @@
 <title>Kistenkrawall</title>
 <meta name="description" content="3D-Kistenschlacht: Blechbande Orange gegen Blechbande Petrol. Kisten sammeln, stapeln, auspacken.">
 <meta name="theme-color" content="#13201b">
+<meta name="kk-version" content="dev" data-date="">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
@@ -71,7 +72,7 @@
       <div class="sub" id="sub1"></div>
     </div>
   </div>
-  <div id="status"><span class="pill peace" id="peacePill" hidden>Bauruhe 6:00</span><span class="pill" id="wpn">Knipser · ∞</span><span class="pill crate" id="carryPill" hidden>Trägt Kiste</span></div>
+  <div id="status"><span class="pill peace" id="peacePill" hidden>Bauruhe 6:00</span><span class="pill" id="wpn">Knipser · ∞</span><span class="pill crate" id="carryPill" hidden>Trägt Kiste</span><span class="pill upd" id="updPill" hidden>Update bereit</span></div>
   <canvas id="mm" width="184" height="184"></canvas>
   <div id="toast"></div>
   <div id="toggles">
@@ -94,6 +95,12 @@
   <div class="phone" aria-hidden="true"></div>
   <p>Dreh dein Handy ins Querformat. Dann hast du links und rechts Platz für beide Sticks.</p>
   <button class="go2" id="portraitBtn">Hochkant weiterspielen</button>
+</div>
+
+<div id="updBar" role="status" hidden>
+  <span>Neue Version verfügbar</span>
+  <button class="go" id="updNow">Jetzt aktualisieren</button>
+  <button class="go2" id="updLater">Später</button>
 </div>
 
 <div id="menu">
@@ -119,6 +126,7 @@
 <div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><label class="sndVol">Lautstärke <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke"></label></div>
     <button class="go2" id="helpBtn">Wie wird gespielt?</button>
     <button class="go" id="startBtn">Los geht's</button>
+    <p class="ver" id="verLine"></p>
   </div>
   <div class="panel help" id="panelHelp" hidden>
     <p class="result">Wie wird gespielt?</p>
@@ -196,6 +204,7 @@
     <p class="lead" id="resultText"></p>
     <button class="go" id="againBtn">Nochmal</button>
     <button class="go2" id="toMenuBtn">Zum Menü</button>
+    <button class="go2 upd" id="updEndBtn" hidden>Neue Version: jetzt aktualisieren</button>
   </div>
   <div class="panel" id="panelPause" hidden>
     <p class="result">Pause</p>
@@ -204,6 +213,7 @@
 <div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><label class="sndVol">Lautstärke <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke"></label></div>
     <button class="go2" id="restartBtn">Neu starten</button>
     <button class="go2" id="quitBtn">Zum Menü</button>
+    <button class="go2 upd" id="updPauseBtn" hidden>Aktualisieren (beendet die Runde)</button>
   </div>
 </div>
 
@@ -220,6 +230,7 @@
 <script src="js/input.js"></script>
 <script src="js/hud.js"></script>
 <script src="js/game.js"></script>
+<script src="js/update.js"></script>
 
 <script>
 if('serviceWorker' in navigator&&location.protocol!=='file:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}

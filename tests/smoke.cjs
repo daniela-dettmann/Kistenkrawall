@@ -10,6 +10,14 @@ const { chromium } = require('playwright');
 // Clicks therefore use force (no waiting for 'stable' elements) and waits are generous.
 
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..'));
+// The browser test runs on a temporary copy, so it can pretend that a new version was deployed.
+const SERVE = fs.mkdtempSync(path.join(require('os').tmpdir(), 'kk-smoke-'));
+function setVersion(v) {
+  const edit = (f, re, to) => { const p = path.join(SERVE, f); fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace(re, to)); };
+  edit('index.html', /<meta name="kk-version" content="[^"]*" data-date="[^"]*">/, `<meta name="kk-version" content="${v}" data-date="2026-01-02">`);
+  edit('sw.js', /const VERSION = '[^']*';/, `const VERSION = 'kk-${v}';`);
+  fs.writeFileSync(path.join(SERVE, 'version.json'), JSON.stringify({ version: v, date: '2026-01-02' }));
+}
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
   '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 
@@ -22,8 +30,8 @@ function serve() {
   const server = http.createServer((req, res) => {
     let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (p.endsWith('/')) p += 'index.html';
-    const file = path.join(ROOT, p);
-    if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found'); }
+    const file = path.join(SERVE, p);
+    if (!file.startsWith(SERVE) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end('not found'); }
     res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' });
     fs.createReadStream(file).pipe(res);
   });
@@ -55,6 +63,8 @@ function staticChecks() {
 
 async function main() {
   staticChecks();
+  fs.cpSync(ROOT, SERVE, { recursive: true, filter: src => !/node_modules|\.git$/.test(src) });
+  setVersion('aaa111');
   const server = await serve();
   const base = 'http://127.0.0.1:' + server.address().port + '/';
   const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -133,12 +143,33 @@ async function main() {
   await page.waitForTimeout(300);
   check(await page.evaluate(() => music.playing === null), 'Musik: Stopp funktioniert');
 
+  console.log('Update-Hinweis');
+  await page.goto(base);
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check((await page.textContent('#verLine')) === 'Version vom 02.01.2026 · aaa111', 'Versionsanzeige im Startmenü');
+  setVersion('bbb222');                       // "deploy" a new version
+  await page.evaluate(() => window.kkCheckUpdate());
+  await page.waitForSelector('#updBar', { state: 'visible', timeout: 60000 }).catch(() => {});
+  check(await page.isVisible('#updBar'), 'Hinweis „Neue Version verfügbar“ erscheint im Menü');
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1000);
+  check(!(await page.isVisible('#updBar')) && await page.isVisible('#updPill'), 'während der Runde nur das Abzeichen');
+  await page.click('#pauseBtn', { force: true });
+  await page.waitForTimeout(600);
+  check(await page.isVisible('#updPauseBtn'), 'Aktualisieren-Knopf im Pausenmenü');
+  await Promise.all([page.waitForNavigation(), page.click('#updPauseBtn', { force: true })]);
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check((await page.textContent('#verLine')).endsWith('bbb222'), 'nach dem Aktualisieren läuft die neue Version');
+  await page.waitForTimeout(3500);
+  check(!(await page.isVisible('#updBar')), 'danach kein Hinweis mehr');
+
   const errs = errors.filter(e => !/net::ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(e));
   check(errs.length === 0, 'keine JavaScript-Fehler' + (errs.length ? ': ' + errs.join(' | ') : ''));
   check(foreign.length === 0, 'keine Anfragen an fremde Server' + (foreign.length ? ': ' + foreign.join(', ') : ''));
 
   await browser.close();
   server.close();
+  fs.rmSync(SERVE, { recursive: true, force: true });
   console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlles in Ordnung');
   process.exit(failed ? 1 : 0);
 }
