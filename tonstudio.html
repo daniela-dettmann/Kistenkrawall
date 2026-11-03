@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kistenkrawall Tonstudio</title>
+<meta name="theme-color" content="#13201b">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* One column of sound groups, each a wrap of big tappable pads; same dark look as the game */
+:root{
+  --bg:#13201b;--panel:#1b2d26;--line:rgba(245,241,227,.12);--ink:#f5f1e3;--muted:#a7b8ad;
+  --orange:#ff8a1f;--teal:#1fb5a8;--crate:#d39a52;
+  --display:'Bowlby One SC','Arial Black',Impact,sans-serif;
+  --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--body);margin:0}
+main{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:28px 40px;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-size:clamp(30px,8vw,44px);line-height:.95;margin:0;text-wrap:balance}
+h1 span{color:var(--crate)}
+.lead{margin:6px 0 0;color:var(--muted);font-size:15px;line-height:1.5;max-width:60ch}
+.lead a{color:var(--orange)}
+.bar{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;background:var(--panel);border-radius:14px;padding:12px 14px}
+.bar label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px}
+.bar input[type=range]{width:160px;accent-color:var(--orange)}
+.bar button{border:0;border-radius:10px;background:var(--orange);color:#2a1300;font-weight:700;font-size:14px;padding:9px 14px;cursor:pointer;font-family:var(--body)}
+.bar button:focus-visible,.pad:focus-visible{outline:3px solid var(--crate);outline-offset:2px}
+section h2{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin:0 0 10px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.pad{position:relative;border:0;border-radius:14px;background:var(--panel);color:var(--ink);text-align:left;padding:14px 14px 13px;cursor:pointer;font-family:var(--body);box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;gap:4px;min-height:74px;overflow:hidden;transition:transform .1s}
+.pad b{font-size:15px}
+.pad small{font-size:12px;color:var(--muted);font-family:ui-monospace,Menlo,monospace}
+.pad::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 30%,rgba(255,138,31,.45),transparent 70%);opacity:0;transition:opacity .5s}
+.pad.on{transform:scale(.97)}
+.pad.on::after{opacity:1;transition:opacity .05s}
+.note{font-size:13px;color:var(--muted);line-height:1.5;margin:0}
+@media (prefers-reduced-motion:reduce){.pad,.pad::after{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Kisten<span>krawall</span> Tonstudio</h1>
+    <p class="lead">Jeder Knopf spielt genau einen Ton aus dem Spiel ab. Die Töne kommen aus derselben Datei wie im Spiel (<code>js/sounds.js</code>), du hörst hier also exakt das, was auch beim Spielen läuft. <a href="./">Zurück zum Spiel</a></p>
+  </header>
+  <div class="bar">
+    <label for="vol">Lautstärke <input type="range" id="vol" min="0" max="1.5" step="0.05" value="1"></label>
+    <button id="all">Alle nacheinander abspielen</button>
+  </div>
+  <div id="groups"></div>
+  <p class="note">Ton nicht zu hören? Manche Browser spielen Töne erst nach dem ersten Antippen ab.</p>
+</main>
+
+<script src="js/sounds.js"></script>
+<script>
+'use strict';
+try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
+let AC=null,noiseBuf=null;
+function initAudio(){
+  if(!AC){
+    try{AC=new (window.AudioContext||window.webkitAudioContext)();
+      noiseBuf=AC.createBuffer(1,AC.sampleRate*0.5,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    }catch(e){AC=null;return;}
+  }
+  if(AC.state!=='running')AC.resume().catch(()=>{});
+}
+const LEN={build:700,shield:550,tempo:550,repair:500,ammo:350,moerser:450,plane:2000,drum:1500,whistle:700,boom:600,gold:700,open:500,recruit:400,rocket:450,kanone:400};
+const pads={};
+const groups=document.getElementById('groups');
+for(const [title,items] of SOUND_LIST){
+  const sec=document.createElement('section');
+  sec.innerHTML='<h2></h2><div class="grid"></div>';sec.querySelector('h2').textContent=title;
+  const grid=sec.querySelector('.grid');
+  for(const [k,label] of items){
+    const b=document.createElement('button');b.className='pad';b.id='snd-'+k;
+    b.innerHTML='<b></b><small></small>';b.querySelector('b').textContent=label;b.querySelector('small').textContent=k;
+    b.addEventListener('click',()=>play(k));grid.appendChild(b);pads[k]=b;
+  }
+  groups.appendChild(sec);
+}
+function play(k){
+  initAudio();if(!AC)return;
+  playSound(AC,noiseBuf,k,+document.getElementById('vol').value);
+  const b=pads[k];b.classList.add('on');clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove('on'),Math.min(LEN[k]||250,900));
+}
+document.getElementById('all').addEventListener('click',()=>{
+  initAudio();let at=0;
+  for(const [,items] of SOUND_LIST)for(const [k] of items){setTimeout(()=>play(k),at);at+=(LEN[k]||300)+450;}
+});
+</script>
+</body>
+</html>

@@ -1,8 +1,11 @@
 name: GitHub Pages
 
+# Every push to main: assemble the site, test it in a real browser, and only deploy if
+# the test passes. Pull requests run the same test without deploying.
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -11,20 +14,51 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Seite zusammenstellen
+        run: |
+          mkdir _site
+          cp -r index.html tonstudio.html sw.js manifest.webmanifest .nojekyll css js fonts icons vendor _site/
+          # fresh offline cache for every deploy, no manual version bump needed
+          sed -i "s/const VERSION = 'kk-dev';/const VERSION = 'kk-${GITHUB_SHA::12}';/" _site/sw.js
+          grep -q "kk-${GITHUB_SHA::12}" _site/sw.js
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Test-Browser installieren
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Spiel testen
+        run: node tests/smoke.cjs _site
+
+      - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: _site
+
   deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
       - id: deployment
         uses: actions/deploy-pages@v4
