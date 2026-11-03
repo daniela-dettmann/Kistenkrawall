@@ -2,40 +2,62 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Kistenkrawall Tonstudio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#13201b">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
-/* One column of sound groups, each a wrap of big tappable pads; same dark look as the game */
+/* Layout: one column; music first as a stack of track rows with a live bar counter, then the sound pads. Same single dark look as the game. */
 :root{
-  --bg:#13201b;--panel:#1b2d26;--line:rgba(245,241,227,.12);--ink:#f5f1e3;--muted:#a7b8ad;
+  --bg:#13201b;--panel:#1b2d26;--panel-hi:#22382f;--line:rgba(245,241,227,.12);--ink:#f5f1e3;--muted:#a7b8ad;
   --orange:#ff8a1f;--teal:#1fb5a8;--crate:#d39a52;
   --display:'Bowlby One SC','Arial Black',Impact,sans-serif;
   --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
   color-scheme:dark;
 }
 html,body{background:var(--bg);color:var(--ink);font-family:var(--body);margin:0}
-main{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:28px 40px;display:flex;flex-direction:column;gap:22px}
+main{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 40px;display:flex;flex-direction:column;gap:26px}
 h1{font-family:var(--display);font-size:clamp(30px,8vw,44px);line-height:.95;margin:0;text-wrap:balance}
 h1 span{color:var(--crate)}
-.lead{margin:6px 0 0;color:var(--muted);font-size:15px;line-height:1.5;max-width:60ch}
+h2{font-family:var(--display);font-size:20px;letter-spacing:.02em;margin:0;color:var(--crate)}
+.lead{margin:6px 0 0;color:var(--muted);font-size:15px;line-height:1.5;max-width:62ch}
 .lead a{color:var(--orange)}
-.bar{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;background:var(--panel);border-radius:14px;padding:12px 14px}
+.bar{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;background:var(--panel);border-radius:14px;padding:12px 14px}
 .bar label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px}
-.bar input[type=range]{width:160px;accent-color:var(--orange)}
-.bar button{border:0;border-radius:10px;background:var(--orange);color:#2a1300;font-weight:700;font-size:14px;padding:9px 14px;cursor:pointer;font-family:var(--body)}
-.bar button:focus-visible,.pad:focus-visible{outline:3px solid var(--crate);outline-offset:2px}
-section h2{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin:0 0 10px;font-weight:700}
+.bar input[type=range]{width:150px;accent-color:var(--orange)}
+.btn{border:0;border-radius:10px;background:var(--orange);color:#2a1300;font-weight:700;font-size:14px;padding:9px 14px;cursor:pointer;font-family:var(--body)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:focus-visible,.pad:focus-visible,.play:focus-visible{outline:3px solid var(--crate);outline-offset:2px}
+section{display:flex;flex-direction:column;gap:12px}
+section h3{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin:4px 0 0;font-weight:700}
+
+/* music */
+.tracks{display:flex;flex-direction:column;gap:8px}
+.track{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;background:var(--panel);border-radius:14px;padding:12px 14px;box-shadow:inset 0 0 0 1px var(--line)}
+.track.on{background:var(--panel-hi);box-shadow:inset 0 0 0 1.5px var(--orange)}
+.play{grid-row:span 2;width:46px;height:46px;border-radius:50%;border:0;background:var(--orange);color:#2a1300;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.play svg{width:18px;height:18px;fill:currentColor}
+.track b{font-size:16px}
+.track p{margin:0;font-size:13px;color:var(--muted);line-height:1.4;min-width:0}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pos{grid-column:3;font-family:var(--mono);font-size:12px;color:var(--orange);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;min-height:1.2em}
+.switch{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
+.switch span{font-size:13px;color:var(--muted);flex:1 1 220px}
+
+/* sounds */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .pad{position:relative;border:0;border-radius:14px;background:var(--panel);color:var(--ink);text-align:left;padding:14px 14px 13px;cursor:pointer;font-family:var(--body);box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;gap:4px;min-height:74px;overflow:hidden;transition:transform .1s}
 .pad b{font-size:15px}
-.pad small{font-size:12px;color:var(--muted);font-family:ui-monospace,Menlo,monospace}
+.pad small{font-size:12px;color:var(--muted);font-family:var(--mono)}
 .pad::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 30%,rgba(255,138,31,.45),transparent 70%);opacity:0;transition:opacity .5s}
 .pad.on{transform:scale(.97)}
 .pad.on::after{opacity:1;transition:opacity .05s}
 .note{font-size:13px;color:var(--muted);line-height:1.5;margin:0}
+@media (max-width:520px){.track{grid-template-columns:auto 1fr}.meta,.pos{grid-column:2;text-align:left}}
 @media (prefers-reduced-motion:reduce){.pad,.pad::after{transition:none}}
 </style>
 </head>
@@ -43,35 +65,91 @@ section h2{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:va
 <main>
   <header>
     <h1>Kisten<span>krawall</span> Tonstudio</h1>
-    <p class="lead">Jeder Knopf spielt genau einen Ton aus dem Spiel ab. Die Töne kommen aus derselben Datei wie im Spiel (<code>js/sounds.js</code>), du hörst hier also exakt das, was auch beim Spielen läuft. <a href="./">Zurück zum Spiel</a></p>
+    <p class="lead">Hier hörst du die Musik und alle Töne aus dem Spiel. Alles wird live im Browser erzeugt, aus denselben Dateien wie im Spiel. <a href="./">Zurück zum Spiel</a></p>
   </header>
+
   <div class="bar">
-    <label for="vol">Lautstärke <input type="range" id="vol" min="0" max="1.5" step="0.05" value="1"></label>
-    <button id="all">Alle nacheinander abspielen</button>
+    <label for="musicVol">Musik <input type="range" id="musicVol" min="0" max="1" step="0.05" value="0.6"></label>
+    <label for="vol">Effekte <input type="range" id="vol" min="0" max="1.5" step="0.05" value="1"></label>
   </div>
-  <div id="groups"></div>
-  <p class="note">Ton nicht zu hören? Manche Browser spielen Töne erst nach dem ersten Antippen ab.</p>
+
+  <section aria-labelledby="hMusic">
+    <h2 id="hMusic">Musik</h2>
+    <div class="tracks" id="tracks"></div>
+    <div class="bar switch">
+      <span>Übergang testen, während die Bauruhe läuft. Gewechselt wird sauber am nächsten Taktanfang.</span>
+      <button class="btn ghost" id="toAttack" disabled>Welle startet</button>
+      <button class="btn ghost" id="toRest" disabled>Welle überstanden</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="hSfx">
+    <h2 id="hSfx">Effekte</h2>
+    <div id="groups"></div>
+    <div><button class="btn" id="all">Alle Effekte nacheinander abspielen</button></div>
+  </section>
+
+  <p class="note">Ton nicht zu hören? Prüf die Lautstärke am Gerät. Manche Browser spielen Töne erst nach dem ersten Antippen ab.</p>
 </main>
 
 <script src="js/sounds.js"></script>
+<script src="js/music.js"></script>
 <script>
 'use strict';
 try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
-let AC=null,noiseBuf=null;
+let AC=null,noiseBuf=null,music=null;
 function initAudio(){
   if(!AC){
     try{AC=new (window.AudioContext||window.webkitAudioContext)();
       noiseBuf=AC.createBuffer(1,AC.sampleRate*0.5,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+      music=MUSIC.create(AC,AC.destination);music.volume=+document.getElementById('musicVol').value;music.onBar(showBar);
     }catch(e){AC=null;return;}
   }
   if(AC.state!=='running')AC.resume().catch(()=>{});
 }
+for(const ev of ['pointerdown','keydown'])window.addEventListener(ev,initAudio,{capture:true,passive:true});
+
+/* ----- music ----- */
+const KEYS={menu:'E-Dorisch',ruhe:'D-Dorisch',angriff:'E-Moll',sieg:'C-Dur',niederlage:'C-Moll'};
+const PLAY='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z"/></svg>';
+const STOP='<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/></svg>';
+const rows={};
+function length(tr){
+  const bars=(tr.intro||[]).concat(tr.loop).reduce((s,k)=>s+tr.sections[k].chords.length,0);
+  const sec=Math.round(bars*4*60/tr.bpm);
+  return tr.once?sec+' s':'Schleife '+Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+}
+for(const [name,tr] of Object.entries(MUSIC.tracks)){
+  const row=document.createElement('div');row.className='track';row.innerHTML='<button class="play"></button><b></b><span class="meta"></span><p></p><span class="pos"></span>';
+  row.querySelector('b').textContent=tr.title;row.querySelector('p').textContent=tr.desc;
+  row.querySelector('.meta').textContent=tr.bpm+' BPM · '+KEYS[name]+' · '+length(tr);
+  const btn=row.querySelector('.play');btn.innerHTML=PLAY;btn.setAttribute('aria-label',tr.title+' abspielen');btn.id='play-'+name;
+  btn.addEventListener('click',()=>{initAudio();if(!music)return;
+    if(music.playing===name){music.stop();}else{music.stop(0.15);music.play(name,{now:true});mark(name);}});
+  document.getElementById('tracks').appendChild(row);rows[name]=row;
+}
+function mark(name){
+  for(const [n,row] of Object.entries(rows)){const on=n===name;row.classList.toggle('on',on);
+    const b=row.querySelector('.play');b.innerHTML=on?STOP:PLAY;b.setAttribute('aria-label',MUSIC.tracks[n].title+(on?' stoppen':' abspielen'));
+    if(!on)row.querySelector('.pos').textContent='';}
+  document.getElementById('toAttack').disabled=name!=='ruhe';document.getElementById('toRest').disabled=name!=='angriff';
+}
+function showBar(info){
+  if(!info){mark(null);return;}
+  if(!rows[info.track].classList.contains('on'))mark(info.track);
+  rows[info.track].querySelector('.pos').textContent='Teil '+(info.section==='FILL'?'Intro':info.section)+' · Takt '+(info.bar+1)+'/'+info.bars;
+}
+document.getElementById('toAttack').addEventListener('click',()=>{if(music&&music.playing==='ruhe'){music.play('angriff');document.getElementById('toAttack').disabled=true;}});
+document.getElementById('toRest').addEventListener('click',()=>{if(music&&music.playing==='angriff'){music.play('ruhe');document.getElementById('toRest').disabled=true;}});
+document.getElementById('musicVol').addEventListener('input',e=>{if(music)music.volume=+e.target.value;});
+
+/* ----- sound effects ----- */
 const LEN={build:700,shield:550,tempo:550,repair:500,ammo:350,moerser:450,plane:2000,drum:1500,whistle:700,boom:600,gold:700,open:500,recruit:400,rocket:450,kanone:400};
 const pads={};
 const groups=document.getElementById('groups');
 for(const [title,items] of SOUND_LIST){
   const sec=document.createElement('section');
-  sec.innerHTML='<h2></h2><div class="grid"></div>';sec.querySelector('h2').textContent=title;
+  sec.innerHTML='<h3></h3><div class="grid"></div>';sec.querySelector('h3').textContent=title;
   const grid=sec.querySelector('.grid');
   for(const [k,label] of items){
     const b=document.createElement('button');b.className='pad';b.id='snd-'+k;

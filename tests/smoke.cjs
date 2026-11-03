@@ -36,7 +36,7 @@ function staticChecks() {
   const pre = [...sw.match(/const PRECACHE = \[([\s\S]*?)\];/)[1].matchAll(/'\.\/([^']*)'/g)].map(m => m[1]).filter(Boolean);
   for (const f of pre) if (!fs.existsSync(path.join(ROOT, f))) bad('sw.js speichert ' + f + ', aber die Datei fehlt');
   const refs = new Set();
-  for (const page of ['index.html', 'fonts/fonts.css', 'manifest.webmanifest']) {
+  for (const page of ['index.html', 'tonstudio.html', 'fonts/fonts.css', 'manifest.webmanifest']) {
     const txt = fs.readFileSync(path.join(ROOT, page), 'utf8'), dir = path.dirname(page);
     for (const m of txt.matchAll(/(?:src|href)="([^"#:]+)"|url\(([^):]+)\)|"src":\s*"([^"]+)"/g)) {
       const ref = (m[1] || m[2] || m[3]).replace(/^\.\//, '');
@@ -119,6 +119,17 @@ async function main() {
   await page.waitForTimeout(200);
   check(await page.$$eval('.pad', p => p.length) === 22, '22 Töne im Tonstudio');
   check(await page.evaluate(b => window.__osc > b, before), 'Tonstudio spielt Töne ab');
+  check(await page.$$eval('.track', t => t.length) === 5, '5 Musikstücke im Tonstudio');
+  await page.click('#play-ruhe', { force: true });
+  await page.waitForTimeout(2500);
+  check(await page.evaluate(() => music && music.playing === 'ruhe'), 'Musik: Bauruhe spielt');
+  check(await page.$eval('#play-ruhe', b => b.closest('.track').querySelector('.pos').textContent.startsWith('Teil')), 'Musik: Taktanzeige läuft');
+  await page.click('#toAttack', { force: true });
+  await page.waitForTimeout(6000);
+  check(await page.evaluate(() => music.playing === 'angriff'), 'Musik: Wechsel Bauruhe → Angriff am Taktanfang');
+  await page.click('#play-angriff', { force: true });
+  await page.waitForTimeout(300);
+  check(await page.evaluate(() => music.playing === null), 'Musik: Stopp funktioniert');
 
   const errs = errors.filter(e => !/net::ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(e));
   check(errs.length === 0, 'keine JavaScript-Fehler' + (errs.length ? ': ' + errs.join(' | ') : ''));
