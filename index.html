@@ -178,6 +178,11 @@ table.stack{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-nu
 .help .stack td:first-child{width:28px}
 .help .stack td:last-child{text-align:left;color:var(--ink)}
 .ctrl b{color:var(--ink)}
+.sndRow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sndRow .sndBtn{flex:0 0 auto;min-width:96px}
+.sndRow .sndBtn[aria-pressed="false"]{color:var(--muted)}
+.sndVol{flex:1 1 140px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.sndVol input{flex:1;min-width:80px;accent-color:var(--orange)}
 .go{border:0;border-radius:12px;background:var(--orange);color:#2a1300;font-family:var(--display);font-size:20px;padding:13px}
 .go2{border:2px solid rgba(245,241,227,.2);border-radius:12px;background:transparent;font-weight:700;font-size:15px;padding:10px}
 .result{font-family:var(--display);font-size:clamp(30px,9vw,42px);margin:0;line-height:1}
@@ -251,6 +256,7 @@ table.stack{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-nu
         <button data-p="7" aria-pressed="false">7 Min</button>
       </div>
     </div>
+<div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><label class="sndVol">Lautstärke <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke"></label></div>
     <button class="go2" id="helpBtn">Wie wird gespielt?</button>
     <button class="go" id="startBtn">Los geht's</button>
   </div>
@@ -335,6 +341,7 @@ table.stack{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-nu
     <p class="result">Pause</p>
     <button class="go" id="resumeBtn">Weiter</button>
     <button class="go2" id="attackNowBtn" hidden>Nächste Welle jetzt starten</button>
+<div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><label class="sndVol">Lautstärke <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke"></label></div>
     <button class="go2" id="restartBtn">Neu starten</button>
     <button class="go2" id="quitBtn">Zum Menü</button>
   </div>
@@ -898,13 +905,29 @@ const tagsEl=$('#tags');
 const marker=new THREE.Mesh(G.marker,M.marker);marker.rotation.x=-Math.PI/2;scene.add(marker);
 
 /* ---------- Audio ---------- */
-let AC=null,noiseBuf=null;
+let AC=null,noiseBuf=null,master=null;
+let soundOn=true,soundVol=0.8;
+try{const v=localStorage.getItem('kk-snd');if(v==='0')soundOn=false;const l=parseFloat(localStorage.getItem('kk-vol'));if(l>=0&&l<=1)soundVol=l;}catch(e){}
+// iOS Safari: treat game audio as real playback so the ring/silent switch does not mute it
+try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
+function applyVolume(){if(master)master.gain.setTargetAtTime(soundOn?soundVol:0,AC.currentTime,0.02);}
+// Called on every user gesture: creates the context once, and wakes it up again whenever the
+// browser suspended or interrupted it (screen lock, app switch, phone call).
 function initAudio(){
-  if(AC)return;
-  try{AC=new (window.AudioContext||window.webkitAudioContext)();
-    noiseBuf=AC.createBuffer(1,AC.sampleRate*0.5,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
-  }catch(e){AC=null;}
+  if(!AC){
+    try{AC=new (window.AudioContext||window.webkitAudioContext)();
+      noiseBuf=AC.createBuffer(1,AC.sampleRate*0.5,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+      master=AC.createGain();master.gain.value=soundOn?soundVol:0;master.connect(AC.destination);
+    }catch(e){AC=null;return;}
+  }
+  if(AC.state!=='running'){const r=AC.resume();if(r&&r.catch)r.catch(()=>{});}
 }
+for(const ev of ['pointerdown','touchend','keydown','click'])window.addEventListener(ev,initAudio,{capture:true,passive:true});
+document.addEventListener('visibilitychange',()=>{
+  if(!AC)return;
+  if(document.hidden){if(AC.state==='running')AC.suspend().catch(()=>{});}
+  else AC.resume().catch(()=>{});
+});
 /* SOUND-START */
 /* Playful retro sound set: everything is synthesized, cartoonish and tinny rather than threatening */
 const SND=(function(){
@@ -985,7 +1008,9 @@ function playSound(AC,noiseBuf,kind,vol,dest){
 function sfx(kind,x,z){
   if(!AC||state!=='play')return;
   let vol=1;if(x!==undefined&&player){const d=Math.hypot(x-player.x,z-player.z);if(d>28)return;vol=1-d/32;}
-  playSound(AC,noiseBuf,kind,vol);
+  if(AC.state!=='running'){AC.resume().catch(()=>{});return;}
+  if(!soundOn)return;
+  playSound(AC,noiseBuf,kind,vol,master);
 }
 
 /* ---------- Units ---------- */
@@ -2354,6 +2379,20 @@ function toMenu(){
   newGame(true);
 }
 $('#startBtn').addEventListener('click',startGame);
+function syncSoundUI(){
+  for(const b of document.querySelectorAll('.sndBtn')){b.setAttribute('aria-pressed',soundOn?'true':'false');b.textContent=soundOn?'Ton an':'Ton aus';}
+  for(const r of document.querySelectorAll('.sndVol input')){r.value=soundVol;r.disabled=!soundOn;}
+}
+for(const b of document.querySelectorAll('.sndBtn'))b.addEventListener('click',()=>{
+  soundOn=!soundOn;try{localStorage.setItem('kk-snd',soundOn?'1':'0');}catch(e){}
+  initAudio();applyVolume();syncSoundUI();
+  if(soundOn&&AC)playSound(AC,noiseBuf,'pick',1,master);
+});
+for(const r of document.querySelectorAll('.sndVol input')){
+  r.addEventListener('input',()=>{soundVol=+r.value;try{localStorage.setItem('kk-vol',String(soundVol));}catch(e){}initAudio();applyVolume();syncSoundUI();});
+  r.addEventListener('change',()=>{if(AC&&soundOn)playSound(AC,noiseBuf,'hit',1,master);});
+}
+syncSoundUI();
 $('#helpBtn').addEventListener('click',()=>{$('#panelStart').hidden=true;$('#panelHelp').hidden=false;$('#menu').scrollTop=0;});
 $('#helpBack').addEventListener('click',()=>{$('#panelHelp').hidden=true;$('#panelStart').hidden=false;});
 $('#againBtn').addEventListener('click',startGame);

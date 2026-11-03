@@ -1,6 +1,6 @@
 // Kistenkrawall service worker: makes the game installable and playable offline.
 // Bump VERSION whenever index.html or the icons change so players get the update.
-const VERSION = 'kk-v1';
+const VERSION = 'kk-v2';
 const SHELL = [
   './',
   './index.html',
