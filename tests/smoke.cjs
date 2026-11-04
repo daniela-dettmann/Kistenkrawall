@@ -198,6 +198,29 @@ async function main() {
   await page.waitForTimeout(300);
   check(await page.evaluate(() => music.playing === null), 'Musik: Stopp funktioniert');
 
+  console.log('Weihnachtsedition');
+  await page.goto(base + '?weihnachten');
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check(await page.evaluate(() => XMAS && document.documentElement.classList.contains('xmas')), 'mit ?weihnachten aktiv');
+  check(await page.evaluate(() => [new Date(2026, 9, 31), new Date(2026, 10, 1), new Date(2026, 11, 31), new Date(2027, 0, 10), new Date(2027, 0, 11)].map(d => xmasSeason(d)).join() === 'false,true,true,true,false'),
+    'Saison: 1. November bis 10. Januar');
+  check(await page.isVisible('.xribbon') && await page.isVisible('#xmasToggle'), 'Banderole „Weihnachtsedition“ und Schalter im Menü');
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1200);
+  check(await page.evaluate(() => { const b = units.filter(u => u.kind === 'bot'); return b.length > 0 && b.every(u => ['santa', 'elf', 'snowman'].includes(u.bot.costume)) && new Set(b.map(u => u.bot.costume)).size >= 2; }), 'Blechlinge als Weihnachtsmänner, Elfen und Schneemänner');
+  check(await page.evaluate(() => crates.length > 0 && crates.every(c => c.bow)), 'Kisten mit Geschenkschleife');
+  await page.evaluate(() => { const t = spawnUnit(0, player.x + 3, player.z, 'fahrzeug', 'tank'); pause(true); });
+  await page.click('#attackNowBtn', { force: true });
+  await page.waitForTimeout(400);
+  check(await page.evaluate(() => { const t = units.find(u => u.kind === 'tank' && u.team === 0); const n = shots.length; t.cd = 0; fire(t, t.h, 1); const s = shots.slice(n); player.cd = 0; fire(player, player.h, 1); const all = shots.slice(n); return s.length > 0 && all.length >= 2 && all.every(x => x.m.userData.xmas) && s[0].m.userData.spin; }),
+    'Schlitten verschießt Geschenke, Knipser Christbaumkugeln');
+  check(await page.evaluate(() => !!(window.xmasSleigh && xmasSleigh.deer.length === 6)), 'Weihnachtsmann-Schlitten mit Rentieren bereit');
+  await page.waitForTimeout(2000);
+  check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50), 'Weihnachtsrunde läuft');
+  await page.goto(base + '?normal');
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check(await page.evaluate(() => !XMAS && !document.documentElement.classList.contains('xmas') && units.every(u => !u.bot.costume)) && !(await page.isVisible('.xribbon')), 'mit ?normal die normale Version');
+
   console.log('Update-Hinweis');
   await page.goto(base);
   await page.waitForSelector('#startBtn', { state: 'visible' });

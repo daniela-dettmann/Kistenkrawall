@@ -178,3 +178,30 @@ table.stack{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-nu
 .ver{margin:0;text-align:center;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .go.resume{display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.1}
 .go.resume small{font-family:var(--body);font-size:13px;font-weight:700;color:#5a2c00;letter-spacing:0;font-variant-numeric:tabular-nums;text-wrap:balance}
+
+/* ----- Weihnachtsedition (class .xmas on <html>, set by js/xmas.js) ----- */
+.xribbon,#xsnow{display:none}
+.xmas #panelStart{position:relative;padding-top:44px}
+.xmas .xribbon{display:block;position:absolute;top:-4px;right:-18px;transform:rotate(6deg);z-index:2;pointer-events:none;animation:xswing .9s cubic-bezier(.3,1.6,.5,1) both}
+.xmas .xribbon span{display:block;font-family:var(--display);font-size:clamp(15px,4.2vw,20px);letter-spacing:.03em;color:#fff;text-shadow:0 2px 0 #7a0f12;
+  background:#c8202a;padding:7px 20px 8px;border-radius:4px;
+  box-shadow:0 8px 18px rgba(0,0,0,.4),inset 0 5px 0 -1px #fff,inset 0 -5px 0 -1px #fff;
+  background-image:repeating-linear-gradient(135deg,rgba(255,255,255,0) 0 14px,rgba(255,255,255,.14) 14px 22px)}
+.xmas .xribbon span::before,.xmas .xribbon span::after{content:"";position:absolute;top:8px;width:16px;height:100%;background:#8f141b;z-index:-1}
+.xmas .xribbon span::before{left:-10px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,40% 50%)}
+.xmas .xribbon span::after{right:-10px;clip-path:polygon(0 0,100% 0,60% 50%,100% 100%,0 100%)}
+@keyframes xswing{0%{transform:rotate(-14deg) scale(.6);opacity:0}100%{transform:rotate(6deg) scale(1);opacity:1}}
+.xmas .logo .kis{position:relative;color:inherit}
+.xmas .logo .kis::before{content:"";position:absolute;left:-.03em;right:.03em;top:-.03em;height:.3em;pointer-events:none;border-radius:.15em .15em .05em .05em;
+  background:#fff;filter:drop-shadow(0 2px 0 rgba(150,185,220,.8));
+  -webkit-mask:radial-gradient(circle at 10% 100%,#000 .16em,transparent .17em) 0 0/.5em 100% repeat-x,linear-gradient(#000,#000) 0 0/100% 62% no-repeat;
+  mask:radial-gradient(circle at 50% 0,#000 .14em,transparent .15em) 0 100%/.42em .2em repeat-x,linear-gradient(#000,#000) 0 0/100% 60% no-repeat}
+.xmas .logo .kis::after{content:"";position:absolute;left:-.32em;top:-.62em;width:.95em;height:.85em;transform:rotate(-24deg);pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 36'%3E%3Cpath d='M4 28 C8 12 18 4 30 6 C36 7 38 14 34 16 C28 12 22 16 20 28 Z' fill='%23d42b2b'/%3E%3Crect x='2' y='25' width='22' height='8' rx='4' fill='%23fff'/%3E%3Ccircle cx='35' cy='17' r='4.5' fill='%23fff'/%3E%3C/svg%3E") no-repeat center/contain}
+.xmas #xsnow{display:block;position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.8;
+  background-image:radial-gradient(circle,#fff 0 1.6px,transparent 2px),radial-gradient(circle,#fff 0 1.1px,transparent 1.5px),radial-gradient(circle,rgba(255,255,255,.8) 0 2.2px,transparent 2.6px);
+  background-size:120px 120px,80px 80px,190px 190px;animation:xsnow 14s linear infinite}
+@keyframes xsnow{to{background-position:30px 120px,-20px 160px,40px 190px}}
+.xmas #menu>.panel{z-index:1}
+#xmasToggle[aria-pressed="true"]{border-color:#c8202a;color:#ffd6d6}
+@media (prefers-reduced-motion:reduce){.xmas #xsnow,.xmas .xribbon{animation:none}}
