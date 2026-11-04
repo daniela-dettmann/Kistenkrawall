@@ -25,7 +25,7 @@ function newGame(attract){
   if(!attract){setPlayer(units[0]);units[0].role='sammler';camYaw=Math.PI;}
 }
 function endGame(win,why){
-  state='end';fireHeld=false;musicJingle(win);
+  state='end';fireHeld=false;musicJingle(win);clearSave();
   $('#hud').hidden=true;$('#menu').hidden=false;
   $('#panelStart').hidden=true;$('#panelPause').hidden=true;$('#panelEnd').hidden=false;
   const t=$('#resultTitle');t.textContent=win?'Sieg!':'Verschrottet';t.className='result '+(win?'win':'lose');
@@ -50,6 +50,7 @@ function startRest(){
   sfx('repair');
 }
 function startGame(){
+  clearSave();
   initAudio();if(AC&&AC.state==='suspended')AC.resume();
   tryLandscape();
   newGame(false);state='play';
@@ -59,13 +60,13 @@ function startGame(){
   const jh=$('#joyHint');jh.hidden=false;clearTimeout(window.__jh);window.__jh=setTimeout(()=>{jh.hidden=true;},6000);
 }
 function pause(on){
-  if(on&&state==='play'){state='pause';fireHeld=false;$('#attackNowBtn').hidden=!(peaceT>0);$('#menu').hidden=false;$('#panelStart').hidden=true;$('#panelEnd').hidden=true;$('#panelPause').hidden=false;}
+  if(on&&state==='play'){state='pause';fireHeld=false;writeSave();$('#attackNowBtn').hidden=!(peaceT>0);$('#menu').hidden=false;$('#panelStart').hidden=true;$('#panelEnd').hidden=true;$('#panelPause').hidden=false;}
   else if(!on&&state==='pause'){state='play';$('#menu').hidden=true;}
 }
 function toMenu(){
   state='menu';$('#hud').hidden=true;$('#menu').hidden=false;
   $('#panelStart').hidden=false;$('#panelEnd').hidden=true;$('#panelPause').hidden=true;
-  newGame(true);
+  newGame(true);refreshResume();
 }
 $('#startBtn').addEventListener('click',startGame);
 function syncSoundUI(){

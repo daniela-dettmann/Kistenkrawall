@@ -29,6 +29,9 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/input.js` | Touch-, Maus- und Tastatursteuerung |
 | `js/hud.js` | HUD, Sprechblasen, Atmosphäre |
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
+| `js/save.js` | Spielstand speichern und fortsetzen |
+| `js/update.js` | Hinweis auf neue Versionen, Versionsanzeige |
+| `js/music.js` | Hintergrundmusik (Sequenzer, Instrumente, Kompositionen) |
 | `vendor/` | three.js r128 (lokal, kein CDN) |
 | `fonts/` | Schriften Bowlby One SC und Atkinson Hyperlegible (lokal) |
 | `icons/` | App-Icon (`icon.svg`) und alle PNG-Größen |
@@ -49,6 +52,10 @@ npm install
 npx playwright install chromium
 npm test
 ```
+
+## Spielstand
+
+Eine laufende Partie wird automatisch gespeichert, sobald das Spiel pausiert (auch wenn die App in den Hintergrund geht) und alle 30 Sekunden. Im Startmenü erscheint dann „Weiterspielen“ mit Welle, Schwierigkeit und Zeitpunkt; fortgesetzt wird im Pausenmenü. Sieg, Niederlage oder „Neues Spiel“ löschen den Spielstand. Kugeln, Explosionen und Flieger im Anflug werden nicht gespeichert. Ändert sich das Format so, dass alte Spielstände nicht mehr passen, wird `SAVE_FORMAT` in `js/save.js` erhöht; alte Spielstände werden dann mit einem Hinweis verworfen.
 
 ## Stabilität
 

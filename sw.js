@@ -28,6 +28,7 @@ const PRECACHE = [
   './js/input.js',
   './js/hud.js',
   './js/game.js',
+  './js/save.js',
   './js/update.js',
   './icons/icon.svg',
   './icons/icon-192.png',

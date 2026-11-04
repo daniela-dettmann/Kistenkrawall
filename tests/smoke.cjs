@@ -130,6 +130,55 @@ async function main() {
   check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50), 'Spiel startet offline');
   await ctx.setOffline(false);
 
+  console.log('Spielstand');
+  await page.evaluate(() => { pause(true); });
+  await page.click('#attackNowBtn', { force: true });
+  await page.waitForTimeout(2500);
+  // build up a richer situation: stacked crates, a turret, a buggy, a shield, damaged HQ, a carried crate
+  await page.evaluate(() => {
+    const free = crates.filter(c => c.state === 'ground');
+    for (const c of free.slice(0, 3)) addToPad(c, pads[0], null);
+    buildTurret(0, 8, 20, true);
+    const b = spawnUnit(0, -6, 30, 'fahrzeug', 'buggy'); b.hp = 99;
+    giveShield(player, 77);
+    hqs[1].hp = hqs[1].max * 0.6;
+    const loose = crates.find(c => c.state === 'ground');
+    const carrier = units.find(u => u.alive && u.team === 0 && u !== player && u.kind === 'bot' && !u.carry);
+    if (loose && carrier) { carrier.carry = loose; loose.state = 'carry'; }
+    stats.kills = 4;
+  });
+  const sum = () => page.evaluate(() => ({
+    wave: waveNo, peace: Math.round(peaceT), diff: diffKey, kills: stats.kills,
+    hq: hqs.map(h => Math.round(h.hp)), stacks: pads.map(p => p.stack.length),
+    player: player && player.id, shield: player && Math.round(player.shield || 0),
+    carried: units.filter(u => u.alive && u.carry).map(u => u.id).sort(),
+    units: units.filter(u => u.alive).map(u => [u.id, u.team, u.kind, u.weapon, Math.round(u.hp), Math.round(u.x * 10), Math.round(u.z * 10), u.name]).sort((a, b) => a[0] - b[0]),
+  }));
+  await page.click('#pauseBtn', { force: true });
+  const saved = await sum();
+  const size = await page.evaluate(() => (localStorage.getItem('kk-save') || '').length);
+  check(size > 1000 && size < 400000, 'Spielstand gespeichert (' + Math.round(size / 1024) + ' KB)');
+  await page.reload();
+  await page.waitForSelector('#continueBtn', { state: 'visible' });
+  const info = await page.textContent('#continueInfo');
+  check(/Welle 1 läuft · Normal · gespeichert (gerade eben|vor 1 Min\.)/.test(info), 'Menü zeigt „Weiterspielen“: ' + info);
+  check((await page.textContent('#startBtn')) === 'Neues Spiel', 'Startknopf heißt jetzt „Neues Spiel“');
+  await page.click('#continueBtn', { force: true });
+  await page.waitForTimeout(500);
+  check(await page.evaluate(() => state === 'pause'), 'Fortsetzen startet im Pausenmenü');
+  const after = await sum();
+  for (const k of Object.keys(saved)) {
+    const same = JSON.stringify(saved[k]) === JSON.stringify(after[k]);
+    check(same, 'wiederhergestellt: ' + k + (same ? '' : ' (vorher ' + JSON.stringify(saved[k]).slice(0, 200) + ', nachher ' + JSON.stringify(after[k]).slice(0, 200) + ')'));
+  }
+  await page.click('#resumeBtn', { force: true });
+  await page.keyboard.down('Space'); await page.waitForTimeout(2500); await page.keyboard.up('Space');
+  check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50), 'fortgesetzte Runde läuft weiter');
+  await page.evaluate(() => endGame(false, 'Test.'));
+  check(await page.evaluate(() => localStorage.getItem('kk-save') === null), 'Spielstand nach Rundenende gelöscht');
+  await page.click('#toMenuBtn', { force: true });
+  check(await page.$eval('#continueBtn', b => b.hidden), 'danach kein „Weiterspielen“ mehr');
+
   console.log('Tonstudio');
   await page.goto(base + 'tonstudio.html');
   const before = await page.evaluate(() => window.__osc);
