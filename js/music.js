@@ -26,19 +26,19 @@ const MUSIC=(function(){
     return out.sort((a,b)=>a-b);
   }
   const VEL={X:1,x:0.75,g:0.35};
-  function parseHits(str){
-    if(str.length!==16)throw new Error('16 Schritte erwartet: "'+str+'"');
+  function parseHits(str,N){
+    N=N||16;if(str.length!==N)throw new Error(N+' Schritte erwartet: "'+str+'"');
     const ev=[];let cur=null;
-    for(let i=0;i<16;i++){const c=str[i];
+    for(let i=0;i<N;i++){const c=str[i];
       if(c==='-'){if(cur)cur.len++;}
       else if(VEL[c]){cur={step:i,v:VEL[c],len:1};ev.push(cur);}
       else if(c==='.')cur=null;
       else throw new Error('Unbekanntes Zeichen "'+c+'" in "'+str+'"');}
     return ev;
   }
-  function parseLine(str){
-    const t=str.trim().split(/\s+/);
-    if(t.length!==16)throw new Error('16 Schritte erwartet, '+t.length+' gefunden: "'+str+'"');
+  function parseLine(str,N){
+    N=N||16;const t=str.trim().split(/\s+/);
+    if(t.length!==N)throw new Error(N+' Schritte erwartet, '+t.length+' gefunden: "'+str+'"');
     const ev=[];let cur=null;
     t.forEach((tok,i)=>{
       if(tok==='-'){if(cur)cur.len++;}
@@ -49,7 +49,7 @@ const MUSIC=(function(){
   }
 
   /* ---------- Kompositionen ---------- */
-  const DRUMS=['k','s','c','h','oh','cr'];   // Kick, Snare, Rimshot, Hi-Hat, offene Hi-Hat, Becken
+  const DRUMS=['k','s','c','h','oh','cr','jb'];   // Kick, Snare, Rimshot, Hi-Hat, offene Hi-Hat, Becken, Schlittenglocken
   const LINES=['bass','lead','horn','vib'];  // einstimmige Spuren
   const COMPS=['organ','clav','brass'];      // Akkord-Spuren
   const TRACKS={
@@ -159,6 +159,68 @@ const MUSIC=(function(){
     }
   };
 
+  /* ---------- Weihnachten: gemeinfreie Melodien (Jingle Bells, O Tannenbaum), eigene Arrangements ---------- */
+  const NN=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],nm=n=>NN[n%12]+(Math.floor(n/12)-1);
+  // bass bar from a chord name in a given style; '-' holds, '.' rests, numbers are semitones above the root
+  const BASS={slap:[0,'-','.',12,'.','.',0,'.','.',0,'T','.','F','.','S','F'],drive:[0,'.',12,0,'.',0,12,'.',0,'.',12,0,'T','.','F','.'],waltz:[0,'-','-','-','.','.','F','-','.','.','F','.']};
+  function bass(chord,style){
+    const m=/^([A-G][#b]?)(.*)$/.exec(chord.split('|')[0]),minor=/^m(?!aj)/.test(m[2]);let r=midi(m[1]+'2');if(r>47)r-=12;
+    const T=minor?3:4,F=7,S=minor?10:9;
+    return BASS[style].map(x=>x==='-'||x==='.'?x:nm(r+(x==='T'?T:x==='F'?F:x==='S'?S:x))).join(' ');
+  }
+  const JB_VERSE=['D4 . . . B4 . . . A4 . . . G4 . . .','D4 - - - - - - - - - - . D4 . D4 .','D4 . . . B4 . . . A4 . . . G4 . . .','E4 - - - - - - - - - - - . . . .',
+    'E4 . . . C5 . . . B4 . . . A4 . . .','F#4 - - - - - - - - - - - . . . .','D5 . . . D5 . . . C5 . . . A4 . . .','B4 - - - - - - - - - - - . . . .'];
+  const JB_VERSE2=JB_VERSE.slice(0,4).concat(['E4 . . . C5 . . . B4 . . . A4 . . .','D5 . . . D5 . . . D5 . . . D5 . . .','E5 . . . D5 . . . C5 . . . A4 . . .','G4 - - - - - - - D5 - - - - - - -']);
+  const JB_CHORUS=['B4 . . . B4 . . . B4 - - - - - - .','B4 . . . B4 . . . B4 - - - - - - .','B4 . . . D5 . . . G4 - - - - - A4 .','B4 - - - - - - - - - - - - - - .',
+    'C5 . . . C5 . . . C5 - - - - - C5 .','C5 . . . B4 . . . B4 . . . B4 . B4 .','B4 . . . A4 . . . A4 . . . B4 . . .','A4 - - - - - - . D5 - - - - - - .'];
+  const JB_CHORUS2=JB_CHORUS.slice(0,4).concat(['C5 . . . C5 . . . C5 - - - - - C5 .','C5 . . . B4 . . . B4 . . . B4 . B4 .','D5 . . . D5 . . . C5 . . . A4 . . .','G4 - - - - - - - - - - - . . . .']);
+  const V_CH=['G','G','G','C','Am','D','D7','G'],V2_CH=['G','G','G','C','C','D','D7','G|D7'];
+  const C_CH=['G','G','G','G','C','G','A7','D7'],C2_CH=['G','G','G','G','C','G','D7','G'];
+  const up=l=>l.split(' ').map(t=>t==='-'||t==='.'?t:nm(midi(t)+12)).join(' ');
+  const sec=(chords,o)=>Object.assign({chords},o);
+  const funkKit={k:'X.....x...x.....',s:'....X..g.g..X..g',h:'x.x.x.x.x.x.x...',oh:'..............x.',jb:'x.x.x.x.x.x.x.x.'};
+  const driveKit={k:'X.....x.X.x.....',s:'....X.......X..g',h:'xgxgxgxgxgxgxgxg',jb:'x.xxx.xxx.xxx.xx'};
+  Object.assign(TRACKS,{
+    menu_x:{title:'Titelthema (Weihnachten)',desc:'Jingle Bells als Funk: Strophe auf dem Clavinet, Refrain mit Bläsern und Schlittenglocken.',
+      bpm:108,swing:0.09,loop:['V','V2','C','C2'],
+      sections:{
+        V:sec(V_CH,Object.assign({bass:V_CH.map(c=>bass(c,'slap')),clav:'x.g.x.gx.gx.x.g.',organ:'g---------------',vib:JB_VERSE},funkKit,{cr:['X...............','................','................','................','................','................','................','................']})),
+        V2:sec(V2_CH,Object.assign({bass:V2_CH.map(c=>bass(c,'slap')),clav:'x.g.x.gx.gx.x.g.',organ:'g---------------',vib:JB_VERSE2},funkKit)),
+        C:sec(C_CH,Object.assign({bass:C_CH.map(c=>bass(c,'slap')),brass:'X.....x.....x...',organ:'g---------------',horn:JB_CHORUS,cr:['X...............','................','................','................','................','................','................','................']},funkKit)),
+        C2:sec(C2_CH,Object.assign({bass:C2_CH.map(c=>bass(c,'slap')),brass:'X.....x.....x...',organ:'g---------------',horn:JB_CHORUS2,lead:JB_CHORUS2.map(up)},funkKit))
+      }},
+    ruhe_x:{title:'Bauruhe (Weihnachten)',desc:'O Tannenbaum als gemütlicher Jazzwalzer mit Vibraphon, Orgel und Glöckchen.',
+      bpm:96,swing:0.12,steps:12,loop:['A','A2'],
+      sections:{
+        A:{chords:['D7','G','G','Am|D7','D7|G','G'],k:'X...........',c:'....x...x...',h:'x.g.x.g.x.g.',jb:'x...x...x...',
+          bass:['D2 - - - . . A1 - . . A1 .','G1 - - - . . D2 - . . D2 .','G1 - - - . . D2 - . . B1 .','A1 - - - . . D2 - . . F#2 .','D2 - - - . . G1 - . . B1 .','G1 - - - . . D2 - . . D2 .'],
+          organ:'....x-..x-..',
+          vib:['. . . . . . . . D4 - - -','G4 - - G4 G4 - - - A4 - - -','B4 - - B4 B4 - - - B4 - - -','A4 - - - B4 - - - C5 - - -','F#4 - - - A4 - - - G4 - - -','G4 - - - - - - - . . . .']},
+        A2:{chords:['D7','G','G','Am|D7','D7|G','G'],k:'X.......x...',c:'....x...x...',h:'x.g.x.g.x.g.',jb:'x.x.x.x.x.x.',
+          bass:['D2 - - - . . A1 - . . A1 .','G1 - - - . . D2 - . . D2 .','G1 - - - . . D2 - . . B1 .','A1 - - - . . D2 - . . F#2 .','D2 - - - . . G1 - . . B1 .','G1 - - - . . D2 - . . D2 .'],
+          organ:'....x-..x-..',clav:'x...g...g...',
+          horn:['. . . . . . . . D5 - - -','G5 - - G5 G5 - - - A5 - - -','B5 - - B5 B5 - - - B5 - - -','A5 - - - B5 - - - C6 - - -','F#5 - - - A5 - - - G5 - - -','G5 - - - - - - - . . . .'],
+          vib:['. . . . . . . . D4 - - -','G4 - - G4 G4 - - - A4 - - -','B4 - - B4 B4 - - - B4 - - -','A4 - - - B4 - - - C5 - - -','F#4 - - - A4 - - - G4 - - -','G4 - - - - - - - . . . .']}
+      }},
+    angriff_x:{title:'Angriffswelle (Weihnachten)',desc:'Jingle-Bells-Refrain als Breakbeat mit Bläserstößen, 128 BPM.',
+      bpm:128,swing:0.04,intro:['FILL'],loop:['C','C2','BRK'],
+      sections:{
+        FILL:{chords:['D7'],k:'X.......X.......',s:'....x.x.xxxxXXXX',jb:'xxxxxxxxxxxxxxxx',brass:'X-..............',bass:'D2 - . . . . . . D2 - . . D2 . F#2 .'},
+        C:sec(C_CH,Object.assign({bass:C_CH.map(c=>bass(c,'drive')),brass:'X..x..x.......x.',organ:'g---------------',lead:JB_CHORUS,
+          cr:['X...............','................','................','................','X...............','................','................','................']},driveKit)),
+        C2:sec(C2_CH,Object.assign({bass:C2_CH.map(c=>bass(c,'drive')),brass:'X..x..x.......x.',organ:'g---------------',lead:JB_CHORUS2,horn:JB_CHORUS2.map(up),
+          cr:['X...............','................','................','................','X...............','................','................','................']},driveKit)),
+        BRK:{chords:['G','D7'],k:['X.......X.X.X...','X...X...X.X.X.X.'],s:['....X...xxxxXXXX','....X.X.xxxxXXXX'],jb:'x.x.x.x.x.x.x.x.',
+          bass:['G2 - - - . . . . . . . . . . . .','D2 - - - . . . . D2 . D2 . F#2 . A2 .']}
+      }},
+    sieg_x:{title:'Sieg (Weihnachten)',desc:'„Jingle all the way!“ als Fanfare.',
+      bpm:132,swing:0,loop:['S'],once:true,
+      sections:{S:{chords:['G|D7','G'],k:['X...X...X...X...','X...............'],s:['..........x.xxxx','................'],cr:['................','X...............'],jb:['x.x.x.x.x.x.x.x.','x...............'],
+        bass:['G2 . . . G2 . . . D2 - - - - - D2 .','G2 - - - - - - - - - - - . . . .'],brass:['X...x...X-----x.','X-----------....'],
+        horn:['B4 . . . D5 . . . G4 - - - - - A4 .','B4 - - - - - - . G5 - - - - - - -']}}
+    }
+  });
+
   // Compile every section once; a typo in the notes throws here with a clear message.
   for(const [tname,tr] of Object.entries(TRACKS)){
     for(const [sname,sec] of Object.entries(tr.sections)){
@@ -166,9 +228,10 @@ const MUSIC=(function(){
       try{
         sec.bars=[];
         for(let b=0;b<bars;b++){
-          const bar={chords:sec.chords[b].split('|').map((c,i,a)=>({step:i*16/a.length,notes:chordNotes(c),root:c})),parts:{}};
-          for(const k of DRUMS.concat(COMPS))if(sec[k]){const p=list(sec[k]);bar.parts[k]=parseHits(p[b%p.length]);}
-          for(const k of LINES)if(sec[k]){const p=list(sec[k]);bar.parts[k]=parseLine(p[b%p.length]);}
+          const N=tr.steps||16;
+          const bar={chords:sec.chords[b].split('|').map((c,i,a)=>({step:Math.round(i*N/a.length),notes:chordNotes(c),root:c})),parts:{}};
+          for(const k of DRUMS.concat(COMPS))if(sec[k]){const p=list(sec[k]);bar.parts[k]=parseHits(p[b%p.length],N);}
+          for(const k of LINES)if(sec[k]){const p=list(sec[k]);bar.parts[k]=parseLine(p[b%p.length],N);}
           sec.bars.push(bar);
         }
       }catch(e){throw new Error('Musik '+tname+'/'+sname+': '+e.message);}
@@ -222,6 +285,10 @@ const MUSIC=(function(){
       h(o,t,v){noiseHit(o,t,0.045,v*0.13,'highpass',7500);},
       oh(o,t,v){noiseHit(o,t,0.3,v*0.12,'highpass',7000);},
       cr(o,t,v){noiseHit(o,t,1.5,v*0.16,'highpass',5200);noiseHit(o,t,0.9,v*0.06,'bandpass',9000,1);},
+      jb(o,t,v){   // sleigh bells: a shake of bright noise plus a few metallic partials
+        noiseHit(o,t,0.13,v*0.09,'bandpass',8500,2.5);noiseHit(o,t+0.018,0.1,v*0.06,'bandpass',6200,3);
+        for(const f of [3150,4370,5230])tone(o,'sine',f*(1+Math.random()*0.01),t,0.001,v*0.018,0.005,0.12);
+      },
       bass(o,t,n,d,v){
         const f=hz(n),flt=ctx.createBiquadFilter(),g=ctx.createGain();
         flt.type='lowpass';flt.Q.value=7;flt.frequency.setValueAtTime(2600,t);flt.frequency.exponentialRampToValueAtTime(380,t+0.18);
@@ -266,7 +333,7 @@ const MUSIC=(function(){
         tone(o,'sine',f,t,0.003,v*0.1,0.01,ring);tone(o,'sine',f*1.003,t,0.003,v*0.04,0.01,ring);tone(o,'sine',f*4,t,0.002,v*0.03,0.005,0.25);
       }
     };
-    const GROUP={k:'drums',s:'drums',c:'drums',h:'drums',oh:'drums',cr:'drums',bass:'bass',organ:'keys',clav:'keys',vib:'keys',brass:'brass',horn:'brass',lead:'lead'};
+    const GROUP={jb:'drums',k:'drums',s:'drums',c:'drums',h:'drums',oh:'drums',cr:'drums',bass:'bass',organ:'keys',clav:'keys',vib:'keys',brass:'brass',horn:'brass',lead:'lead'};
     const SEND={drums:0.08,bass:0,keys:0.22,brass:0.18,lead:0.25};
     const LEVEL={drums:1,bass:1,keys:1,brass:1,lead:1};
 
@@ -302,7 +369,7 @@ const MUSIC=(function(){
         }
       }
       if(listener){const info={track:cur.name,section:sname,bar:cur.bar,bars:sec.bars.length};const delay=Math.max(0,(t0-ctx.currentTime)*1000);setTimeout(()=>listener(info),delay);}
-      cur.next=t0+16*sd;
+      cur.next=t0+(tr.steps||16)*sd;
       if(++cur.bar>=sec.bars.length){cur.bar=0;cur.pos++;
         if(cur.pos>=cur.seq.length){
           if(tr.once&&pending){const p=pending;pending=null;startTrack(p,cur.next);return true;}

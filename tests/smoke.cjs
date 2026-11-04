@@ -92,7 +92,7 @@ async function main() {
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => renderer.info.render.calls > 50), '3D-Szene wird gezeichnet');
   check(await page.evaluate(() => state === 'play' && units.length >= 6), 'Runde läuft mit beiden Teams');
-  check(await page.evaluate(() => music && music.playing === 'ruhe'), 'Musik: Bauruhe läuft beim Rundenstart');
+  check(await page.evaluate(() => music && /^ruhe(_x)?$/.test(music.playing || '')), 'Musik: Bauruhe läuft beim Rundenstart');
   check(await page.evaluate(() => soundVol === 0.7 && musicVol === 0.1), 'Standardlautstärke: Effekte 70 %, Musik 10 %');
   await page.click('#pauseBtn', { force: true });
   check(await page.evaluate(() => state === 'pause'), 'Pause funktioniert');
@@ -107,7 +107,7 @@ async function main() {
   check(await page.evaluate(() => AC.state === 'running'), 'Ton kommt nach Unterbrechung beim nächsten Tippen zurück');
   await page.waitForTimeout(3000);
   check(await page.evaluate(() => state === 'play'), 'Spiel läuft nach 3 Sekunden Kampf weiter');
-  check(await page.evaluate(() => music.playing === 'angriff'), 'Musik: Angriffsmusik während der Welle');
+  check(await page.evaluate(() => /^angriff(_x)?$/.test(music.playing || '')), 'Musik: Angriffsmusik während der Welle');
   check(await page.$eval('#fail', el => el.hidden), 'kein Fehlerbildschirm');
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
   check(await page.evaluate(() => state === 'pause'), 'pausiert automatisch, wenn die App in den Hintergrund geht');
@@ -115,7 +115,7 @@ async function main() {
   await page.click('#resumeBtn', { force: true });
   await page.evaluate(() => endGame(true, 'Test.'));
   await page.waitForTimeout(400);
-  check(await page.evaluate(() => music.playing === 'sieg'), 'Musik: Sieg-Jingle am Rundenende');
+  check(await page.evaluate(() => /^sieg(_x)?$/.test(music.playing || '')), 'Musik: Sieg-Jingle am Rundenende');
 
   console.log('App / offline');
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -184,9 +184,9 @@ async function main() {
   const before = await page.evaluate(() => window.__osc);
   await page.click('#snd-shot', { force: true });
   await page.waitForTimeout(200);
-  check(await page.$$eval('.pad', p => p.length) === 22, '22 Töne im Tonstudio');
+  check(await page.evaluate(() => document.querySelectorAll('.pad').length === SOUND_LIST.reduce((n, g) => n + g[1].length, 0) && SOUND_LIST.length >= 6), 'alle Töne im Tonstudio, auch Weihnachten');
   check(await page.evaluate(b => window.__osc > b, before), 'Tonstudio spielt Töne ab');
-  check(await page.$$eval('.track', t => t.length) === 5, '5 Musikstücke im Tonstudio');
+  check(await page.evaluate(() => document.querySelectorAll('.track').length === Object.keys(MUSIC.tracks).length && !!MUSIC.tracks.ruhe_x), 'alle Musikstücke im Tonstudio, auch Weihnachten');
   await page.click('#play-ruhe', { force: true });
   await page.waitForTimeout(2500);
   check(await page.evaluate(() => music && music.playing === 'ruhe'), 'Musik: Bauruhe spielt');
@@ -215,6 +215,8 @@ async function main() {
   check(await page.evaluate(() => { const t = units.find(u => u.kind === 'tank' && u.team === 0); const n = shots.length; t.cd = 0; fire(t, t.h, 1); const s = shots.slice(n); player.cd = 0; fire(player, player.h, 1); const all = shots.slice(n); return s.length > 0 && all.length >= 2 && all.every(x => x.m.userData.xmas) && s[0].m.userData.spin; }),
     'Schlitten verschießt Geschenke, Knipser Christbaumkugeln');
   check(await page.evaluate(() => !!(window.xmasSleigh && xmasSleigh.deer.length === 6)), 'Weihnachtsmann-Schlitten mit Rentieren bereit');
+  check(await page.evaluate(() => /_x$/.test(music.playing || '') && wantedMusic() === 'angriff_x'), 'Weihnachtsmusik läuft: ' + await page.evaluate(() => music.playing));
+  check(await page.evaluate(() => NAMES.includes('Zimtstern') && LINES.kill.includes('Ab in den Kamin!')), 'weihnachtliche Namen und Sprüche');
   await page.waitForTimeout(2000);
   check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50), 'Weihnachtsrunde läuft');
   await page.goto(base + '?normal');
@@ -227,7 +229,7 @@ async function main() {
   check((await page.textContent('#verLine')) === 'Version vom 02.01.2026 · aaa111', 'Versionsanzeige im Startmenü');
   await page.mouse.click(8, 300);
   await page.waitForTimeout(1200);
-  check(await page.evaluate(() => music && music.playing === 'menu'), 'Musik: Titelthema im Menü');
+  check(await page.evaluate(() => music && /^menu(_x)?$/.test(music.playing || '')), 'Musik: Titelthema im Menü');
   setVersion('bbb222');                       // "deploy" a new version
   await page.evaluate(() => window.kkCheckUpdate());
   await page.waitForSelector('#updBar', { state: 'visible', timeout: 60000 }).catch(() => {});

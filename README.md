@@ -60,7 +60,7 @@ Eine laufende Partie wird automatisch gespeichert, sobald das Spiel pausiert (au
 
 ## Weihnachtsedition
 
-Vom 1. November bis 10. Januar schaltet sich jedes Jahr automatisch die Weihnachtsedition ein (Datum des Geräts): Banderole im Startmenü, Blechlinge als Weihnachtsmänner, Elfen und Schneemänner, Christbaumkugeln statt Kugeln, Schlitten statt Panzer (verschießt Geschenke), Motorschlitten, Schneeball-Katapult, Nussknacker-Türme, Lebkuchenhäuser, Geschenkkisten mit Schleife, verschneite Landschaft mit geschmückten Tannen, Lichterketten, Eisschollen und Schneefall, und statt der Möwen fliegt ab und zu der Weihnachtsmann mit Rentieren vorbei. Im Menü lässt sie sich abschalten. Zum Ausprobieren außerhalb der Saison: `?weihnachten` an die Adresse hängen, `?normal` erzwingt die normale Version.
+Vom 1. November bis 10. Januar schaltet sich jedes Jahr automatisch die Weihnachtsedition ein (Datum des Geräts): Banderole im Startmenü, Blechlinge als Weihnachtsmänner, Elfen und Schneemänner, Christbaumkugeln statt Kugeln, Schlitten statt Panzer (verschießt Geschenke), Motorschlitten, Schneeball-Katapult, Nussknacker-Türme, Lebkuchenhäuser, Geschenkkisten mit Schleife, verschneite Landschaft mit geschmückten Tannen, Lichterketten, Eisschollen und Schneefall, und statt der Möwen fliegt ab und zu der Weihnachtsmann mit Rentieren vorbei. Dazu läuft weihnachtliche Musik (Jingle Bells als Funk und Breakbeat, O Tannenbaum als Jazzwalzer, beide gemeinfrei), Treffer klingen nach Glöckchen, der Schlitten bringt Schlittenglocken mit, und die Blechlinge haben weihnachtliche Namen und Sprüche. Im Menü lässt sie sich abschalten. Zum Ausprobieren außerhalb der Saison: `?weihnachten` an die Adresse hängen, `?normal` erzwingt die normale Version.
 
 ## Stabilität
 

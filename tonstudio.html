@@ -110,13 +110,13 @@ function initAudio(){
 for(const ev of ['pointerdown','keydown'])window.addEventListener(ev,initAudio,{capture:true,passive:true});
 
 /* ----- music ----- */
-const KEYS={menu:'E-Dorisch',ruhe:'D-Dorisch',angriff:'E-Moll',sieg:'C-Dur',niederlage:'C-Moll'};
+const KEYS={menu:'E-Dorisch',ruhe:'D-Dorisch',angriff:'E-Moll',sieg:'C-Dur',niederlage:'C-Moll',menu_x:'G-Dur',ruhe_x:'G-Dur · 3/4',angriff_x:'G-Dur',sieg_x:'G-Dur'};
 const PLAY='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z"/></svg>';
 const STOP='<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/></svg>';
 const rows={};
 function length(tr){
   const bars=(tr.intro||[]).concat(tr.loop).reduce((s,k)=>s+tr.sections[k].chords.length,0);
-  const sec=Math.round(bars*4*60/tr.bpm);
+  const sec=Math.round(bars*(tr.steps||16)/4*60/tr.bpm);
   return tr.once?sec+' s':'Schleife '+Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
 }
 for(const [name,tr] of Object.entries(MUSIC.tracks)){
@@ -132,15 +132,15 @@ function mark(name){
   for(const [n,row] of Object.entries(rows)){const on=n===name;row.classList.toggle('on',on);
     const b=row.querySelector('.play');b.innerHTML=on?STOP:PLAY;b.setAttribute('aria-label',MUSIC.tracks[n].title+(on?' stoppen':' abspielen'));
     if(!on)row.querySelector('.pos').textContent='';}
-  document.getElementById('toAttack').disabled=name!=='ruhe';document.getElementById('toRest').disabled=name!=='angriff';
+  document.getElementById('toAttack').disabled=!/^ruhe/.test(name||'');document.getElementById('toRest').disabled=!/^angriff/.test(name||'');
 }
 function showBar(info){
   if(!info){mark(null);return;}
   if(!rows[info.track].classList.contains('on'))mark(info.track);
   rows[info.track].querySelector('.pos').textContent='Teil '+(info.section==='FILL'?'Intro':info.section)+' · Takt '+(info.bar+1)+'/'+info.bars;
 }
-document.getElementById('toAttack').addEventListener('click',()=>{if(music&&music.playing==='ruhe'){music.play('angriff');document.getElementById('toAttack').disabled=true;}});
-document.getElementById('toRest').addEventListener('click',()=>{if(music&&music.playing==='angriff'){music.play('ruhe');document.getElementById('toRest').disabled=true;}});
+document.getElementById('toAttack').addEventListener('click',()=>{if(music&&/^ruhe/.test(music.playing||'')){music.play(music.playing.replace('ruhe','angriff'));document.getElementById('toAttack').disabled=true;}});
+document.getElementById('toRest').addEventListener('click',()=>{if(music&&/^angriff/.test(music.playing||'')){music.play(music.playing.replace('angriff','ruhe'));document.getElementById('toRest').disabled=true;}});
 document.getElementById('musicVol').addEventListener('input',e=>{if(music)music.volume=+e.target.value;});
 
 /* ----- sound effects ----- */

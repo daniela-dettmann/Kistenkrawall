@@ -342,6 +342,26 @@ if(XMAS)(function(){
     for(const p of pads){const top=Math.floor((p.stack.length-1)/4)*4;p.stack.forEach((c,i)=>{if(c.bow)c.bow.visible=i>=top;});}
   })(last);
 
+  /* ---------- Musik, Töne, Namen, Sprüche ---------- */
+  const _wanted=wantedMusic;
+  wantedMusic=function(){const w=_wanted();return w&&MUSIC.tracks[w+'_x']?w+'_x':w;};
+  musicJingle=function(win){if(music&&soundOn)music.play(win?'sieg_x':'niederlage',{now:true});};
+  const _sfx=sfx;
+  sfx=function(kind,x,z){return _sfx(kind==='hit'?'xhit':kind,x,z);};
+  window.xmasJingle=function(){if(AC&&soundOn&&AC.state==='running'&&state!=='pause')playSound(AC,noiseBuf,'sleigh',0.55,master);};
+  NAMES.splice(0,NAMES.length,'Flinki','Zimtstern','Lebkuchen','Rudi','Knecht Bolzen','Glöckchen','Lametta','Zuckerstange','Schneeflocke','Nussknacker','Stollen','Marzipan','Plätzchen','Tannenzapfen','Wichtel','Pfefferkuchen');
+  Object.assign(LINES,{
+    pick:['Ho ho ho, meins!','Ein Geschenk!','Gut eingepackt.','Was da wohl drin ist?','Nicht schütteln!'],
+    stack:['Unterm Baum wird es voll!','Ordentlich gestapelt, wie in der Werkstatt.','Noch ein Päckchen!','Die Bescherung naht!'],
+    open:['Bescherung!','Oh, was glänzt da?','Genau das wollte ich!','Auspacken ist das Beste.'],
+    recruit:['Frisch vom Nordpol!','Bin noch in Geschenkpapier!','Wer hat mich bestellt?'],
+    hit:['Au, meine Mütze!','Mein Bommel!','He, das war Lametta!','Kalt, kalt, kalt!','Das gibt Beulen im Lack!'],
+    kill:['Ab in den Kamin!','Kein Geschenk für dich!','Fröhliche Verschrottung!','Rute statt Päckchen!'],
+    steal:['Danke fürs Einpacken!','Das kommt unter meinen Baum.','Frühe Bescherung!'],
+    empty:['Keine Kugeln mehr! Zurück zum Knipser.','Klingeling. Leer.'],
+    idle:['Riecht nach Plätzchen hier.','Wer hat die Geschenke bestellt?','Mir ist kalt an den Schrauben.','Hörst du die Glöckchen?']
+  });
+
   window.xmasSleigh=sleigh;   // for tests
   // the menu's demo round was built before the costumes existed: rebuild it
   if(state==='menu')newGame(true);

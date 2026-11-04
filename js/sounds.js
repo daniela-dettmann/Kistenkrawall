@@ -55,6 +55,13 @@ const SND=(function(){
     repair(c){[N.C6,N.G5,N.C6,N.E6].forEach((f,i)=>osc(c,'triangle',f,f,i*0.09,0.2,0.045,0.004));},
     ammo(c){for(let i=0;i<3;i++){noise(c,i*0.09,0.05,0.07,'bandpass',2600-i*300,2000,2.5);osc(c,'square',900-i*120,700-i*120,i*0.09,0.04,0.03);}},
     whistle(c){const o=osc(c,'sine',1350,520,0,0.6,0.04,0.04);wobble(o,c,0,7,14,0.6);},
+    xhit(c){[2093,3136,4186].forEach((f,i)=>osc(c,'sine',f,f,0,0.22-i*0.05,0.045-i*0.01,0.002));},
+    sleigh(c){
+      // a shaken string of sleigh bells, swelling in and fading out
+      for(let i=0;i<14;i++){const t=i*0.11+Math.random()*0.02,v=Math.sin(Math.PI*(i+0.5)/14);
+        noise(c,t,0.09,0.06*v,'bandpass',8200,7600,2.5);
+        [3150,4370,5230].forEach(f=>osc(c,'sine',f*(1+Math.random()*0.01),f,t,0.1,0.012*v,0.001));}
+    },
     drum(c){
       // gentle snare roll that swells, then a soft low tom
       const n=16,len=1.0;
@@ -68,7 +75,8 @@ const SOUND_LIST=[
   ['Treffer & Explosion',[['hit','Treffer'],['boom','Explosion']]],
   ['Kisten',[['pick','Kiste aufnehmen'],['stack','Kiste stapeln'],['open','Stapel öffnen'],['gold','Sonderkiste'],['recruit','Neuer Blechling']]],
   ['Werkstatt (gelbe Kisten)',[['ammo','Munition'],['repair','Reparatur'],['tempo','Tempo-Schub'],['shield','Schutzschild'],['build','Turm bauen']]],
-  ['Signale & Luftschlag',[['drum','Angriffssignal'],['plane','Flieger im Anflug'],['whistle','Bombe fällt']]]
+  ['Signale & Luftschlag',[['drum','Angriffssignal'],['plane','Flieger im Anflug'],['whistle','Bombe fällt']]],
+  ['Weihnachten',[['xhit','Treffer (Glöckchen)'],['sleigh','Schlittenglocken']]]
 ];
 function playSound(AC,noiseBuf,kind,vol,dest){
   const f=SND[kind];if(!f||!AC)return;
