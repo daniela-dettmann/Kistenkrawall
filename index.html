@@ -104,7 +104,9 @@
 </div>
 
 <div id="menu">
+  <div id="xsnow" aria-hidden="true"></div>
   <div class="panel" id="panelStart">
+    <div class="xribbon" aria-hidden="true"><span>Weihnachtsedition</span></div>
     <h1 class="logo">Kisten<span>krawall</span></h1>
     <button class="go resume" id="continueBtn" hidden>Weiterspielen<small id="continueInfo"></small></button>
     <p class="lead">Deine Blechbande Orange gegen die Blechbande Petrol. Schnapp dir die Kisten, die vom Himmel fallen, stapel sie auf deiner Plattform und pack sie aus. Wer das gegnerische Hauptquartier sprengt oder alle Gegner verschrottet, gewinnt.</p>
@@ -125,6 +127,7 @@
       </div>
     </div>
 <div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><div class="sndSliders"><label class="sndVol">Effekte <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Effekte"></label><label class="musVol">Musik <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Musik"></label></div></div>
+    <button class="go2" id="xmasToggle" aria-pressed="true" hidden>Weihnachtsedition: an</button>
     <button class="go2" id="helpBtn">Wie wird gespielt?</button>
     <button class="go" id="startBtn">Los geht's</button>
     <p class="ver" id="verLine"></p>
@@ -233,6 +236,7 @@
 <script src="js/hud.js"></script>
 <script src="js/game.js"></script>
 <script src="js/save.js"></script>
+<script src="js/xmas.js"></script>
 <script src="js/update.js"></script>
 
 <script>
