@@ -87,8 +87,11 @@ async function main() {
   await page.waitForSelector('#startBtn', { state: 'visible' });
   check(await page.evaluate(() => typeof THREE === 'object' && THREE.REVISION === '128'), 'three.js r128 geladen');
   check(await page.evaluate(() => document.fonts.check("20px 'Bowlby One SC'")), 'Schrift Bowlby One SC geladen');
+  // software rendering makes the start slow, so record whether the hint ever appeared instead of looking at one moment
+  await page.evaluate(() => { const el = document.querySelector('#joyHint'); new MutationObserver(() => { if (!el.hidden) window.__jhShown = true; }).observe(el, { attributes: true }); });
   await page.click('#startBtn', { force: true });
   await page.waitForSelector('#hud', { state: 'visible' });
+  check(await page.evaluate(() => window.__jhShown === true), 'Starthinweis erscheint bei neuem Spiel');
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => renderer.info.render.calls > 50), '3D-Szene wird gezeichnet');
   check(await page.evaluate(() => state === 'play' && units.length >= 6), 'Runde läuft mit beiden Teams');
@@ -166,6 +169,7 @@ async function main() {
   await page.click('#continueBtn', { force: true });
   await page.waitForTimeout(500);
   check(await page.evaluate(() => state === 'pause'), 'Fortsetzen startet im Pausenmenü');
+  check(await page.$eval('#joyHint', el => el.hidden), 'kein Starthinweis nach dem Fortsetzen');
   const after = await sum();
   for (const k of Object.keys(saved)) {
     const same = JSON.stringify(saved[k]) === JSON.stringify(after[k]);
