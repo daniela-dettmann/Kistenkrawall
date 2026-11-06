@@ -280,17 +280,18 @@ async function main() {
     const code = await host.textContent('#netCode');
     check(/^[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/.test(code), 'Raumcode gut lesbar, ohne 0/O/1/I/L: ' + code);
     const join = async (p, c) => { await p.click('#netBtn', { force: true }); await p.click('#netJoinBtn', { force: true }); await p.fill('#netCodeIn', c); await p.click('#netJoinGo', { force: true }); };
+    const third = await mkPage('Dritter');
+    await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'andere-version');
+    await join(third, code);
+    await third.waitForFunction(() => /Version/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
+    check(/aktualisier/.test(await third.textContent('#netStatus')), 'andere Spielversion: Hinweis „bitte aktualisieren“');
+    await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'aaa111');
     await join(guest, code);
     await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled);
     ok('Gast ist dem Raum beigetreten');
-    const third = await mkPage('Dritter');
-    await join(third, code);
+    await third.fill('#netCodeIn', code); await third.click('#netJoinGo', { force: true });
     await third.waitForFunction(() => /voll/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
     { const t = await third.textContent('#netStatus'); check(/voll/.test(t), 'ein weiterer Beitritt wird abgelehnt (' + t + ')'); }
-    await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'andere-version');
-    await third.fill('#netCodeIn', code); await third.click('#netJoinGo', { force: true });
-    await third.waitForFunction(() => /Version/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
-    check(/aktualisier/.test(await third.textContent('#netStatus')), 'andere Spielversion: Hinweis „bitte aktualisieren“');
     await third.context().close();
     await host.click('#netStartBtn', { force: true });
     await guest.waitForFunction(() => MP === 'guest' && player && player.team === 1 && units.length >= 6);
