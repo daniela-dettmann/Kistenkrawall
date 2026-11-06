@@ -263,6 +263,64 @@ async function main() {
   check(await page.evaluate(() => XMAS && MOUNTAIN && units.filter(u => u.kind === 'bot').every(u => u.bot.costume) && crates.every(c => c.bow) && !!window.xmasSleigh), 'Weihnachtsedition auf dem Gebirge');
   await page.evaluate(() => { endGame(true, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
 
+  console.log('Mehrspieler');
+  await page.goto('about:blank');   // free the CPU: software rendering of several pages at once is slow
+  {
+    // local signalling server instead of the public PeerJS cloud
+    const { PeerServer } = require('peer');
+    const pport = 9124, ps = PeerServer({ port: pport, host: '127.0.0.1', path: '/' });
+    await new Promise(r => setTimeout(r, 500));
+    const q = '?normal&peerserver=127.0.0.1:' + pport;
+    const mkPage = async name => { const c = await browser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
+      p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 120000 }); await p.waitForSelector('#startBtn', { state: 'visible', timeout: 120000 }); return p; };
+    const host = await mkPage('Host'), guest = await mkPage('Gast');
+    await host.evaluate(() => localStorage.setItem('kk-save', '{"format":1,"marker":"einzelspieler"}'));
+    await host.click('#netBtn', { force: true }); await host.click('#netHostBtn', { force: true });
+    await host.waitForFunction(() => /Warte/.test(document.querySelector('#netStatus').textContent));
+    const code = await host.textContent('#netCode');
+    check(/^[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/.test(code), 'Raumcode gut lesbar, ohne 0/O/1/I/L: ' + code);
+    const join = async (p, c) => { await p.click('#netBtn', { force: true }); await p.click('#netJoinBtn', { force: true }); await p.fill('#netCodeIn', c); await p.click('#netJoinGo', { force: true }); };
+    await join(guest, code);
+    await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled);
+    ok('Gast ist dem Raum beigetreten');
+    const third = await mkPage('Dritter');
+    await join(third, code);
+    await third.waitForFunction(() => /voll/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
+    { const t = await third.textContent('#netStatus'); check(/voll/.test(t), 'ein weiterer Beitritt wird abgelehnt (' + t + ')'); }
+    await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'andere-version');
+    await third.fill('#netCodeIn', code); await third.click('#netJoinGo', { force: true });
+    await third.waitForFunction(() => /Version/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
+    check(/aktualisier/.test(await third.textContent('#netStatus')), 'andere Spielversion: Hinweis „bitte aktualisieren“');
+    await third.context().close();
+    await host.click('#netStartBtn', { force: true });
+    await guest.waitForFunction(() => MP === 'guest' && player && player.team === 1 && units.length >= 6);
+    check(await host.evaluate(() => MP === 'host' && player.team === 0 && player2 && player2.team === 1), 'Spiel läuft: Host spielt Orange, Gast Petrol');
+    check(await host.evaluate(() => teams[1].wave.phase === 'idle' && aiParams(1) === ALLY), 'faire KI: beide Teams wie Mitstreiter, keine Petrol-Wellen');
+    const z0 = await host.evaluate(() => player2.z);
+    await guest.keyboard.down('w'); await guest.waitForTimeout(2500); await guest.keyboard.up('w');
+    check(await host.evaluate(z => Math.abs(player2.z - z) > 0.5, z0), 'Eingaben des Gasts bewegen seinen Blechling beim Host');
+    check(await guest.evaluate(() => crates.length > 0 && units.every(u => !u.alive || u.tx !== undefined)), 'Gast zeigt Blechlinge und Kisten des Hosts');
+    await guest.evaluate(() => { netDebug.send({ t: 'in', mx: 9, mz: 0, a: null, f: true }); netDebug.send({ t: 'act', a: 'eval(1)' }); netDebug.send({ t: 'x', html: '<img src=x onerror=alert(1)>' }); netDebug.send('<b>hi</b>'); });
+    await host.waitForTimeout(800);
+    check(await host.evaluate(() => NET.stats.invalid >= 4 && MP === 'host'), 'ungültige Nachrichten werden verworfen');
+    await host.click('#pauseBtn', { force: true }); await guest.waitForTimeout(1000);
+    check(await guest.evaluate(() => state === 'pause'), 'Pause gilt für beide');
+    await host.click('#resumeBtn', { force: true }); await guest.waitForTimeout(1000);
+    check(await guest.evaluate(() => state === 'play'), 'Weiter gilt für beide');
+    await guest.evaluate(() => netDebug.drop());
+    await host.waitForFunction(() => !document.querySelector('#netOverlay').hidden, null, { timeout: 15000 }).catch(() => {});
+    check(await host.evaluate(() => !document.querySelector('#netOverlay').hidden && state === 'pause'), 'Abbruch: pausiert und zeigt „Verbindung verloren“');
+    await host.waitForFunction(() => document.querySelector('#netOverlay').hidden, null, { timeout: 30000 }).catch(() => {});
+    check(await host.evaluate(() => document.querySelector('#netOverlay').hidden && NET.conn && NET.conn.open), 'Gast verbindet sich von selbst wieder');
+    check(await host.evaluate(() => JSON.parse(localStorage.getItem('kk-save')).marker === 'einzelspieler'), 'Einzelspieler-Spielstand bleibt unberührt');
+    await host.click('#pauseBtn', { force: true }).catch(() => {});
+    await host.evaluate(() => toMenu());
+    await guest.waitForFunction(() => MP === null, null, { timeout: 15000 }).catch(() => {});
+    check(await guest.evaluate(() => MP === null && state === 'menu'), 'Host verlässt das Spiel: endet auch für den Gast');
+    await host.evaluate(() => localStorage.removeItem('kk-save'));
+    await host.context().close(); await guest.context().close();
+  }
+
   console.log('Update-Hinweis');
   await page.goto(base);
   await page.waitForSelector('#startBtn', { state: 'visible' });
