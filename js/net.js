@@ -265,7 +265,8 @@ function joinRoom(raw){
   const peer=NET.peer=new Peer(peerOpts());
   peer.on('open',()=>guestConnect());
   peer.on('error',e=>{
-    if(e.type==='peer-unavailable'){if(NET.started&&NET.lostAt)return;netStatus('Kein Raum mit diesem Code gefunden.');return;}
+    // the room is gone: during a round that means the host has left, so end it at once instead of waiting a minute
+    if(e.type==='peer-unavailable'){if(NET.started){leaveMultiplayer('Dein Gegner hat das Spiel verlassen.');return;}netStatus('Kein Raum mit diesem Code gefunden.');return;}
     if(e.type==='network'||e.type==='server-error'||e.type==='socket-error')netStatus('Keine Verbindung zum Vermittlungsserver. Prüfe das Internet.');
   });
   peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{peer.reconnect();}catch(e){}},2000);});
