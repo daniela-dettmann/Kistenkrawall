@@ -262,6 +262,7 @@ if(XMAS)(function(){
     m.position.copy(old.position);m.rotation.y=old.rotation.y;m.castShadow=true;m.userData.xmas=true;
     return m;
   }
+  window.xmasShotMesh=(w,old)=>shotMesh(w,old);   // the multiplayer guest builds shots itself
   const _fire=fire;
   fire=function(u,ang,cdMul,tgt){
     const n=shots.length,ok=_fire(u,ang,cdMul,tgt);

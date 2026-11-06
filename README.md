@@ -62,6 +62,16 @@ Eine laufende Partie wird automatisch gespeichert, sobald das Spiel pausiert (au
 
 Im Startmenü lässt sich zwischen **Insel** und **Gebirge** wählen. Beide folgen demselben Grundriss: Eine unpassierbare Mitte (Fluss bzw. Schlucht) wird bei x = −18 und x = +18 überquert, in der Mitte jedes Übergangs liegt ein Plateau, auf dem die Kisten landen. Deshalb funktionieren Bewegung und KI auf beiden Karten gleich. Auf dem Gebirge ist links eine breite Brücke, rechts ein enger Pass. Das Höhenprofil steht in `js/core.js` (`hgtMountain`), Licht, Horizont, Schneetreiben und Adler in `js/mountain.js`. Die Welt wird beim Laden gebaut, ein Kartenwechsel lädt die Seite neu. Zum Testen: `?karte=gebirge` oder `?karte=insel`.
 
+## Mehrspieler (1 gegen 1)
+
+„Gegen Freund spielen“ im Startmenü: Eine Person erstellt einen Raum und gibt den 8-stelligen Code weiter, die andere tritt bei. Die Geräte verbinden sich direkt und verschlüsselt per WebRTC; den Verbindungsaufbau vermittelt der kostenlose öffentliche PeerJS-Server (sieht die IP-Adressen, nicht das Spiel). Im gleichen WLAN läuft die Verbindung automatisch lokal.
+
+- Der Host (Orange) rechnet das Spiel und schickt etwa zehnmal pro Sekunde den Stand, der Gast (Petrol) schickt nur seine Eingaben. Beide Teams haben gleich starke KI-Mitstreiter, automatische Wellen gibt es im Mehrspieler nicht.
+- Raumcodes aus kryptografischem Zufall ohne 0/O/1/I/L, Ablauf nach 10 Minuten ohne Beitritt, nur ein Gast, Versionsvergleich, Prüfung jeder Nachricht (Format, Werte, Größe, Häufigkeit), kein Chat, keine persönlichen Daten.
+- Abbruch: beide pausieren, 60 Sekunden lang verbindet sich der Gast selbst wieder. Verlässt der Host das Spiel, endet es für beide. Der Einzelspieler-Spielstand bleibt unberührt.
+- TURN-Server: noch keiner. Er wird in `js/net.js` unter `NET_CFG.turn` eingetragen, falls Verbindungen übers Internet scheitern.
+- Code: `js/net.js`, Bibliothek `vendor/peerjs-1.5.4.min.js`. Der Test nutzt einen lokalen PeerServer (`?peerserver=127.0.0.1:PORT`, nur auf localhost erlaubt).
+
 ## Weihnachtsedition
 
 Vom 1. November bis 10. Januar schaltet sich jedes Jahr automatisch die Weihnachtsedition ein (Datum des Geräts): Banderole im Startmenü, Blechlinge als Weihnachtsmänner, Elfen und Schneemänner, Christbaumkugeln statt Kugeln, Schlitten statt Panzer (verschießt Geschenke), Motorschlitten, Schneeball-Katapult, Nussknacker-Türme, Lebkuchenhäuser, Geschenkkisten mit Schleife, verschneite Landschaft mit geschmückten Tannen, Lichterketten, Eisschollen und Schneefall, und statt der Möwen fliegt ab und zu der Weihnachtsmann mit Rentieren vorbei. Dazu läuft weihnachtliche Musik (Jingle Bells als Funk und Breakbeat, O Tannenbaum als Jazzwalzer, beide gemeinfrei), Treffer klingen nach Glöckchen, der Schlitten bringt Schlittenglocken mit, und die Blechlinge haben weihnachtliche Namen und Sprüche. Im Menü lässt sie sich abschalten. Zum Ausprobieren außerhalb der Saison: `?weihnachten` an die Adresse hängen, `?normal` erzwingt die normale Version.

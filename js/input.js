@@ -43,8 +43,8 @@ function toggleCam(){
   camManualT=0;syncCam();toast(camMode==='taktik'?'Taktik-Ansicht':'Schulterblick',1);
 }
 $('#zoomBtn').addEventListener('click',toggleCam);
-function syncCollect(){const c=teams[0].collect||'blau';const b=$('#bCollect');b.dataset.c=c;$('#collectLbl').textContent=c==='gelb'?'Team: Gelb':'Team: Blau';}
-function setCollect(c,quiet){teams[0].collect=c;syncCollect();for(const u of units)if(u.team===0&&u.plan==='fetch')u.thinkT=0;if(!quiet)toast(c==='gelb'?'Team sammelt jetzt gelbe Kisten':'Team sammelt jetzt blaue Kisten',1.5);}
+function syncCollect(){const c=teams[player?player.team:0].collect||'blau';const b=$('#bCollect');b.dataset.c=c;$('#collectLbl').textContent=c==='gelb'?'Team: Gelb':'Team: Blau';}
+function setCollect(c,quiet){if(MP==='guest'){netSendAct('collect');return;}teams[0].collect=c;syncCollect();for(const u of units)if(u.team===0&&u.plan==='fetch')u.thinkT=0;if(!quiet)toast(c==='gelb'?'Team sammelt jetzt gelbe Kisten':'Team sammelt jetzt blaue Kisten',1.5);}
 $('#bCollect').addEventListener('pointerdown',e=>{e.preventDefault();flashBtn(e.currentTarget);setCollect(teams[0].collect==='gelb'?'blau':'gelb');});
 /* Swipe anywhere on the right half to turn the view (shoulder) or the aim (tactical) */
 let look={id:null,x:0},swipeAim=null,swipeT=-1e9;
@@ -119,6 +119,7 @@ function openAction(){
 }
 function swapUnit(){
   if(state!=='play'||!player)return;
+  if(MP==='guest'){netSendAct('swap');return;}
   const mine=teamUnits(0);if(mine.length<2)return;
   const i=mine.indexOf(player);setPlayer(mine[(i+1)%mine.length]);
 }
@@ -184,6 +185,7 @@ function contextFor(u){
 const ACT_LABEL={place:'Bauen',pick:'Nehmen',stack:'Stapeln',toss:'Werfen',open:'Öffnen',steal:'Klauen',none:'Kiste'};
 function contextAction(){
   const u=player;if(!u||!u.alive||state!=='play')return;
+  if(MP==='guest'){netSendAct('action');return;}
   const c=contextFor(u);
   if(c.m==='place')tryPlace();
   else if(c.m==='open')openAction();

@@ -212,7 +212,7 @@ function addToPad(c,pad,u){
   c.state='stack';c.claim=0;pad.stack.push(c);placeStacked(pad);
   sfx('stack',pad.x,pad.z);
   if(c.gold){sfx('gold',pad.x,pad.z);puffs(pad.x,pad.top+1,pad.z,6,0xffd257,{size:.7});
-    if(pad.team===0)toast('Sonderkiste! Die nächste Öffnung wird verstärkt',2.4);else if(player)toast('Petrol hat eine Sonderkiste gestapelt',2);}
+    if(pad.team===(player?player.team:0))toast('Sonderkiste! Die nächste Öffnung wird verstärkt',2.4);else if(player)toast((pad.team?'Petrol':'Orange')+' hat eine Sonderkiste gestapelt',2);}
   if(u){say(u,'stack');if(u===player)stats.stacked++;}
   return true;
 }
@@ -228,7 +228,7 @@ function stealCrate(u,pad){const c=pad.stack.pop();if(!c)return;if(c.gold&&pad.t
 function openStack(u){
   const pad=pads[u.team],n=pad.stack.length,sort=stackSort(pad),rw=rewardFor(n,sort);if(!rw)return;
   const boost=pad.stack.some(c=>c.gold);
-  const gl=boost?'Goldener ':'',me=u.team===0;
+  const gl=boost?'Goldener ':'',me=u.team===(player?player.team:0);
   for(const c of pad.stack.slice()){puffs(c.x,c.y,c.z,3,c.sort==='gelb'?0xffc928:c.gold?0xffd257:0x5aa0ff);removeCrate(c);}
   pad.stack=[];
   sfx('open',pad.x,pad.z);
@@ -294,7 +294,7 @@ function openStack(u){
       break;}
     default:{
       let r=u;
-      if(me){const pool=teamUnits(0).filter(o=>!isVeh(o));if(pool.length)r=pick(pool);}
+      if(me){const pool=teamUnits(u.team).filter(o=>!isVeh(o));if(pool.length)r=pick(pool);}
       if(!isVeh(r)){
         setWeapon(r,made,boost);say(r,'open',true);puffs(r.x,hgt(r.x,r.z)+1.2,r.z,boost?10:4,0xffe08a,{size:.6});
         if(me)toast(r===player?`Du bekommst: ${gl}${REWARD_LABEL[made]}!`:`${r.name} bekommt: ${gl}${REWARD_LABEL[made]}`,2);
@@ -338,7 +338,7 @@ function turretUpdate(u,dt){
   if(!best){u.aimAt=null;u.h+=dt*0.35;return;}
   u.aimAt=best;const want=Math.atan2(best.x-u.x,best.z-u.z);
   u.h+=clamp(angDiff(want,u.h),-4*dt,4*dt);
-  if(Math.abs(angDiff(want,u.h))<0.15)fire(u,u.h+rand(-.05,.05),u.team===1?Math.max(1,D.cdMul*0.8):1,best);
+  if(Math.abs(angDiff(want,u.h))<0.15)fire(u,u.h+rand(-.05,.05),(u.team===1&&!MP)?Math.max(1,D.cdMul*0.8):1,best);
 }
 let placeQueue=[];
 const ghost=(function(){
@@ -361,5 +361,5 @@ function tryPlace(){
   const q=placeQueue.shift();buildTurret(0,p.x,p.z,q.boost);
   toast(placeQueue.length?'Turm steht! Noch einer zu bauen.':'Geschützturm steht!',1.6);
 }
-function roleFor(t){const us=teamUnits(t).filter(u=>u.kind==='bot');const s=us.filter(u=>u.role==='sammler').length;const share=t===1?D.collect:0.5;return s<(us.length+1)*share?'sammler':'kaempfer';}
-function pickTarget(t){const n=teamUnits(t).length;const opts=(t===1?D:ALLY).targets;return n<3?4:pick(opts);}
+function roleFor(t){const us=teamUnits(t).filter(u=>u.kind==='bot');const s=us.filter(u=>u.role==='sammler').length;const share=aiParams(t).collect;return s<(us.length+1)*share?'sammler':'kaempfer';}
+function pickTarget(t){const n=teamUnits(t).length;const opts=aiParams(t).targets;return n<3?4:pick(opts);}

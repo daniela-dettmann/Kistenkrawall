@@ -55,6 +55,7 @@ function snapshot(){
 }
 
 function writeSave(){
+  if(MP)return false;   // a multiplayer round never overwrites the single-player save
   if(state!=='play'&&state!=='pause')return false;
   try{
     localStorage.setItem(SAVE_KEY,JSON.stringify(snapshot(),saveReplacer));
@@ -67,11 +68,11 @@ function readSave(){
   try{
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)return null;
     const s=JSON.parse(raw,saveReviver);
-    if(!s||s.format!==SAVE_FORMAT){clearSave();toast('Dein alter Spielstand passt nicht zu dieser Version und wurde verworfen.',3);return null;}
+    if(!s||s.format!==SAVE_FORMAT||!s.g||!Array.isArray(s.units)){clearSave();toast('Dein alter Spielstand passt nicht zu dieser Version und wurde verworfen.',3);return null;}
     return s;
   }catch(e){clearSave();return null;}
 }
-function clearSave(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}refreshResume();}
+function clearSave(){if(MP)return;try{localStorage.removeItem(SAVE_KEY);}catch(e){}refreshResume();}
 
 function restore(s){
   clearWorld();
@@ -128,7 +129,8 @@ function saveSummary(s){
 }
 function refreshResume(){
   let s=null;try{const raw=localStorage.getItem(SAVE_KEY);s=raw?JSON.parse(raw,saveReviver):null;}catch(e){}
-  const ok=!!(s&&s.format===SAVE_FORMAT);
+  let ok=!!(s&&s.format===SAVE_FORMAT&&s.g&&Array.isArray(s.units));
+  if(ok)try{saveSummary(s);}catch(e){ok=false;}   // an incomplete save is simply not offered
   const btn=$('#continueBtn');btn.hidden=!ok;
   if(ok)$('#continueInfo').textContent=saveSummary(s);
   const start=$('#startBtn');start.className=ok?'go2':'go';start.textContent=ok?'Neues Spiel':"Los geht's";
