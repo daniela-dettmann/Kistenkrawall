@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 6. November 2026 · Live-Version auf `main`: `f443221` (PR #15)
+Stand: 6. November 2026 · Live-Version auf `main`: `2313272` (PR #16)
 
 ## Links
 
@@ -30,6 +30,7 @@ Stand: 6. November 2026 · Live-Version auf `main`: `f443221` (PR #15)
 | #14 | Anleitung zur Drive-Pflege korrigiert (neue Datei hochladen, alte in den Papierkorb) | gemergt |
 | #15 | Zweite Karte „Gebirge“ mit Kartenwahl, Schlucht, breiter Brücke, engem Pass und Schneetreiben | gemergt |
 | #16 | Mehrspieler 1 gegen 1 über Raumcode (WebRTC/PeerJS), Host rechnet, faire KI für beide Teams | gemergt |
+| #17 | Kein versehentliches Reinzoomen mehr auf dem Handy; Durchblick-Loch im Gebirge, damit Hänge die Figur nicht verdecken | gemergt |
 
 ## Was umgesetzt ist
 
@@ -60,6 +61,7 @@ Stand: 6. November 2026 · Live-Version auf `main`: `f443221` (PR #15)
 - Code aufgeteilt in Stil und einzelne Skripte (Welt, Einheiten, Kampf, KI, Steuerung, HUD, Audio, Musik, Spielstand, Updates, Weihnachten).
 - Ein einzelner Fehler hält das Spiel nicht mehr an. Erst bei vielen Fehlern hintereinander oder einer fehlenden Datei erscheint ein Fehlerbildschirm mit „Neu laden“.
 - Automatische Pause, wenn die App in den Hintergrund geht.
+- Die Seite lässt sich nicht mehr versehentlich zoomen (Doppeltipp oder zwei Finger beim Steuern).
 - Setzt das Gerät die 3D-Grafik zurück, pausiert das Spiel mit einem Hinweis.
 
 ### Spielstand
@@ -74,6 +76,7 @@ Stand: 6. November 2026 · Live-Version auf `main`: `f443221` (PR #15)
 - Zwei Wege führen über die Schlucht: links eine breite Holzbrücke, rechts ein enger Pass zwischen hohen Felswänden. Beide sind breit genug für Panzer und Fahrzeuge.
 - Die Kisten landen auf offenen Plateaus in der Mitte beider Wege, gleich weit von beiden Basen entfernt (blau bei der Brücke, gelb am Pass).
 - Felsen, Eis, bereifte Büsche, nur Tannen, ständiges Schneetreiben, kühleres Licht. Statt Möwen kreisen Adler.
+- Durchblick-Loch: Die Kamera bleibt starr; Gelände zwischen Kamera und eigener Figur wird in einem weichen Kreis ausgeblendet, damit ein Hang am Rand die Figur nie verdeckt.
 - Bewegung und KI-Wege funktionieren wie auf der Insel. Geprüft: Blechling, Panzer und Buggy beider Teams kommen über Brücke und Pass, keiner bleibt hängen.
 - Der Spielstand merkt sich die Karte. „Weiterspielen“ lädt bei Bedarf zuerst die richtige Karte. Alte Spielstände ohne Kartenangabe gelten als Insel.
 - Die Weihnachtsedition gilt auf beiden Karten. Auf dem Gebirge hängen die Lichterketten an der Brücke, statt eines zweiten Schneefalls läuft das Schneetreiben.

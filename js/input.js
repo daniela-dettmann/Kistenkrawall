@@ -2,6 +2,12 @@
 'use strict';
 /* ---------- Input ---------- */
 const keys={};
+/* No page zoom: on iPhones a quick double tap or two fingers at once (stick + fire) used to zoom the whole page,
+   and only rotating the phone reset it. Safari partly ignores user-scalable=no, so block the gestures as well. */
+for(const ev of ['gesturestart','gesturechange','gestureend'])document.addEventListener(ev,e=>e.preventDefault(),{passive:false});
+document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+{let lastEnd=0;document.addEventListener('touchend',e=>{const now=performance.now();if(now-lastEnd<350&&e.cancelable&&!(e.target.closest&&e.target.closest('input,textarea')))e.preventDefault();lastEnd=now;},{passive:false});}
+document.addEventListener('touchmove',e=>{if(e.touches.length>1&&e.cancelable&&e.scale!==undefined&&e.scale!==1)e.preventDefault();},{passive:false});
 const joy={x:0,y:0,id:null};
 const aimStick={x:0,y:0,id:null};
 let fireHeld=false,mouseAim=null,mouseFire=false,portraitOk=false;
