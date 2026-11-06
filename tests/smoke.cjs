@@ -86,6 +86,7 @@ async function main() {
   await page.goto(base);
   await page.waitForSelector('#startBtn', { state: 'visible' });
   check(await page.evaluate(() => typeof THREE === 'object' && THREE.REVISION === '128'), 'three.js r128 geladen');
+  check(await page.evaluate(() => /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content)), 'Seite lässt sich nicht versehentlich zoomen');
   check(await page.evaluate(() => document.fonts.check("20px 'Bowlby One SC'")), 'Schrift Bowlby One SC geladen');
   // software rendering makes the start slow, so record whether the hint ever appeared instead of looking at one moment
   await page.evaluate(() => { const el = document.querySelector('#joyHint'); new MutationObserver(() => { if (!el.hidden) window.__jhShown = true; }).observe(el, { attributes: true }); });

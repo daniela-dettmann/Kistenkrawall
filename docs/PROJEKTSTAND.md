@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 6. November 2026 · Live-Version auf `main`: `f443221` (PR #15)
+Stand: 6. November 2026 · Live-Version auf `main`: `2313272` (PR #16)
 
 ## Links
 
@@ -30,6 +30,7 @@ Stand: 6. November 2026 · Live-Version auf `main`: `f443221` (PR #15)
 | #14 | Anleitung zur Drive-Pflege korrigiert (neue Datei hochladen, alte in den Papierkorb) | gemergt |
 | #15 | Zweite Karte „Gebirge“ mit Kartenwahl, Schlucht, breiter Brücke, engem Pass und Schneetreiben | gemergt |
 | #16 | Mehrspieler 1 gegen 1 über Raumcode (WebRTC/PeerJS), Host rechnet, faire KI für beide Teams | gemergt |
+| #17 | Kein versehentliches Reinzoomen mehr auf dem Handy (Doppeltipp, zwei Finger) | gemergt |
 
 ## Was umgesetzt ist
 
@@ -60,6 +61,7 @@ Stand: 6. November 2026 · Live-Version auf `main`: `f443221` (PR #15)
 - Code aufgeteilt in Stil und einzelne Skripte (Welt, Einheiten, Kampf, KI, Steuerung, HUD, Audio, Musik, Spielstand, Updates, Weihnachten).
 - Ein einzelner Fehler hält das Spiel nicht mehr an. Erst bei vielen Fehlern hintereinander oder einer fehlenden Datei erscheint ein Fehlerbildschirm mit „Neu laden“.
 - Automatische Pause, wenn die App in den Hintergrund geht.
+- Die Seite lässt sich nicht mehr versehentlich zoomen (Doppeltipp oder zwei Finger beim Steuern).
 - Setzt das Gerät die 3D-Grafik zurück, pausiert das Spiel mit einem Hinweis.
 
 ### Spielstand
