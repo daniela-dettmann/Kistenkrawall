@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 6. November 2026 · Live-Version auf `main`: `950b9bd` (PR #14)
+Stand: 6. November 2026 · Live-Version auf `main`: `f443221` (PR #15)
 
 ## Links
 
@@ -29,6 +29,7 @@ Stand: 6. November 2026 · Live-Version auf `main`: `950b9bd` (PR #14)
 | #13 | Projektstand im Repo (`docs/PROJEKTSTAND.md`), Anleitung zur Pflege in Google Drive (`CLAUDE.md`) | gemergt |
 | #14 | Anleitung zur Drive-Pflege korrigiert (neue Datei hochladen, alte in den Papierkorb) | gemergt |
 | #15 | Zweite Karte „Gebirge“ mit Kartenwahl, Schlucht, breiter Brücke, engem Pass und Schneetreiben | gemergt |
+| #16 | Mehrspieler 1 gegen 1 über Raumcode (WebRTC/PeerJS), Host rechnet, faire KI für beide Teams | gemergt |
 
 ## Was umgesetzt ist
 
@@ -78,6 +79,15 @@ Stand: 6. November 2026 · Live-Version auf `main`: `950b9bd` (PR #14)
 - Die Weihnachtsedition gilt auf beiden Karten. Auf dem Gebirge hängen die Lichterketten an der Brücke, statt eines zweiten Schneefalls läuft das Schneetreiben.
 - Die Musik ist auf beiden Karten dieselbe.
 
+### Mehrspieler (1 gegen 1)
+- Startmenü: „Gegen Freund spielen“ mit „Raum erstellen“ (Code anzeigen, kopieren, teilen) und „Raum beitreten“ (Code eingeben). Karte und Bauruhe wählt der Host vorher im Startmenü.
+- Direkte, verschlüsselte WebRTC-Verbindung, Vermittlung über den öffentlichen PeerJS-Server. Im gleichen WLAN läuft sie lokal. Noch kein TURN-Server, der Platz dafür ist vorbereitet (`NET_CFG.turn` in `js/net.js`).
+- Der Host spielt Orange und rechnet das Spiel, der Gast spielt Petrol, schickt nur Eingaben und bekommt etwa zehnmal pro Sekunde den Stand. Seine eigene Figur bewegt sich sofort und wird sanft korrigiert.
+- Faire Regeln: beide Teams mit gleich starken KI-Mitstreitern, keine automatischen Wellen.
+- Sicherheit: Raumcode aus kryptografischem Zufall (8 Zeichen ohne 0/O/1/I/L), Ablauf nach 10 Minuten, nur ein Gast, Versionsvergleich mit Hinweis „bitte aktualisieren“, jede Nachricht geprüft (Format, Werte, Größe, Häufigkeit), Texte nur als Text angezeigt, kein Chat, keine persönlichen Daten.
+- Pause und App im Hintergrund pausieren beide. Bei Abbruch „Verbindung verloren“, 60 Sekunden automatisches Wiederverbinden. Verlässt der Host das Spiel, endet es für beide. Der Einzelspieler-Spielstand wird nie überschrieben.
+- Der Gast sieht Explosionen, Töne, Schüsse und seine Meldungen. Flieger beim Luftschlag sieht er nicht, nur die Einschläge.
+
 ### Weihnachtsedition (jedes Jahr 1. November bis 10. Januar)
 - Startbildschirm: schräge rot-weiße Banderole „Weihnachtsedition“, Weihnachtsmütze auf dem K, Schneehaube auf „KISTEN“, Schneefall. Schalter zum Abschalten.
 - Blechlinge reihum als Weihnachtsmann, Elf und Schneemann, mit Mützenrand bzw. Hutband in Teamfarbe.
@@ -99,6 +109,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Musik: richtige Stücke in Menü, Bauruhe, Welle und am Rundenende, Standardlautstärken
 - Weihnachtsedition: Saisongrenzen, Kostüme, Geschenkkisten, Geschosse, Schlitten, Musik, Namen
 - Gebirge: Kartenwahl, Höhen von Schlucht, Brücke, Pass und Tal, Wegfindung über beide Wege, Runde mit Schneetreiben, Spielstand mit Karte, Weihnachtsedition auf dem Gebirge
+- Mehrspieler mit zwei Browsern und lokalem Vermittlungsserver: Raumcode, Beitritt, voller Raum, Versionsunterschied, Rollen, faire KI, Steuerung des Gasts, ungültige Nachrichten, Pause, Abbruch und Wiederverbinden, Einzelspieler-Spielstand unberührt, Host verlässt das Spiel
 - Tonstudio und Update-Hinweis
 
 ## Projektstruktur
@@ -113,7 +124,8 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 | `js/xmas.js` | Weihnachtsedition |
 | `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
 | `js/update.js` | Update-Hinweis und Versionsanzeige |
-| `vendor/`, `fonts/`, `icons/` | three.js, Schriften, App-Icons |
+| `js/net.js` | Mehrspieler: Verbindung, Raumcode, Prüfung, Spielstand-Übertragung |
+| `vendor/`, `fonts/`, `icons/` | three.js, PeerJS, Schriften, App-Icons |
 | `sw.js`, `manifest.webmanifest` | Offline-Speicher und App-Einstellungen |
 | `tonstudio.html` | Tonstudio |
 | `tests/smoke.cjs` | Automatischer Browser-Test |
@@ -125,6 +137,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 
 - Auf echten Handys habe ich nichts ausprobiert, getestet wurde in Chromium ohne Grafikkarte. Wie flüssig die Weihnachtsedition auf älteren Geräten läuft, ist offen.
 - Gebirge auf dem iPhone: Schneetreiben (900 Flocken) und Weihnachtsdeko sind sparsam gebaut, auf einem echten Gerät aber nicht gemessen.
+- Mehrspieler übers Internet ohne TURN-Server: In manchen Netzen (vor allem Mobilfunk) kommt keine Verbindung zustande. Zwei echte Geräte über verschiedene Netze habe ich nicht getestet.
 - Ein eigenes Bauruhe-Stück fürs Gebirge (im Auftrag optional) gibt es noch nicht.
 - Die Musik konnte ich nicht anhören, nur messen: keine Übersteuerung, keine Lücken, gleiche Lautstärke.
 - iPhone: iOS kann Daten von Web-Apps löschen, die etwa eine Woche nicht geöffnet wurden. Das betrifft auch den Spielstand.

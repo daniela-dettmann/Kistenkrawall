@@ -123,8 +123,10 @@ function netOverlay(text,showLeave){const o=$('#netOverlay');if(!o)return;if(!te
 
 function closeNet(){
   clearTimeout(NET.expireTimer);
-  try{if(NET.conn)NET.conn.close();}catch(e){}
-  try{if(NET.peer)NET.peer.destroy();}catch(e){}
+  // forget the connection before closing it, so its close event is not taken for a drop
+  const c=NET.conn,p=NET.peer;NET.conn=null;NET.peer=null;
+  try{if(c)c.close();}catch(e){}
+  try{if(p)p.destroy();}catch(e){}
   Object.assign(NET,{peer:null,conn:null,role:null,code:null,tok:null,joined:false,started:false,lostAt:0,pendingEv:[]});
 }
 // leave multiplayer completely and go back to the single-player menu
