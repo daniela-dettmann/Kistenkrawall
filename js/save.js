@@ -27,7 +27,7 @@ function snapshot(){
   const alive=crates.filter(c=>c.state!=='fall'||c.y>-5);
   const cIdx=c=>alive.indexOf(c);
   return {
-    format:SAVE_FORMAT,savedAt:Date.now(),
+    format:SAVE_FORMAT,savedAt:Date.now(),map:MAP,
     app:(document.querySelector('meta[name="kk-version"]')||{}).content||'dev',
     diffKey,peaceMin,
     g:{gameT,spawnT,peaceT,waveT,waveNo,spawnSide,peaceWarnT,nextId},
@@ -124,7 +124,7 @@ function saveSummary(s){
   const mmss=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
   const where=s.g.peaceT>0?(s.g.waveNo?'Welle '+s.g.waveNo+' geschafft, Bauruhe noch '+mmss(s.g.peaceT):'Bauruhe noch '+mmss(s.g.peaceT)):'Welle '+s.g.waveNo+' läuft';
   const label={leicht:'Leicht',normal:'Normal',schwer:'Schwer'}[s.diffKey]||'';
-  return where+' · '+label+' · gespeichert '+agoText(Date.now()-s.savedAt);
+  return (MAPS[s.map]||'Insel')+' · '+where+' · '+label+' · gespeichert '+agoText(Date.now()-s.savedAt);
 }
 function refreshResume(){
   let s=null;try{const raw=localStorage.getItem(SAVE_KEY);s=raw?JSON.parse(raw,saveReviver):null;}catch(e){}
@@ -133,8 +133,15 @@ function refreshResume(){
   if(ok)$('#continueInfo').textContent=saveSummary(s);
   const start=$('#startBtn');start.className=ok?'go2':'go';start.textContent=ok?'Neues Spiel':"Los geht's";
 }
+// The world is built for one map at load: a save from the other map reloads the page on that map first.
+// Saves from before the mountain existed have no map and belong to the island.
+function reloadOnMap(m){
+  try{localStorage.setItem('kk-map',m);}catch(e){}
+  const u=new URL(location.href);u.search=u.search.replace(/([?&])karte=[^&]*&?/i,'$1').replace(/[?&]$/,'');u.hash='';location.replace(u.href);
+}
 function resumeGame(){
   const s=readSave();if(!s){refreshResume();return;}
+  if((s.map||'insel')!==MAP){try{sessionStorage.setItem('kk-autoresume','1');}catch(e){}reloadOnMap(s.map||'insel');return;}
   initAudio();tryLandscape();
   try{restore(s);}
   catch(e){console.error(e);clearSave();toast('Der Spielstand ließ sich nicht laden und wurde verworfen.',3);newGame(true);return;}
@@ -145,6 +152,14 @@ function resumeGame(){
 }
 $('#continueBtn').addEventListener('click',resumeGame);
 refreshResume();
+{let auto=false;try{auto=sessionStorage.getItem('kk-autoresume')==='1';sessionStorage.removeItem('kk-autoresume');}catch(e){}
+ if(auto)setTimeout(resumeGame,50);}
+
+/* ----- Map choice in the start menu ----- */
+for(const b of document.querySelectorAll('#mapSeg button')){
+  b.setAttribute('aria-pressed',b.dataset.m===MAP?'true':'false');
+  b.addEventListener('click',()=>{if(b.dataset.m!==MAP)reloadOnMap(b.dataset.m);});
+}
 setInterval(()=>{if(state==='menu'&&!$('#menu').hidden)refreshResume();},30000);
 
 /* ----- When to save ----- */

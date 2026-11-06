@@ -36,10 +36,11 @@ const mm=$('#mm'),mctx=mm.getContext('2d');
 function drawMap(){
   const S=mm.width,sc=S/(LIM*2+6),X=x=>(x+LIM+3)*sc,Z=z=>(z+LIM+3)*sc;
   mctx.clearRect(0,0,S,S);
-  mctx.fillStyle='rgba(120,170,90,.35)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
-  mctx.fillStyle='rgba(70,160,210,.85)';mctx.fillRect(X(-LIM),Z(-8.4),LIM*2*sc,16.8*sc);
-  for(const D of DROPS){mctx.fillStyle='#e2cf95';mctx.beginPath();mctx.ellipse(X(D.x),Z(0),ISL_RX*sc,ISL_RZ*sc,0,0,TAU);mctx.fill();mctx.strokeStyle=D.sort==='blau'?'#5aa0ff':'#ffc928';mctx.lineWidth=2.5;mctx.stroke();mctx.fillStyle='#b98a52';mctx.fillRect(X(D.x)-4,Z(-9),8,18*sc);}
-  mctx.fillStyle='#b98a52';for(const bx of BRIDGES)mctx.fillRect(X(bx)-5,Z(-5),10,10*sc);
+  mctx.fillStyle=MOUNTAIN?'rgba(225,232,242,.35)':'rgba(120,170,90,.35)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
+  mctx.fillStyle=MOUNTAIN?'rgba(40,52,70,.9)':'rgba(70,160,210,.85)';mctx.fillRect(X(-LIM),Z(-8.4),LIM*2*sc,16.8*sc);
+  if(MOUNTAIN){mctx.fillStyle='rgba(150,155,165,.9)';mctx.fillRect(X(BRIDGES[1]-10),Z(-6),20*sc,12*sc);}
+  for(const D of DROPS){mctx.fillStyle=MOUNTAIN?'#e8eef5':'#e2cf95';mctx.beginPath();mctx.ellipse(X(D.x),Z(0),ISL_RX*sc,ISL_RZ*sc,0,0,TAU);mctx.fill();mctx.strokeStyle=D.sort==='blau'?'#5aa0ff':'#ffc928';mctx.lineWidth=2.5;mctx.stroke();mctx.fillStyle='#b98a52';mctx.fillRect(X(D.x)-4,Z(-9),8,18*sc);}
+  mctx.fillStyle=MOUNTAIN?'#d8dde4':'#b98a52';for(const bx of BRIDGES)mctx.fillRect(X(bx)-crossW(bx)*sc,Z(-8.4),crossW(bx)*2*sc,16.8*sc);
   for(const h of hqs){mctx.fillStyle=h.dead?'#555':(h.team?'#1fb5a8':'#ff8a1f');mctx.fillRect(X(h.x)-7,Z(h.z)-6,14,12);}
   for(const p of pads){mctx.strokeStyle=p.team?'#1fb5a8':'#ff8a1f';mctx.lineWidth=2;mctx.strokeRect(X(p.x)-6,Z(p.z)-6,12,12);}
   mctx.fillStyle='#e9b46a';
@@ -150,7 +151,7 @@ function updateBirds(dt){
 const foams=[];
 (function(){
   const fg=new THREE.RingGeometry(0.28,0.5,18).rotateX(-Math.PI/2);
-  for(const bx of BRIDGES)for(const side of [-1,1])for(const sx of [-2.25,2.25])for(const sz of [4.8,7.6]){
+  if(!MOUNTAIN)for(const bx of BRIDGES)for(const side of [-1,1])for(const sx of [-2.25,2.25])for(const sz of [4.8,7.6]){
     const m=new THREE.Mesh(fg,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.5,depthWrite:false}));
     const x=bx+sx*0.8,z=side*sz;m.position.set(x,-1.47,z);scene.add(m);foams.push({m,x,z,t:srand()*1.6});
   }
@@ -159,7 +160,7 @@ let splashT=0;
 function updateFoam(dt){
   for(const f of foams){f.t=(f.t+dt)%1.6;const k=f.t/1.6;f.m.scale.setScalar(1+k*1.6);f.m.material.opacity=0.55*(1-k);}
   splashT-=dt;
-  if(splashT<=0){splashT=rand(.35,.7);const f=pick(foams);
+  if(splashT<=0&&foams.length){splashT=rand(.35,.7);const f=pick(foams);
     if(!player||Math.hypot(f.x-player.x,f.z-player.z)<34)puffs(f.x+rand(-.3,.3),-1.4,f.z+rand(-.3,.3),2,0xf4fbff,{size:.28,spread:.6,up:.9,life:.55,op:.85,grow:.4});}
 }
 

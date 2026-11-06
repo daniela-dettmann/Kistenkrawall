@@ -203,8 +203,8 @@ function resolve(u){
   for(const o of obstacles){const dx=u.x-o.x,dz=u.z-o.z,d=Math.hypot(dx,dz),m=o.r+ur;if(d<m&&d>1e-4){u.x=o.x+dx/d*m;u.z=o.z+dz/d*m;}}
   for(const h of hqs){const dx=u.x-h.x,dz=u.z-h.z,d=Math.hypot(dx,dz),m=h.r+ur;if(d<m&&d>1e-4){u.x=h.x+dx/d*m;u.z=h.z+dz/d*m;}}
   if(Math.abs(u.z)<BANK&&islandE(u.x,u.z)>=0.9){ // on an island you can walk freely
-    const bx=BRIDGES.find(b=>Math.abs(u.x-b)<2.35);
-    if(bx!==undefined){const lim=Math.max(0.15,2.05-ur);u.x=clamp(u.x,bx-lim,bx+lim);}
+    const bx=BRIDGES.find(b=>Math.abs(u.x-b)<crossW(b)+0.05);
+    if(bx!==undefined){const lim=Math.max(0.15,crossW(bx)-0.25-ur);u.x=clamp(u.x,bx-lim,bx+lim);}
     else if(islandE(u.x,u.z)<1.25){const bx=BRIDGES.reduce((a,b)=>Math.abs(u.x-b)<Math.abs(u.x-a)?b:a);const dx=(u.x-bx)/ISL_RX,dz=u.z/ISL_RZ,e=Math.hypot(dx,dz),lim=0.9-ur/ISL_RZ;if(e>lim){u.x=bx+dx/e*lim*ISL_RX;u.z=dz/e*lim*ISL_RZ;}}
     else u.z=(u.z>=0?1:-1)*BANK;
   }
