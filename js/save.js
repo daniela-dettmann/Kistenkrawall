@@ -55,6 +55,7 @@ function snapshot(){
 }
 
 function writeSave(){
+  if(MP)return false;   // a multiplayer round never overwrites the single-player save
   if(state!=='play'&&state!=='pause')return false;
   try{
     localStorage.setItem(SAVE_KEY,JSON.stringify(snapshot(),saveReplacer));
@@ -71,7 +72,7 @@ function readSave(){
     return s;
   }catch(e){clearSave();return null;}
 }
-function clearSave(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}refreshResume();}
+function clearSave(){if(MP)return;try{localStorage.removeItem(SAVE_KEY);}catch(e){}refreshResume();}
 
 function restore(s){
   clearWorld();

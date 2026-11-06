@@ -22,6 +22,9 @@
 </head>
 <body>
 
+<div id="netOverlay" hidden>
+  <div class="panel"><p class="lead" id="netOverlayText"></p><button class="go2" id="netLeave">Spiel verlassen</button></div>
+</div>
 <div id="fail" hidden>
   <div class="panel">
     <p class="result">Ups!</p>
@@ -135,6 +138,7 @@
     </div>
 <div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><div class="sndSliders"><label class="sndVol">Effekte <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Effekte"></label><label class="musVol">Musik <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Musik"></label></div></div>
     <button class="go2" id="xmasToggle" aria-pressed="true" hidden>Weihnachtsedition: an</button>
+    <button class="go2" id="netBtn">Gegen Freund spielen</button>
     <button class="go2" id="helpBtn">Wie wird gespielt?</button>
     <button class="go" id="startBtn">Los geht's</button>
     <p class="ver" id="verLine"></p>
@@ -210,6 +214,24 @@
     </section>
     <button class="go" id="helpBack">Zurück</button>
   </div>
+  <div class="panel" id="panelNet" hidden>
+    <p class="result">Gegen Freund spielen</p>
+    <p class="lead">Spiel 1 gegen 1 mit jemandem, den du kennst: auf dem Sofa im gleichen WLAN oder übers Internet. Wer den Raum erstellt, spielt Orange, der Gast Petrol. Beim Verbinden sehen dein Gegner und der Vermittlungsserver deine IP-Adresse.</p>
+    <div id="netChoose" class="netRow"><button class="go" id="netHostBtn">Raum erstellen</button><button class="go2" id="netJoinBtn">Raum beitreten</button></div>
+    <div id="netHostBox" hidden>
+      <p class="lbl">Raumcode</p>
+      <p class="netCode" id="netCode">–</p>
+      <div class="netRow"><button class="go2" id="netCopy">Code kopieren</button><button class="go2" id="netShare" hidden>Teilen</button></div>
+      <p class="ctrl" id="netHostInfo"></p>
+      <button class="go" id="netStartBtn" disabled>Spiel starten</button>
+    </div>
+    <div id="netJoinBox" hidden>
+      <label class="lbl" for="netCodeIn">Raumcode deines Gegners</label>
+      <div class="netRow"><input id="netCodeIn" class="netIn" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EF23"><button class="go" id="netJoinGo">Beitreten</button></div>
+    </div>
+    <p class="ctrl" id="netStatus" role="status" aria-live="polite"></p>
+    <button class="go2" id="netBack">Zurück</button>
+  </div>
   <div class="panel" id="panelEnd" hidden>
     <p class="result" id="resultTitle">Sieg!</p>
     <p class="lead" id="resultText"></p>
@@ -245,6 +267,8 @@
 <script src="js/game.js"></script>
 <script src="js/save.js"></script>
 <script src="js/xmas.js"></script>
+<script src="vendor/peerjs-1.5.4.min.js"></script>
+<script src="js/net.js"></script>
 <script src="js/update.js"></script>
 
 <script>

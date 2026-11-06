@@ -50,6 +50,12 @@ const ALLY={speed:1,jitter:.12,turn:4.5,react:.4,cdMul:1.2,collect:.5,steal:fals
 /* ---------- State ---------- */
 let units=[],crates=[],shots=[],parts=[];
 let player=null,state='menu',diffKey='normal',D=DIFFS.normal;
+/* Multiplayer: MP is null (single player), 'host' or 'guest'. On the host, player is the host's own Blechling
+   (Orange) and player2 the guest's (Petrol). On the guest, player is the guest's own Blechling. */
+let MP=null,player2=null;
+const pilotOf=t=>t===0?player:(MP==='host'?player2:null);
+// In single player Petrol is the opponent with its own difficulty; in multiplayer both teams play like your mates.
+const aiParams=t=>(MP||t===0)?ALLY:D;
 try{const s=localStorage.getItem('kk-diff');if(s&&DIFFS[s])diffKey=s;}catch(e){}
 D=DIFFS[diffKey];
 let gameT=0,spawnT=3,nextId=1,usedNames=new Set();
@@ -61,7 +67,7 @@ let respawns=[];
 const stats={kills:0,stacked:0,stolen:0,opened:0};
 let camYaw=Math.PI,camManualT=0,camMode='schulter';
 try{const m=localStorage.getItem('kk-cam');if(m==='taktik'||m==='schulter')camMode=m;}catch(e){}
-const TAC_YAW=Math.PI;
+let TAC_YAW=Math.PI;   // tactical camera looks toward the enemy base (the guest plays from the other side)
 const camPos=new THREE.Vector3(0,20,40),camLook=new THREE.Vector3();
 const tagsEl=$('#tags');
 const marker=new THREE.Mesh(G.marker,M.marker);marker.rotation.x=-Math.PI/2;scene.add(marker);

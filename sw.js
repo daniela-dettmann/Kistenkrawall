@@ -31,6 +31,8 @@ const PRECACHE = [
   './js/game.js',
   './js/save.js',
   './js/xmas.js',
+  './js/net.js',
+  './vendor/peerjs-1.5.4.min.js',
   './js/update.js',
   './icons/icon.svg',
   './icons/icon-192.png',

@@ -10,7 +10,7 @@ function nearestFoe(u,range){
 function pileCount(pad){return crates.filter(c=>c.state==='ground'&&Math.hypot(c.x-pad.x,c.z-pad.z)<6.5).length;}
 function nearestFreeCrate(u){
   let best=null,bd=1e9,alt=null,ad=1e9;
-  const pd=pads[u.team],want=u.team===0?(teams[0].collect||'blau'):(stackColor(pd)||null);
+  const pd=pads[u.team],want=(u.team===0||MP)?(teams[u.team].collect||'blau'):(stackColor(pd)||null);
   for(const c of crates){
     if(c.state!=='ground')continue;
     if(inPeace()&&(u.team?c.z>2:c.z<-2))continue;
@@ -41,7 +41,7 @@ function foeScore(u,e,P){
     if(e===player)v+=2.5;
     if(isVeh(e))v+=heavy?6:2;
     if(e.kind==='turm')v+=(u.wrole==='flanke'||heavy)?5:1;
-    if(u.team===0&&player&&player.lock===e)v+=5; // your mates help with the target you have locked
+    {const pl=pilotOf(u.team);if(pl&&pl.lock===e)v+=5;} // your mates help with the target you have locked
     s-=v*k;
   }
   if(P.focus){let n=0;for(const o of units)if(o!==u&&o.alive&&o.team===u.team&&o.plan==='fight'&&o.target===e)n++;s-=Math.min(n,3)*2.2;}
@@ -110,7 +110,7 @@ function decide(u,P){
   const foe=pickFoe(u,range,P);
   const n=pad.stack.length;
   const starved=n>=2&&!crates.some(c=>c.state==='ground'&&(c.gold||c.sort===stackColor(pad))&&Math.hypot(c.x-pad.x,c.z-pad.z)>6.5);
-  if(!tank&&!raid&&u.team===1&&n>0&&(n>=teams[1].openTarget||starved)&&(weak||n>=4)&&dist(u,pad)<20&&!(foe&&dist(u,foe)<6)){u.plan='open';return;}
+  if(!tank&&!raid&&u.team===1&&!MP&&n>0&&(n>=teams[1].openTarget||starved)&&(weak||n>=4)&&dist(u,pad)<20&&!(foe&&dist(u,foe)<6)){u.plan='open';return;}
   if(foe){setFight(u,foe);return;}
   if(u.team===1&&u.attacker){
     if(!u.go){u.plan='rally';return;}
@@ -119,13 +119,13 @@ function decide(u,P){
   const threat=threatAt(u.team,26);
   if(threat&&(tank||u.role!=='sammler'||!weak)){setFight(u,threat);return;}
   // in the rest phase everybody on foot helps building; during a wave only the collectors keep at it
-  if(!tank&&(inPeace()||u.role==='sammler'||(weak&&Math.random()<.5))&&!(u.team===0&&n>=8)){
+  if(!tank&&(inPeace()||u.role==='sammler'||(weak&&Math.random()<.5))&&!((u.team===0||MP)&&n>=8)){
     const c=nearestFreeCrate(u);
     if(c){u.plan='fetch';u.planCrate=c;c.claim=u.id;return;}
     if(!inPeace()&&P.steal&&ep.stack.length>0&&Math.random()<.5){u.plan='steal';return;}
   }
   // escort the player when they push across the river
-  if(u.team===0&&!inPeace()&&player&&player.alive&&player!==u&&player.z<-2&&(tank||!weak||u.role==='kaempfer')){u.plan='escort';return;}
+  {const pl=pilotOf(u.team),s=u.team?-1:1;if((u.team===0||MP)&&!inPeace()&&pl&&pl.alive&&pl!==u&&s*pl.z<-2&&(tank||!weak||u.role==='kaempfer')){u.plan='escort';return;}}
   // during a wave the fighters take position at the bridgehead that is under pressure
   if(!inPeace()&&(tank||u.role!=='sammler'||!weak)){const g=defendSpot(u);if(g){u.plan='defend';u.goal=g;return;}}
   if(u.plan!=='patrol'||!u.goal)setPatrol(u);
@@ -174,6 +174,7 @@ function launchGroup(W,g){
 }
 function updateWaves(dt){
   const W=teams[1].wave;
+  if(MP)return;   // no automatic Petrol waves in multiplayer: both humans lead their own attacks
   if(inPeace()){if(W.phase!=='idle'){W.phase='idle';W.groups=[];for(const u of units){u.attacker=false;u.go=false;}}return;}
   if(W.phase==='idle'){W.phase='plan';W.t=state==='menu'?rand(8,14):rand(3,5);W.announced=false;return;}
   W.t-=dt;
@@ -210,7 +211,7 @@ function aiAim(u,t,P,dt){
   return Math.abs(angDiff(want,u.h))<0.3;
 }
 function aiUpdate(u,dt){
-  const P=u.team===1?D:ALLY;
+  const P=aiParams(u.team);
   u.thinkT-=dt;
   // easy bots dither now and then on their way to the front
   if(u.pauseT>0){u.pauseT-=dt;u.h+=Math.sin(gameT*1.7+u.id)*dt*1.2;if(u.plan!=='fight')return;}

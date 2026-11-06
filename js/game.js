@@ -16,7 +16,7 @@ function newGame(attract){
   clearWorld();
   gameT=0;spawnT=2;peaceT=0;queuedStrikes=[];respawns=[];placeQueue=[];teams[0].tempoT=teams[1].tempoT=0;teams[0].collect='blau';teams[1].collect=null;if(typeof syncCollect==='function')syncCollect();teams[1].wave={phase:'idle',t:0,groups:[]};waveT=0;waveNo=0;Object.assign(stats,{kills:0,stacked:0,stolen:0,opened:0});
   const b0=BASES[0],b1=BASES[1];
-  const nE=attract?3:D.units;
+  const nE=(attract||MP)?3:D.units;
   const roles=['sammler','kaempfer','sammler','kaempfer'];
   for(let i=0;i<3;i++)spawnUnit(0,b0.x-2+i*2,b0.z-3,roles[i]);
   for(let i=0;i<nE;i++)spawnUnit(1,b1.x-3+i*2,b1.z+3,roles[i]);
@@ -89,10 +89,10 @@ syncSoundUI();
 $('#helpBtn').addEventListener('click',()=>{$('#panelStart').hidden=true;$('#panelHelp').hidden=false;$('#menu').scrollTop=0;});
 $('#helpBack').addEventListener('click',()=>{$('#panelHelp').hidden=true;$('#panelStart').hidden=false;});
 $('#againBtn').addEventListener('click',startGame);
-$('#toMenuBtn').addEventListener('click',toMenu);
+$('#toMenuBtn').addEventListener('click',()=>toMenu());
 $('#resumeBtn').addEventListener('click',()=>pause(false));
 $('#restartBtn').addEventListener('click',startGame);
-$('#quitBtn').addEventListener('click',toMenu);
+$('#quitBtn').addEventListener('click',()=>toMenu());
 $('#pauseBtn').addEventListener('click',()=>pause(true));
 $('#attackNowBtn').addEventListener('click',()=>{pause(false);startAttack();});
 for(const b of document.querySelectorAll('#peaceSeg button')){
@@ -110,17 +110,20 @@ for(const b of document.querySelectorAll('#diffSeg button')){
 const v3=new THREE.Vector3();
 function update(dt){
   const playing=state==='play';
+  // SIM: this device computes the game. A multiplayer guest only displays the host's state (see net.js).
+  const SIM=MP!=='guest';
+  if(!SIM&&typeof netGuestTick==='function')netGuestTick(dt);
   gameT+=dt;
   // crate drops
   spawnT-=dt;
   const loose=crates.filter(c=>c.state!=='stack').length;
   peaceWarnT-=dt;
   // rhythm: rest phase for building, then an attack wave, then rest again
-  if(state==='play'){
+  if(state==='play'&&SIM){
     if(peaceT>0){peaceT-=dt;if(peaceT<=0){peaceT=0;startAttack();}}
     else if(waveT>0){waveT-=dt;if(waveT<=0){waveT=0;startRest();}}
   }
-  if(spawnT<=0){const pc=inPeace();spawnT=pc?rand(2.4,4):rand(3.5,6.5);if(loose<(pc?16:13)){spawnSide=-spawnSide;
+  if(spawnT<=0&&SIM){const pc=inPeace();spawnT=pc?rand(2.4,4):rand(3.5,6.5);if(loose<(pc?16:13)){spawnSide=-spawnSide;
       const goldLoose=crates.some(c=>c.gold&&c.state!=='stack'),isGold=!goldLoose&&Math.random()<(pc?0.08:0.14);
       // pick the deck with fewer crates on it so neither runs over; gold lands on either deck
       const onDeck=d=>crates.filter(c=>c.state!=='stack'&&Math.abs(c.x-d.x)<ISL_RX+0.5&&Math.abs(c.z)<ISL_RZ+0.5).length;
@@ -130,6 +133,7 @@ function update(dt){
 
   // player control
   if(!(playing&&player&&player.alive))updateLockMarker(null);
+  let MX=0,MZ=0;
   if(playing&&player&&player.alive){
     let ix=joy.x,iz=-joy.y;
     if(keys['w']||keys['arrowup'])iz+=1;if(keys['s']||keys['arrowdown'])iz-=1;
@@ -139,7 +143,7 @@ function update(dt){
     if(camMode==='taktik'){
       // fixed camera: stick up always means "toward the enemy base"
       const fx=Math.sin(TAC_YAW),fz=Math.cos(TAC_YAW),rx=-Math.cos(TAC_YAW),rz=Math.sin(TAC_YAW);
-      moveUnit(player,fx*iz+rx*ix,fz*iz+rz*ix,dt,1);
+      MX=fx*iz+rx*ix;MZ=fz*iz+rz*ix;moveUnit(player,MX,MZ,dt,1);
       if(performance.now()-swipeT<1500)aimDir=swipeAim;
       else if(mouseAim&&performance.now()-mouseAim.t<4000)aimDir=Math.atan2(mouseAim.x-player.x,mouseAim.z-player.z);
       if(keys['arrowleft'])aimDir=(aimDir??player.h)+2.5*dt;if(keys['arrowright'])aimDir=(aimDir??player.h)-2.5*dt;
@@ -153,7 +157,7 @@ function update(dt){
       if(turn!==0){camYaw-=Math.sign(turn)*Math.pow(Math.abs(turn),1.5)*1.7*dt;camManualT=1.2;}
       const fx=Math.sin(camYaw),fz=Math.cos(camYaw),rx=-Math.cos(camYaw),rz=Math.sin(camYaw);
       const mx=fx*iz+rx*ix,mz=fz*iz+rz*ix,ml=Math.hypot(mx,mz);
-      moveUnit(player,mx,mz,dt,1);
+      MX=mx;MZ=mz;moveUnit(player,mx,mz,dt,1);
       camManualT-=dt;
       if(ml>0.25&&camManualT<=0&&iz>-0.5){const want=isVeh(player)?player.hull:player.h;camYaw+=angDiff(want,camYaw)*Math.min(1,dt*2.2*ml);}
       if(ml<0.1&&turn!==0&&!isVeh(player))player.h+=clamp(angDiff(camYaw,player.h),-8*dt,8*dt);
@@ -167,28 +171,33 @@ function update(dt){
       // turret swings smoothly onto the locked target and only fires once it lines up
       player.h+=clamp(angDiff(wantFire||lock?lockAng:dir,player.h),-3.6*dt,3.6*dt);player.aimHold=gameT;
     }
-    if(wantFire){
+    if(MP==='guest'){netSendInput(MX,MZ,isVeh(player)?(wantFire||lock?lockAng:dir):lockAng,!!wantFire&&!player.carry);}
+    else if(wantFire){
       if(player.carry){if(!player._warn){toast('Mit Kiste kein Feuer. Erst abstellen!',1.4);player._warn=1.5;}}
       else if(isVeh(player)){if(Math.abs(angDiff(lockAng,player.h))<0.12)fire(player,player.h,1,lock);}
       else fire(player,lockAng,1,lock);
     }
     updateLockMarker(lock);
+    if(MP==='guest'&&wantFire&&player.carry&&!player._warn){toast('Mit Kiste kein Feuer. Erst abstellen!',1.4);player._warn=1.5;}
     if(player._warn)player._warn=Math.max(0,player._warn-dt);
   }
+
+  if(MP==='host'&&playing)netControlGuest(dt);
 
   // units
   for(const u of units){
     if(u.cd>0)u.cd-=dt;
     if(u.sayCd>0)u.sayCd-=dt;
     if(u.sayT>0){u.sayT-=dt;if(u.sayT<=0)u.tag.say.hidden=true;}
+    if(!SIM)continue;
     if(u.alive&&u.kind==='turm')turretUpdate(u,dt);
-    else if(u.alive&&u!==player)aiUpdate(u,dt);
+    else if(u.alive&&u!==player&&u!==player2)aiUpdate(u,dt);
     if(u.alive&&u.hp<u.maxHp){const h=hqs[u.team];if(!h.dead&&Math.hypot(u.x-h.x,u.z-h.z)<9){const was=u.hp;u.hp=Math.min(u.maxHp,u.hp+(isVeh(u)?14:9)*dt);if(u===player&&was<u.maxHp&&u.hp>=u.maxHp)toast('Repariert!',1);}}
   }
-  for(let i=0;i<units.length;i++){const a=units[i];if(!a.alive)continue;
+  if(SIM)for(let i=0;i<units.length;i++){const a=units[i];if(!a.alive)continue;
     for(let j=i+1;j<units.length;j++){const b=units[j];if(!b.alive)continue;const dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz),md=a.r+b.r;if(d<md&&d>1e-4){const p=(md-d)/2,fa=a.kind==='turm'?0:b.kind==='turm'?2:1,fb=b.kind==='turm'?0:a.kind==='turm'?2:1;a.x-=dx/d*p*fa;a.z-=dz/d*p*fa;b.x+=dx/d*p*fb;b.z+=dz/d*p*fb;}}}
   for(const u of units){
-    if(u.alive&&u.kind!=='turm')resolve(u);
+    if(u.alive&&u.kind!=='turm'&&(SIM||u===player))resolve(u);
     const g=u.bot.g,gy=hgt(u.x,u.z);
     if(u.moving)u.walk+=dt*11;else u.walk*=0.85;
     const sw=Math.sin(u.walk)*0.6*(u.moving?1:0.2);
@@ -215,7 +224,7 @@ function update(dt){
   units=units.filter(u=>u.alive||u.dying>0);
 
   // crates
-  for(const c of crates.slice()){
+  if(SIM)for(const c of crates.slice()){
     if(c.state==='fall'){
       if(c.chute){c.y+=c.vy*dt;c.m.rotation.y+=dt*0.6;c.chute.position.set(c.x,c.y+1.3,c.z);c.ring.scale.setScalar(1+Math.max(0,(c.y-hgt(c.x,c.z))/12));}
       else{c.vy-=22*dt;c.x+=c.vx*dt;c.z+=c.vz*dt;c.y+=c.vy*dt;c.m.rotation.x+=dt*3;
@@ -234,7 +243,8 @@ function update(dt){
   }
 
   // shots
-  for(let i=shots.length-1;i>=0;i--){
+  if(!SIM)netGuestShots(dt);
+  else for(let i=shots.length-1;i>=0;i--){
     const s=shots[i];
     if(s.arc){
       s.t+=dt;const k=Math.min(1,s.t/s.T);s.x=s.x0+(s.x1-s.x0)*k;s.z=s.z0+(s.z1-s.z0)*k;
@@ -271,7 +281,7 @@ function update(dt){
     if(p.life<=0){scene.remove(p.m);if(!p.solid)p.m.material.dispose();parts.splice(i,1);}
   }
 
-  updateAir(dt);
+  if(SIM)updateAir(dt);
 
   // world ambience
   timeU.value=gameT;
@@ -283,10 +293,10 @@ function update(dt){
   if(flashT>0){flashT-=dt;flashLight.intensity=Math.max(0,flashT/.25)*4;}else flashLight.intensity=0;
 
   updateWaves(dt);
-  for(const T of teams){if(T.tempoT>0){T.tempoT-=dt;if(T.tempoT<=0&&T===teams[0]&&state==='play')toast('Tempo-Schub vorbei',1.2);}}
+  if(SIM)for(const T of teams){if(T.tempoT>0){T.tempoT-=dt;if(T.tempoT<=0&&T===teams[0]&&state==='play')toast('Tempo-Schub vorbei',1.2);}}
   updateGhost();
   // respawns at the HQ
-  for(let i=respawns.length-1;i>=0;i--){
+  if(SIM)for(let i=respawns.length-1;i>=0;i--){
     const r=respawns[i];r.t-=dt;
     if(r.t>0)continue;
     respawns.splice(i,1);
@@ -294,10 +304,11 @@ function update(dt){
     const b=BASES[r.team];const nu=spawnUnit(r.team,b.x+rand(-2.5,2.5),b.z+(r.team?3.5:-3.5),r.role);
     puffs(nu.x,hgt(nu.x,nu.z)+1,nu.z,8,0xffffff);say(nu,'recruit',true);
     if(r.team===0&&state==='play'){if(!player||!player.alive)setPlayer(nu);else toast(nu.name+' ist wieder da',1.6);}
+    else if(r.team===1&&MP==='host'&&(!player2||!player2.alive))netSetGuestPilot(nu);
   }
   // HQs
   for(const h of hqs){
-    if(!h.dead&&!inPeace()){
+    if(SIM&&!h.dead&&!inPeace()){
       let best=null,bd=15;
       for(const e of units){if(!e.alive||e.team===h.team)continue;const d=Math.hypot(e.x-h.x,e.z-h.z);if(d<bd){bd=d;best=e;}}
       h.turCd-=dt;
@@ -311,20 +322,20 @@ function update(dt){
         }
       }else h.tur.rotation.y+=dt*0.4;
     }
-    if(!h.dead&&inPeace()&&h.hp<h.max){h.hp=Math.min(h.max,h.hp+h.max*0.0012*dt);h.healT=(h.healT||0)-dt;if(h.healT<=0){h.healT=1.4;puffs(h.x+rand(-1.6,1.6),hgt(h.x,h.z)+2.8,h.z+rand(-1,1),1,0x7ddc5a,{size:.4,spread:.3,up:.5,life:.8,op:.8,grow:.3});}}
+    if(SIM&&!h.dead&&inPeace()&&h.hp<h.max){h.hp=Math.min(h.max,h.hp+h.max*0.0012*dt);h.healT=(h.healT||0)-dt;if(h.healT<=0){h.healT=1.4;puffs(h.x+rand(-1.6,1.6),hgt(h.x,h.z)+2.8,h.z+rand(-1,1),1,0x7ddc5a,{size:.4,spread:.3,up:.5,life:.8,op:.8,grow:.3});}}
     h.flag.rotation.y=Math.sin(gameT*3+h.team)*0.25;
     if(h.flashT>0){h.flashT-=dt;h.bodyMat.emissive.setScalar(h.flashT>0?0.35:0);}
     if(h.hp<h.max*0.5){h.smokeT-=dt;if(h.smokeT<=0){h.smokeT=h.dead?.12:.4;puffs(h.x+rand(-1.5,1.5),hgt(h.x,h.z)+2.6,h.z+rand(-1,1),1,0x4a4a48);}}
   }
 
   // end conditions
-  if(playing){
+  if(playing&&SIM){
     const a=teamUnits(0).length+respawns.filter(r=>r.team===0).length,b=teamUnits(1).length+respawns.filter(r=>r.team===1).length;
     if(hqs[1].dead)endGame(true,'Das Hauptquartier der Petrol-Bande liegt in Trümmern.');
     else if(hqs[0].dead)endGame(false,'Dein Hauptquartier ist eingestürzt.');
     else if(b===0)endGame(true,'Alle Petrol-Blechlinge sind verschrottet.');
     else if(a===0)endGame(false,'Deine ganze Bande liegt auf dem Schrottplatz.');
-  }else if(state==='menu'){
+  }else if(state==='menu'&&SIM){
     if(hqs[0].dead||hqs[1].dead||gameT>300)newGame(true);
   }
 
