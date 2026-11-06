@@ -16,8 +16,8 @@ if(MOUNTAIN)(function(){
   for(let i=0;i<26;i++){
     const a=i/26*TAU+srand()*0.2,r=105+srand()*70,k=clamp((r-95)/90,0.3,0.75),s=18+srand()*22,hgt2=s*(1.1+srand()*0.9);
     const g=new THREE.Group();g.position.set(Math.cos(a)*r,-2,Math.sin(a)*r);g.rotation.y=srand()*3;
-    const m=new THREE.Mesh(peakG,new THREE.MeshLambertMaterial({color:haze(0x6d7685,k),fog:false,flatShading:true}));m.scale.set(s,hgt2,s);m.position.y=hgt2/2;g.add(m);
-    const cap=new THREE.Mesh(capG,new THREE.MeshLambertMaterial({color:haze(0xf6f9fc,k*0.7),fog:false,flatShading:true}));cap.scale.set(s*0.42,hgt2*0.42,s*0.42);cap.position.y=hgt2*0.79;g.add(cap);
+    const m=new THREE.Mesh(peakG,new THREE.MeshLambertMaterial({color:haze(0x6d7685,k),fog:false}));m.scale.set(s,hgt2,s);m.position.y=hgt2/2;g.add(m);
+    const cap=new THREE.Mesh(capG,new THREE.MeshLambertMaterial({color:haze(0xf6f9fc,k*0.7),fog:false}));cap.scale.set(s*0.42,hgt2*0.42,s*0.42);cap.position.y=hgt2*0.79;g.add(cap);
     scene.add(g);
   }
 
@@ -53,4 +53,33 @@ if(MOUNTAIN)(function(){
     clouds.forEach((c,i)=>{c.position.x=Math.sin(t*0.05+i*2)*8;c.material.opacity=0.45+Math.sin(t*0.2+i)*0.1;});
   })(last);
   window.mountainDrift=drift;   // for tests
+
+  /* See-through hole: the camera stays rigid. Terrain that lies between the camera and your Blechling is faded out
+     in a soft circle around it (dithered, so it costs almost nothing), so a slope never hides you. */
+  const cut={on:{value:0},p:{value:new THREE.Vector3()},cam:{value:new THREE.Vector3()},r:{value:4.2}};
+  scene.traverse(o=>{
+    if(!o.isMesh||!o.material||o.material.map!==TX.ground)return;
+    o.material.onBeforeCompile=sh=>{
+      sh.uniforms.uCutOn=cut.on;sh.uniforms.uCutP=cut.p;sh.uniforms.uCam=cut.cam;sh.uniforms.uCutR=cut.r;
+      sh.vertexShader='varying vec3 vCutW;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvCutW=(modelMatrix*vec4(transformed,1.0)).xyz;');
+      sh.fragmentShader='uniform float uCutOn;uniform vec3 uCutP;uniform vec3 uCam;uniform float uCutR;varying vec3 vCutW;\n'+sh.fragmentShader.replace('#include <clipping_planes_fragment>',
+        `#include <clipping_planes_fragment>
+        if(uCutOn>0.5){
+          vec3 cp=uCutP-uCam;float L=length(cp);vec3 dir=cp/L;vec3 fc=vCutW-uCam;float t=dot(fc,dir);
+          if(t>0.0&&t<L-1.5){
+            float d=length(fc-dir*t),r=uCutR*(0.3+0.7*t/L),k=1.0-smoothstep(r*0.6,r,d);
+            float n=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);
+            if(n<k)discard;
+          }
+        }`);
+    };
+    o.material.needsUpdate=true;
+  });
+  (function follow(){
+    requestAnimationFrame(follow);
+    const on=!!(player&&player.alive&&state!=='menu');
+    cut.on.value=on?1:0;
+    if(on){cut.p.value.set(player.x,hgt(player.x,player.z)+1,player.z);cut.cam.value.copy(camera.position);}
+  })();
+  window.mountainCut=cut;   // for tests
 })();

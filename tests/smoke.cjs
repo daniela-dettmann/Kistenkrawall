@@ -250,6 +250,7 @@ async function main() {
   await page.click('#startBtn', { force: true });
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && !!window.mountainDrift), 'Runde auf dem Gebirge läuft, mit Schneetreiben');
+  check(await page.evaluate(() => mountainCut.on.value === 1 && mountainCut.p.value.distanceTo(new THREE.Vector3(player.x, mountainCut.p.value.y, player.z)) < 0.5), 'Gebirge: Durchblick-Loch folgt der Figur');
   await page.evaluate(() => pause(true));
   await page.goto(base + '?normal&karte=insel');
   await page.waitForSelector('#continueBtn', { state: 'visible' });
