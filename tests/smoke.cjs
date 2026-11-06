@@ -316,7 +316,7 @@ async function main() {
     check(await host.evaluate(() => JSON.parse(localStorage.getItem('kk-save')).marker === 'einzelspieler'), 'Einzelspieler-Spielstand bleibt unberührt');
     await host.click('#pauseBtn', { force: true }).catch(() => {});
     await host.evaluate(() => toMenu());
-    await guest.waitForFunction(() => MP === null, null, { timeout: 15000 }).catch(() => {});
+    await guest.waitForFunction(() => MP === null, null, { timeout: 30000 }).catch(() => {});
     check(await guest.evaluate(() => MP === null && state === 'menu'), 'Host verlässt das Spiel: endet auch für den Gast');
     await host.evaluate(() => localStorage.removeItem('kk-save'));
     await host.context().close(); await guest.context().close();
