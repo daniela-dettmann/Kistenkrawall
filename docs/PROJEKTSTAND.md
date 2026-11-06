@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 5. November 2026 · Live-Version auf `main`: `3c27d49` (PR #12)
+Stand: 6. November 2026 · Live-Version auf `main`: `adff3ac` (PR #13)
 
 ## Links
 
@@ -26,7 +26,8 @@ Stand: 5. November 2026 · Live-Version auf `main`: `3c27d49` (PR #12)
 | #10 | Weihnachtsedition: Look | gemergt |
 | #11 | Weihnachtsedition: Musik, Töne, Namen und Sprüche | gemergt |
 | #12 | Starthinweis bleibt nach „Weiterspielen“ nicht mehr stehen | gemergt |
-| #13 | Projektstand im Repo (`docs/PROJEKTSTAND.md`), Anleitung zur Pflege in Google Drive (`CLAUDE.md`) | offen |
+| #13 | Projektstand im Repo (`docs/PROJEKTSTAND.md`), Anleitung zur Pflege in Google Drive (`CLAUDE.md`) | gemergt |
+| #14 | Anleitung zur Drive-Pflege korrigiert (neue Datei hochladen, alte in den Papierkorb) | gemergt |
 
 ## Was umgesetzt ist
 
