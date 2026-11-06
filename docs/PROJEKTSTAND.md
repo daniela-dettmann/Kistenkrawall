@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 6. November 2026 · Live-Version auf `main`: `adff3ac` (PR #13)
+Stand: 6. November 2026 · Live-Version auf `main`: `950b9bd` (PR #14)
 
 ## Links
 
@@ -28,6 +28,7 @@ Stand: 6. November 2026 · Live-Version auf `main`: `adff3ac` (PR #13)
 | #12 | Starthinweis bleibt nach „Weiterspielen“ nicht mehr stehen | gemergt |
 | #13 | Projektstand im Repo (`docs/PROJEKTSTAND.md`), Anleitung zur Pflege in Google Drive (`CLAUDE.md`) | gemergt |
 | #14 | Anleitung zur Drive-Pflege korrigiert (neue Datei hochladen, alte in den Papierkorb) | gemergt |
+| #15 | Zweite Karte „Gebirge“ mit Kartenwahl, Schlucht, breiter Brücke, engem Pass und Schneetreiben | gemergt |
 
 ## Was umgesetzt ist
 
@@ -66,6 +67,17 @@ Stand: 6. November 2026 · Live-Version auf `main`: `adff3ac` (PR #13)
 - Im Startmenü steht oben „Weiterspielen“ mit Stand und Zeitpunkt. Fortgesetzt wird im Pausenmenü.
 - Sieg, Niederlage oder „Neues Spiel“ löschen den Spielstand. Unpassende oder kaputte Spielstände werden mit Hinweis verworfen.
 
+### Karten: Insel und Gebirge
+- Im Startmenü steht vor der Schwierigkeit die Kartenwahl „Insel“ oder „Gebirge“. Die Wahl wird gemerkt, die Insel bleibt unverändert.
+- Gebirge: Die Hauptquartiere liegen in Tälern auf gegenüberliegenden Seiten, ringsum verschneite Gipfel und Berge am Horizont. In der Mitte trennt eine tiefe Schlucht die beiden Hälften, mit Wolken unterhalb der Kanten.
+- Zwei Wege führen über die Schlucht: links eine breite Holzbrücke, rechts ein enger Pass zwischen hohen Felswänden. Beide sind breit genug für Panzer und Fahrzeuge.
+- Die Kisten landen auf offenen Plateaus in der Mitte beider Wege, gleich weit von beiden Basen entfernt (blau bei der Brücke, gelb am Pass).
+- Felsen, Eis, bereifte Büsche, nur Tannen, ständiges Schneetreiben, kühleres Licht. Statt Möwen kreisen Adler.
+- Bewegung und KI-Wege funktionieren wie auf der Insel. Geprüft: Blechling, Panzer und Buggy beider Teams kommen über Brücke und Pass, keiner bleibt hängen.
+- Der Spielstand merkt sich die Karte. „Weiterspielen“ lädt bei Bedarf zuerst die richtige Karte. Alte Spielstände ohne Kartenangabe gelten als Insel.
+- Die Weihnachtsedition gilt auf beiden Karten. Auf dem Gebirge hängen die Lichterketten an der Brücke, statt eines zweiten Schneefalls läuft das Schneetreiben.
+- Die Musik ist auf beiden Karten dieselbe.
+
 ### Weihnachtsedition (jedes Jahr 1. November bis 10. Januar)
 - Startbildschirm: schräge rot-weiße Banderole „Weihnachtsedition“, Weihnachtsmütze auf dem K, Schneehaube auf „KISTEN“, Schneefall. Schalter zum Abschalten.
 - Blechlinge reihum als Weihnachtsmann, Elf und Schneemann, mit Mützenrand bzw. Hutband in Teamfarbe.
@@ -86,6 +98,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Spielstand: Runde speichern, neu laden, fortsetzen, alles identisch, Löschen am Rundenende
 - Musik: richtige Stücke in Menü, Bauruhe, Welle und am Rundenende, Standardlautstärken
 - Weihnachtsedition: Saisongrenzen, Kostüme, Geschenkkisten, Geschosse, Schlitten, Musik, Namen
+- Gebirge: Kartenwahl, Höhen von Schlucht, Brücke, Pass und Tal, Wegfindung über beide Wege, Runde mit Schneetreiben, Spielstand mit Karte, Weihnachtsedition auf dem Gebirge
 - Tonstudio und Update-Hinweis
 
 ## Projektstruktur
@@ -98,6 +111,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 | `js/sounds.js`, `js/audio.js`, `js/music.js` | Effekte, Audio-Steuerung, Musik-Sequenzer und Kompositionen |
 | `js/save.js` | Spielstand |
 | `js/xmas.js` | Weihnachtsedition |
+| `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
 | `js/update.js` | Update-Hinweis und Versionsanzeige |
 | `vendor/`, `fonts/`, `icons/` | three.js, Schriften, App-Icons |
 | `sw.js`, `manifest.webmanifest` | Offline-Speicher und App-Einstellungen |
@@ -110,6 +124,8 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 ## Grenzen und offene Punkte
 
 - Auf echten Handys habe ich nichts ausprobiert, getestet wurde in Chromium ohne Grafikkarte. Wie flüssig die Weihnachtsedition auf älteren Geräten läuft, ist offen.
+- Gebirge auf dem iPhone: Schneetreiben (900 Flocken) und Weihnachtsdeko sind sparsam gebaut, auf einem echten Gerät aber nicht gemessen.
+- Ein eigenes Bauruhe-Stück fürs Gebirge (im Auftrag optional) gibt es noch nicht.
 - Die Musik konnte ich nicht anhören, nur messen: keine Übersteuerung, keine Lücken, gleiche Lautstärke.
 - iPhone: iOS kann Daten von Web-Apps löschen, die etwa eine Woche nicht geöffnet wurden. Das betrifft auch den Spielstand.
 - Änderungen am ursprünglichen Claude-Artifact „Kistenkrawall“ kommen nicht automatisch ins Repo. Die Hauptversion ist das Repository.

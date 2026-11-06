@@ -27,6 +27,7 @@ const PRECACHE = [
   './js/ai.js',
   './js/input.js',
   './js/hud.js',
+  './js/mountain.js',
   './js/game.js',
   './js/save.js',
   './js/xmas.js',

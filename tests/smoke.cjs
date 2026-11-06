@@ -227,6 +227,42 @@ async function main() {
   await page.waitForSelector('#startBtn', { state: 'visible' });
   check(await page.evaluate(() => !XMAS && !document.documentElement.classList.contains('xmas') && units.every(u => !u.bot.costume)) && !(await page.isVisible('.xribbon')), 'mit ?normal die normale Version');
 
+  console.log('Gebirge');
+  await page.goto(base + '?normal');
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check(await page.evaluate(() => MAP === 'insel' && document.querySelector('#mapSeg [data-m="insel"]').getAttribute('aria-pressed') === 'true'), 'Standardkarte ist die Insel');
+  await Promise.all([page.waitForNavigation(), page.click('#mapSeg [data-m="gebirge"]', { force: true })]);
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check(await page.evaluate(() => MAP === 'gebirge' && localStorage.getItem('kk-map') === 'gebirge' && document.querySelector('#mapSeg [data-m="gebirge"]').getAttribute('aria-pressed') === 'true'), 'Kartenwahl: Gebirge gewählt und gemerkt');
+  check(await page.evaluate(() => hgtRaw(0, 0) < -8 && Math.abs(hgt(-18, 5) - 0.38) < 0.05 && Math.abs(hgt(18, 4.5) - 0.4) < 0.1 && hgtRaw(21.5, 4.5) > 4 && hgt(0, 44) < 1.5),
+    'Gebirge: tiefe Schlucht, Brücke und Pass auf Laufhöhe, Felswände am Pass, Basis im Tal');
+  check(await page.evaluate(() => {
+    const out = [];
+    for (const kind of [undefined, 'tank']) for (const bx of BRIDGES) for (const team of [0, 1]) {
+      const s = team ? -1 : 1, u = spawnUnit(team, bx * 0.6, s * 36, 'kaempfer', kind); let i = 0, via = false;
+      for (; i < 6000; i++) { if (moveToward(u, bx * 0.6, -s * 36, 0.05, ALLY, 1.5)) break; if (Math.abs(u.z) < 1 && Math.abs(u.x - bx) < crossW(bx)) via = true; }
+      out.push(i < 6000 && via);
+      u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
+    }
+    return out.every(Boolean);
+  }), 'Wegfindung: Blechling und Panzer beider Teams kommen über Brücke und Pass');
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1500);
+  check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && !!window.mountainDrift), 'Runde auf dem Gebirge läuft, mit Schneetreiben');
+  await page.evaluate(() => pause(true));
+  await page.goto(base + '?normal&karte=insel');
+  await page.waitForSelector('#continueBtn', { state: 'visible' });
+  check((await page.textContent('#continueInfo')).startsWith('Gebirge · '), 'Spielstand merkt die Karte: ' + await page.textContent('#continueInfo'));
+  await Promise.all([page.waitForNavigation(), page.click('#continueBtn', { force: true })]);
+  await page.waitForFunction(() => typeof state !== 'undefined' && state === 'pause', null, { timeout: 60000 }).catch(() => {});
+  check(await page.evaluate(() => MAP === 'gebirge' && state === 'pause'), 'Weiterspielen lädt das Gebirge und setzt fort');
+  await page.goto(base + '?weihnachten&karte=gebirge');
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1200);
+  check(await page.evaluate(() => XMAS && MOUNTAIN && units.filter(u => u.kind === 'bot').every(u => u.bot.costume) && crates.every(c => c.bow) && !!window.xmasSleigh), 'Weihnachtsedition auf dem Gebirge');
+  await page.evaluate(() => { endGame(true, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
+
   console.log('Update-Hinweis');
   await page.goto(base);
   await page.waitForSelector('#startBtn', { state: 'visible' });

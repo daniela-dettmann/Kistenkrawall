@@ -1,6 +1,18 @@
 /* Kistenkrawall: Gelände, Wasser, Gras, Inseln, Wolken, Deko und Hindernisse, Basen */
 'use strict';
 /* ---------- Terrain ---------- */
+// Mountain colours: snow on flat ground, grey-blue rock on steep slopes and in the chasm, trodden paths
+function mountainColor(x,z,h){
+  const sl=Math.hypot(hgtRaw(x+0.8,z)-hgtRaw(x-0.8,z),hgtRaw(x,z+0.8)-hgtRaw(x,z-0.8))/1.6;
+  const snow=new THREE.Color(0xf3f6fb),rock=new THREE.Color(0x6f7680),deep=new THREE.Color(0x3a4456),ice=new THREE.Color(0xbcd6ea),trail=new THREE.Color(0xb6ab9c);
+  const c=snow.clone().lerp(rock,clamp((sl-0.45)/0.6,0,1));
+  if(h<-1)c.lerp(deep,clamp((-h-1)/8,0,1));
+  if(h>9)c.lerp(snow,clamp((h-9)/6,0,0.8));
+  const path=pathDist(x,z);if(path<2.2&&sl<0.5)c.lerp(trail,(1-path/2.2)*0.5);
+  for(const b of BASES){const d=Math.hypot(x-b.x,z-b.z);if(d<10)c.lerp(trail,(1-d/10)*0.55);}
+  if(sl<0.25&&Math.sin(x*0.7+z*0.3)*Math.cos(z*0.5-x*0.2)>0.75)c.lerp(ice,0.5);
+  return c.multiplyScalar(1.02);
+}
 (function(){
   const g=new THREE.PlaneGeometry(172,172,176,176);g.rotateX(-Math.PI/2);
   const p=g.attributes.position,cols=[];
@@ -8,6 +20,7 @@
   for(let i=0;i<p.count;i++){
     const x=p.getX(i),z=p.getZ(i),h=hgtRaw(x,z);p.setY(i,h);
     let c;
+    if(MOUNTAIN){c=mountainColor(x,z,h);c.offsetHSL(0,0,(srand()-.5)*0.04);cols.push(c.r,c.g,c.b);continue;}
     if(h<-0.9)c=cS.clone().lerp(cD,clamp((-h-1.4)/1.8,0,1));
     else{
       c=cA.clone().lerp(cB,clamp((h+0.8)/1.8,0,1));
@@ -30,6 +43,12 @@
       .replace('#include <beginnormal_vertex>','vec3 objectNormal=normalize(vec3(-cos(position.x*0.15+uTime)*0.11,sin(position.y*0.2+uTime*1.3)*0.12,1.0));')
       .replace('#include <begin_vertex>','vec3 transformed=vec3(position);transformed.z+=sin(position.x*0.15+uTime)*0.12+cos(position.y*0.2+uTime*1.3)*0.1;');
   };
+  if(MOUNTAIN){
+    // clouds drifting below the edges make the drop visible
+    const cm=new THREE.MeshLambertMaterial({color:0xf2f5fa,emissive:0x8090a0,transparent:true,opacity:.55,depthWrite:false});
+    for(const y of [-6,-8.5]){const cl=new THREE.Mesh(new THREE.PlaneGeometry(240,14,1,1),cm);cl.rotation.x=-Math.PI/2;cl.position.y=y;cl.userData.cloudLayer=true;scene.add(cl);}
+    return;
+  }
   const w=new THREE.Mesh(new THREE.PlaneGeometry(420,420,130,130),wm);
   w.rotation.x=-Math.PI/2;w.position.y=-1.65;w.receiveShadow=true;scene.add(w);
 })();
@@ -51,7 +70,7 @@
     sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\nfloat sway=sin(uTime*1.8+instanceMatrix[3].x*0.35+instanceMatrix[3].z*0.22);transformed.x+=sway*0.09*position.y;transformed.z+=cos(uTime*1.3+instanceMatrix[3].x*0.2)*0.05*position.y;');
   };
-  const N=6500,NF=760,im=new THREE.InstancedMesh(g,mat,N),fl=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075,0),new THREE.MeshLambertMaterial({color:0xffffff}),NF);
+  const N=MOUNTAIN?2200:6500,NF=MOUNTAIN?0:760,im=new THREE.InstancedMesh(g,mat,N),fl=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075,0),new THREE.MeshLambertMaterial({color:0xffffff}),NF);
   const d=new THREE.Object3D(),c=new THREE.Color();let n=0,f=0,tries=0;
   const FLC=[0xfff7e0,0xffd84a,0xff8fb1,0xb9a7ff];
   while((n<N||f<NF)&&tries<70000){
@@ -61,7 +80,7 @@
     if(pathDist(x,z)<1.4)continue;
     if(n<N){
       d.position.set(x,h-0.02,z);d.rotation.set(0,srand()*TAU,0);const s=0.7+srand()*0.8;d.scale.set(s,s*(0.8+srand()*0.6),s);d.updateMatrix();
-      im.setMatrixAt(n,d.matrix);c.setHSL(0.24+srand()*0.07,0.5+srand()*0.2,0.33+srand()*0.12);im.setColorAt(n,c);n++;
+      im.setMatrixAt(n,d.matrix);if(MOUNTAIN)c.setHSL(0.2+srand()*0.06,0.18,0.62+srand()*0.15);else c.setHSL(0.24+srand()*0.07,0.5+srand()*0.2,0.33+srand()*0.12);im.setColorAt(n,c);n++;
     }else if(f<NF){
       d.position.set(x,h+0.24,z);d.rotation.set(0,0,0);d.scale.setScalar(0.8+srand()*0.6);d.updateMatrix();
       fl.setMatrixAt(f,d.matrix);fl.setColorAt(f,c.set(FLC[Math.floor(srand()*FLC.length)]));f++;
@@ -71,7 +90,7 @@
 })();
 
 /* Distant islands out at sea; colours are pre-hazed toward the horizon instead of using fog */
-(function(){
+if(!MOUNTAIN)(function(){
   const hz=new THREE.Color(HORIZON);
   const haze=(c,k)=>new THREE.Color(c).lerp(hz,k);
   const spots=[[0.3,120,1],[1.1,150,1.4],[1.75,135,0.8],[2.5,175,1.8],[3.2,128,1.1],[3.9,160,1.5],[4.6,118,0.7],[5.35,190,2.1],[5.9,140,1.0],[2.05,200,1.2]];
@@ -187,7 +206,7 @@ const pineMat=[0x2f6f3f,0x3a7d45].map(c=>texMat(c,TX.leaf,0.06,{flatShading:true
 function addTree(x,z,block){
   const y=hgt(x,z),g=new THREE.Group();g.position.set(x,y-0.05,z);g.rotation.y=srand()*TAU;
   const s=0.85+srand()*0.55;
-  if(srand()<0.38){
+  if(srand()<0.38||MOUNTAIN){
     const t=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.22,1.0*s,6),trunkMat);t.position.y=0.5*s;g.add(t);
     const pm=pineMat[srand()<.5?0:1];
     for(let i=0;i<3;i++){const c=new THREE.Mesh(new THREE.ConeGeometry((1.35-i*0.33)*s,1.5*s,7),pm);c.position.y=(1.25+i*0.85)*s;c.rotation.y=srand();g.add(c);}
@@ -234,23 +253,25 @@ function addBags(x0,z,x1){
   for(let i=0;i<80;i++){const a=srand()*TAU,r=58+srand()*8;addTree(Math.cos(a)*r,Math.sin(a)*r,false);}
   for(const s of [1,-1]){addBags(-10,s*35.5,-4);addBags(4,s*35.5,10);addBags(-26,s*14,-21);addBags(21,s*14,26);}
   // the river acts like a long wall with gaps at the two bridges
-  walls.push({a:-LIM-4,b:-20.3,z:0,noA:true},{a:-15.7,b:15.7,z:0},{a:20.3,b:LIM+4,z:0,noB:true});
+  walls.push({a:-LIM-4,b:BRIDGES[0]-CW[0],z:0,noA:true},{a:BRIDGES[0]+CW[0],b:BRIDGES[1]-CW[1],z:0},{a:BRIDGES[1]+CW[1],b:LIM+4,z:0,noB:true});
   // reed and stones along the banks
-  for(let i=0;i<60;i++){const x=(srand()*2-1)*50,s=srand()<.5?1:-1,z=s*(8.9+srand()*1.3);if(BRIDGES.some(bx=>Math.abs(x-bx)<4))continue;const m=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.9+srand()*0.6,4),leafPal[0]);m.position.set(x,hgtRaw(x,z)+0.4,z);scene.add(m);}
+  if(!MOUNTAIN)for(let i=0;i<60;i++){const x=(srand()*2-1)*50,s=srand()<.5?1:-1,z=s*(8.9+srand()*1.3);if(BRIDGES.some(bx=>Math.abs(x-bx)<4))continue;const m=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.9+srand()*0.6,4),leafPal[0]);m.position.set(x,hgtRaw(x,z)+0.4,z);scene.add(m);}
   // bridges
   const plank=texMat(0x9a6a3c,TX.plank,0.05,{shininess:6}),dk=texMat(0x6b4423,TX.plank,0.05,{shininess:6});
   for(const bx of BRIDGES){
+    if(MOUNTAIN&&bx>0)continue;
+    const cw=crossW(bx),pillarH=MOUNTAIN?16:3;
     const g=new THREE.Group();g.position.set(bx,0,0);
     for(const side of [-1,1]){
-      for(let i=0;i<9;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(4.6,0.24,0.78),i%2?plank:dk);p.position.set(0,0.3,side*(2.9+i*0.785));p.castShadow=p.receiveShadow=true;g.add(p);}
-      for(const sx of [-2.25,2.25]){
+      for(let i=0;i<9;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(cw*2,0.24,0.78),i%2?plank:dk);p.position.set(0,0.3,side*(2.9+i*0.785));p.castShadow=p.receiveShadow=true;g.add(p);}
+      for(const sx of [-(cw-0.05),cw-0.05]){
         const rail=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.14,6.6),dk);rail.position.set(sx,0.99,side*6.1);rail.castShadow=true;g.add(rail);
         for(let k=0;k<4;k++){const post=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.75,0.16),dk);post.position.set(sx,0.64,side*(3.0+k*2.1));post.castShadow=true;g.add(post);}
-        for(const sz of [3.3,4.8,6.2,7.6]){const pil=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.26,3,8),dk);pil.position.set(sx*0.8,-1.3,side*sz);g.add(pil);}
+        for(const sz of [3.3,4.8,6.2,7.6]){const pil=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.26,pillarH,8),dk);pil.position.set(sx*0.8,0.2-pillarH/2,side*sz);g.add(pil);}
       }
       // two stringers carry the planks, a stone abutment holds the deck where it meets the bank
       for(const sx of [-1.5,1.5]){const beam=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.3,6.9),dk);beam.position.set(sx,0.05,side*6.05);beam.castShadow=true;g.add(beam);}
-      const abut=new THREE.Mesh(new THREE.BoxGeometry(5.2,2.6,1.3),rockMat);abut.position.set(0,-1.12,side*9.15);abut.castShadow=abut.receiveShadow=true;g.add(abut);
+      const abut=new THREE.Mesh(new THREE.BoxGeometry(cw*2+0.6,2.6,1.3),rockMat);abut.position.set(0,-1.12,side*9.15);abut.castShadow=abut.receiveShadow=true;g.add(abut);
     }
     scene.add(g);
   }
@@ -269,7 +290,7 @@ for(const D of DROPS){
     const st=new THREE.Mesh(new THREE.DodecahedronGeometry(0.22,0),new THREE.MeshPhongMaterial({color:col,flatShading:true,shininess:20}));st.position.set(x,hgtRaw(x,z)+0.08,z);st.scale.y=0.6;g.add(st);}
   const pal=new THREE.Group();pal.position.set(D.x-out*5.0,hgtRaw(D.x-out*5,0),0.6);
   const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.16,2.2,6),trunkMat);trunk.position.y=1.1;trunk.rotation.z=out*0.2;pal.add(trunk);
-  const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(0.75,0),leafPal[2]);crown.position.set(out*0.25,2.35,0);crown.scale.y=0.6;pal.add(crown);g.add(pal);
+  const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(0.75,0),leafPal[2]);crown.position.set(out*0.25,2.35,0);crown.scale.y=0.6;pal.add(crown);if(!MOUNTAIN)g.add(pal);
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
   scene.add(g);dropFx.push({beacon,flag,phase:blue?0:Math.PI});
 }
@@ -285,7 +306,7 @@ for(const D of DROPS){
     if(nb<220){
       if(Math.abs(z)<6.5||pathDist(x,z)<2.5||obstacles.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+1.2))continue;
       d.position.set(x,h+0.25,z);d.rotation.set(srand(),srand()*3,0);const s=0.6+srand()*0.9;d.scale.set(s*1.2,s*0.75,s);d.updateMatrix();
-      bush.setMatrixAt(nb,d.matrix);bush.setColorAt(nb,c.setHSL(0.27+srand()*0.06,0.45,0.5+srand()*0.2));nb++;
+      bush.setMatrixAt(nb,d.matrix);bush.setColorAt(nb,MOUNTAIN?c.setHSL(0.36+srand()*0.05,0.22,0.36+srand()*0.14):c.setHSL(0.27+srand()*0.06,0.45,0.5+srand()*0.2));nb++;
     }else{
       d.position.set(x,h+0.03,z);d.rotation.set(srand()*3,srand()*3,srand()*3);d.scale.setScalar(0.5+srand()*1.4);d.updateMatrix();
       peb.setMatrixAt(np,d.matrix);peb.setColorAt(np,c.setHSL(0.08,0.06,0.55+srand()*0.3));np++;

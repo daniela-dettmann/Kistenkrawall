@@ -205,3 +205,4 @@ table.stack{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-nu
 .xmas #menu>.panel{z-index:1}
 #xmasToggle[aria-pressed="true"]{border-color:#c8202a;color:#ffd6d6}
 @media (prefers-reduced-motion:reduce){.xmas #xsnow,.xmas .xribbon{animation:none}}
+.seg.seg2{grid-template-columns:repeat(2,1fr)}
