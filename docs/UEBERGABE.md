@@ -20,12 +20,7 @@ Neu in #18: Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur de
 
 1. **PR #18 fertig machen.** Browser-Test auf GitHub muss grün sein, dann entscheidet Daniela über den Merge. Danach gehen #17 und #18 zusammen live. Prüfen, dass der Deploy auf `main` wirklich durchgelaufen ist, nicht nur der PR-Test.
 2. **Projektstand nachziehen** (nach dem Merge, siehe `CLAUDE.md`): Live-Version in `docs/PROJEKTSTAND.md` und in Google Drive eintragen. Die Drive-Fassung nennt im Moment fälschlich `8f9a123` als live; das wird dabei richtiggestellt.
-3. **Umzug nach GitLab: offen.** Daniela wollte das Repository nach GitLab umziehen, als GitHub nicht erreichbar war. Jetzt geht GitHub wieder. Zu klären:
-   - Soll der Umzug trotzdem kommen?
-   - Wenn ja: Adresse des GitLab-Projekts und ein Token (Project Access Token, Rolle Maintainer, Rechte `api` und `write_repository`, oder ein Fine-Grained Token mit Code schreiben, Merge Requests erstellen und mergen, Pipelines lesen; nur für dieses Projekt, mit Ablaufdatum). Der Token kommt über das sichere Formular, nie in den Chat.
-   - Spiel auf GitLab Pages veröffentlichen? Dann ändert sich die Adresse. Die App muss neu installiert werden, Spielstand und Einstellungen fangen neu an, weil der Browser sie pro Adresse speichert.
-   - GitHub als Archiv behalten?
-   - Für den Umzug nötig: `.gitlab-ci.yml` mit demselben Ablauf wie `.github/workflows/pages.yml` (zusammenstellen, Version eintragen, Browser-Test mit lokalem PeerServer, veröffentlichen), Links in `README.md`, `CLAUDE.md` und `docs/PROJEKTSTAND.md` anpassen.
+3. **Umzug nach GitLab: entschieden, wir bleiben auf GitHub.** Daniela hatte den Umzug überlegt, als GitHub nicht erreichbar war. Am 9. November 2026 hat sie entschieden: erst einmal bleibt alles auf GitHub (Repository und GitHub Pages).
 4. **Sicherung.** Eine ZIP-Datei und ein Git-Bundle vom Stand `0112df1` hat Daniela direkt bekommen. Hochladen nach Google Drive macht sie selbst.
 
 ## Offene Punkte ohne Auftrag
