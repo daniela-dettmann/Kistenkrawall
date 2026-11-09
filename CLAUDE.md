@@ -18,5 +18,5 @@ Kein Artifact für den Projektstand anlegen; Daniela möchte ihn nur in Google D
 ## Arbeitsweise in diesem Repo
 
 - Änderungen als Pull Request; Daniela entscheidet, ob gemergt wird. Gemergt wird erst, wenn der Browser-Test auf GitHub grün ist.
-- Vor dem Pushen `node tests/smoke.cjs` laufen lassen (siehe README).
+- Vor dem Pushen `node tests/smoke.cjs` laufen lassen (siehe README). Der Mehrspieler-Test läuft nur lokal, GitHub überspringt ihn; deshalb lokal immer mit Mehrspieler-Test (Paket `peer`) prüfen.
 - Kommunikation mit Daniela auf Deutsch.

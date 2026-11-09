@@ -12,7 +12,9 @@ Stand: 9. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was a
 
 PR #17 ist zwar gemergt, aber nicht live: Beim Veröffentlichen ist der Test „Host verlässt das Spiel: endet auch für den Gast“ gescheitert. Er wackelte, weil der Gast nur über eine Verzögerung vom Abschied des Hosts erfuhr. PR #18 behebt das: Meldet der Vermittlungsserver während einer Runde, dass der Host nicht mehr da ist (`peer-unavailable`), beendet der Gast das Spiel sofort mit „Dein Gegner hat das Spiel verlassen.“ (`js/net.js`, `joinRoom`).
 
-Der letzte Testlauf von #18 wurde abgebrochen, als der GitHub-Zugang weg war. Er läuft mit diesem Commit neu.
+Der letzte Testlauf von #18 wurde abgebrochen, als der GitHub-Zugang weg war. Er läuft mit dem nächsten Push neu.
+
+Neu in #18: Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (Dateien, Spiel, App, Spielstand, Musik, Weihnachten, Gebirge, Tonstudio, Update-Hinweis). GitHub setzt `CI=true`, daran erkennt `tests/smoke.cjs` das; `KK_MP_TEST=1` erzwingt den Mehrspieler-Test trotzdem.
 
 ## Was noch zu tun ist
 
@@ -37,7 +39,7 @@ Aus `docs/PROJEKTSTAND.md`, „Grenzen und offene Punkte“:
 
 ## Hinweise für die nächste Sitzung
 
-- Vor jedem Push `node tests/smoke.cjs`. Der Mehrspieler-Test braucht das Paket `peer` (`npm install`).
+- Vor jedem Push `node tests/smoke.cjs`, mit Mehrspieler-Test (läuft nur lokal, braucht das Paket `peer` aus `npm install`). Besonders wichtig bei Änderungen an `js/net.js`, weil GitHub diesen Teil nicht mehr prüft.
 - Nur mergen, wenn der Browser-Test grün ist und Daniela zugestimmt hat.
 - Nach dem Merge immer den Deploy-Lauf auf `main` prüfen, bevor man sagt, dass etwas live ist.
 - Mit Daniela auf Deutsch sprechen.

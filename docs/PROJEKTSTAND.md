@@ -31,7 +31,7 @@ Stand: 6. November 2026 · Live-Version auf `main`: `2313272` (PR #16, #17 wurde
 | #15 | Zweite Karte „Gebirge“ mit Kartenwahl, Schlucht, breiter Brücke, engem Pass und Schneetreiben | gemergt |
 | #16 | Mehrspieler 1 gegen 1 über Raumcode (WebRTC/PeerJS), Host rechnet, faire KI für beide Teams | gemergt |
 | #17 | Kein versehentliches Reinzoomen mehr auf dem Handy; Durchblick-Loch im Gebirge, damit Hänge die Figur nicht verdecken | gemergt |
-| #18 | Mehrspieler: Gast erkennt sofort, wenn der Host den Raum geschlossen hat; damit geht auch #17 live | gemergt |
+| #18 | Mehrspieler: Gast erkennt sofort, wenn der Host den Raum geschlossen hat; Mehrspieler-Test läuft nur noch lokal, auf GitHub nur der schnelle Test; Übergabedatei `docs/UEBERGABE.md`; damit geht auch #17 live | gemergt |
 
 ## Was umgesetzt ist
 
@@ -113,8 +113,10 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Musik: richtige Stücke in Menü, Bauruhe, Welle und am Rundenende, Standardlautstärken
 - Weihnachtsedition: Saisongrenzen, Kostüme, Geschenkkisten, Geschosse, Schlitten, Musik, Namen
 - Gebirge: Kartenwahl, Höhen von Schlucht, Brücke, Pass und Tal, Wegfindung über beide Wege, Runde mit Schneetreiben, Spielstand mit Karte, Weihnachtsedition auf dem Gebirge
-- Mehrspieler mit zwei Browsern und lokalem Vermittlungsserver: Raumcode, Beitritt, voller Raum, Versionsunterschied, Rollen, faire KI, Steuerung des Gasts, ungültige Nachrichten, Pause, Abbruch und Wiederverbinden, Einzelspieler-Spielstand unberührt, Host verlässt das Spiel
+- Nur lokal (`node tests/smoke.cjs`, auf GitHub übersprungen): Mehrspieler mit zwei Browsern und lokalem Vermittlungsserver: Raumcode, Beitritt, voller Raum, Versionsunterschied, Rollen, faire KI, Steuerung des Gasts, ungültige Nachrichten, Pause, Abbruch und Wiederverbinden, Einzelspieler-Spielstand unberührt, Host verlässt das Spiel
 - Tonstudio und Update-Hinweis
+
+Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikkarte, drei Browserseiten gleichzeitig). Er läuft deshalb nur lokal vor dem Push; mit `KK_MP_TEST=1` lässt er sich auch auf GitHub erzwingen.
 
 ## Projektstruktur
 
