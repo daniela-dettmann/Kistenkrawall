@@ -70,7 +70,7 @@ Im Startmenü lässt sich zwischen **Insel** und **Gebirge** wählen. Beide folg
 - Raumcodes aus kryptografischem Zufall ohne 0/O/1/I/L, Ablauf nach 10 Minuten ohne Beitritt, nur ein Gast, Versionsvergleich, Prüfung jeder Nachricht (Format, Werte, Größe, Häufigkeit), kein Chat, keine persönlichen Daten.
 - Abbruch: beide pausieren, 60 Sekunden lang verbindet sich der Gast selbst wieder. Verlässt der Host das Spiel, endet es für beide. Der Einzelspieler-Spielstand bleibt unberührt.
 - TURN-Server: noch keiner. Er wird in `js/net.js` unter `NET_CFG.turn` eingetragen, falls Verbindungen übers Internet scheitern.
-- Code: `js/net.js`, Bibliothek `vendor/peerjs-1.5.4.min.js`. Der Test nutzt einen lokalen PeerServer (`?peerserver=127.0.0.1:PORT`, nur auf localhost erlaubt) und läuft nur lokal, nicht auf GitHub.
+- Code: `js/net.js`, Bibliothek `vendor/peerjs-1.5.4.min.js` (eine Änderung: kommt ein Datenkanal für eine schon geschlossene Verbindung an, wird er ignoriert, statt einen Fehler zu werfen). Der Test nutzt einen lokalen PeerServer (`?peerserver=127.0.0.1:PORT`, nur auf localhost erlaubt) und läuft nur lokal, nicht auf GitHub.
 
 ## Weihnachtsedition
 
