@@ -30,6 +30,7 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/hud.js` | HUD, Sprechblasen, Atmosphäre |
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
 | `js/mountain.js`, `js/volcano.js` | Karten Gebirge und Vulkan: Licht, Wetter, Krater und Ausbruch |
+| `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
 | `js/save.js` | Spielstand speichern und fortsetzen |
 | `js/xmas.js` | Weihnachtsedition (1. November bis 10. Januar) |
 | `js/update.js` | Hinweis auf neue Versionen, Versionsanzeige |
@@ -74,6 +75,17 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 - Abbruch: beide pausieren, 60 Sekunden lang verbindet sich der Gast selbst wieder. Verlässt der Host das Spiel, endet es für beide. Der Einzelspieler-Spielstand bleibt unberührt.
 - TURN-Server: noch keiner. Er wird in `js/net.js` unter `NET_CFG.turn` eingetragen, falls Verbindungen übers Internet scheitern.
 - Code: `js/net.js`, Bibliothek `vendor/peerjs-1.5.4.min.js` (eine Änderung: kommt ein Datenkanal für eine schon geschlossene Verbindung an, wird er ignoriert, statt einen Fehler zu werfen). Der Test nutzt einen lokalen PeerServer (`?peerserver=127.0.0.1:PORT`, nur auf localhost erlaubt) und läuft nur lokal, nicht auf GitHub.
+
+## Grafik
+
+`js/gfx.js` hängt sich an das Bestehende an und gilt auf allen Karten. Im Startmenü steht „Grafik: Schön / Schnell“ (gemerkt; zum Testen `?grafik=schoen` oder `?grafik=schnell`).
+
+- **Schön:** Das Bild wird erst in einen Zwischenspeicher gezeichnet und dann mit drei kleinen Durchgängen nachbearbeitet: weicher Schein um Helles (auf Schnee nur um echte Lichter), etwas mehr Kontrast und Farbe, warme Lichter, kühle Schatten, dunklere Ecken. Dazu Druckwelle und Funken bei Explosionen, Staub hinter Fahrzeugen, Schattenflecken unter Bäumen und Felsen, Schatten in voller Auflösung.
+- **Schnell:** ohne Nachbearbeitung und Zusatzeffekte, kleinere Schatten, geringere Bildauflösung.
+- In beiden Stufen: Uferschaum und helles Flachwasser, Glut an den Lavaufern, unregelmäßiger Boden statt Kachelmuster, nasser Saum am Wasser. Dafür wird das Höhenprofil beim Laden einmal in eine kleine Textur geschrieben (`hgtTex`).
+- Läuft das Spiel zweimal hintereinander unter 24 Bildern pro Sekunde und hat man nichts fest gewählt, stellt es von selbst auf „Schnell“.
+- Schlägt die Nachbearbeitung fehl, zeichnet das Spiel wie früher direkt (kein schwarzes Bild).
+- Shader anderer Dateien bleiben erhalten: `gfxChain` hängt sich hinter vorhandene `onBeforeCompile`-Funktionen (Wasser, Lava, Durchblick-Loch).
 
 ## Weihnachtsedition
 

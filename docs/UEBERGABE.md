@@ -6,16 +6,16 @@ Stand: 13. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `f2d1ca6` (PR #19, Vulkan-Karte) |
-| `main` | `f2d1ca6` |
-| Offener Pull Request | #20: Vulkan nachgebessert (Daniela fand auf dem Handy orange Flecken im Boden, ein hellblaues Meer in der Weihnachtsedition und Lava, die über die Küste hinausragte) |
+| Live auf GitHub Pages | `9bd13ec` (PR #20, Vulkan nachgebessert) |
+| `main` | `9bd13ec` |
+| Offener Pull Request | #21: Grafik-Paket für alle Karten |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
 ## Was noch zu tun ist
 
-1. **PR #20 (Vulkan nachgebessert):** Browser-Test auf GitHub muss grün sein, dann entscheidet Daniela über den Merge. Danach den Deploy auf `main` prüfen und den Projektstand in Google Drive erneuern.
-2. **Tag, Nacht und Wetter** (beauftragt, kommt als eigener Pull Request nach dem Vulkan): Ein Tag dauert etwa 8 Minuten mit Morgen, Mittag, Abendrot und Nacht. Nachts Scheinwerfer an Blechlingen und Fahrzeugen, leuchtende Kisten, Hauptquartiere und Lava. Wetter je Karte: Insel Regen und Gewitter, Gebirge Schneesturm und Nebel, Vulkan Ascheregen. Nur Optik und Ton, keine Spielwirkung. Im Mehrspieler gibt der Host Uhrzeit und Wetter vor. Schalter im Menü zum Ausschalten.
+1. **PR #21 (Grafik-Paket):** Browser-Test auf GitHub muss grün sein, dann entscheidet Daniela über den Merge. Danach den Deploy auf `main` prüfen und den Projektstand in Google Drive erneuern.
+2. **Tag, Nacht und Wetter** (beauftragt, kommt als eigener Pull Request nach dem Grafik-Paket und baut auf dessen Licht auf): Ein Tag dauert etwa 8 Minuten mit Morgen, Mittag, Abendrot und Nacht. Nachts Scheinwerfer an Blechlingen und Fahrzeugen, leuchtende Kisten, Hauptquartiere und Lava. Wetter je Karte: Insel Regen und Gewitter, Gebirge Schneesturm und Nebel, Vulkan Ascheregen. Nur Optik und Ton, keine Spielwirkung. Im Mehrspieler gibt der Host Uhrzeit und Wetter vor. Schalter im Menü zum Ausschalten.
 3. **Hosting zieht später zu AWS um.** Nur die Veröffentlichung, der Code bleibt auf GitHub. Der GitLab-Umzug ist vom Tisch (Entscheidung vom 9. November 2026). Einzelheiten zu AWS sind noch nicht besprochen. Zu beachten: Bei einer neuen Adresse muss die App neu installiert werden, Spielstand und Einstellungen fangen neu an.
 4. **Sicherung.** Eine ZIP-Datei und ein Git-Bundle vom Stand `0112df1` liegen in Google Drive.
 

@@ -266,6 +266,25 @@ async function main() {
   check(await page.evaluate(() => XMAS && MOUNTAIN && units.filter(u => u.kind === 'bot').every(u => u.bot.costume) && crates.every(c => c.bow) && !!window.xmasSleigh), 'Weihnachtsedition auf dem Gebirge');
   await page.evaluate(() => { endGame(true, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
 
+  console.log('Grafik');
+  await page.goto(base + '?normal&karte=insel');
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check(await page.evaluate(() => GFX.mode === 'schoen' && document.querySelector('#gfxToggle').textContent === 'Grafik: Schön' && typeof gfxRender === 'function'), 'Grafik: Standard ist „Schön“');
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1500);
+  const lit = () => page.evaluate(() => {
+    gfxRender(); const gl = renderer.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(4); let sum = 0;
+    for (const [fx, fy] of [[0.5, 0.5], [0.25, 0.3], [0.75, 0.3], [0.5, 0.8]]) { gl.readPixels(Math.floor(w * fx), Math.floor(h * fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); sum += px[0] + px[1] + px[2]; }
+    return sum;
+  });
+  check(await page.evaluate(() => GFX.ok && !!GFX.water && !!GFX.contact && GFX.contact.visible && sun.shadow.mapSize.x === 2048) && await lit() > 200, 'Grafik „Schön“: Bildeffekte zeichnen ein Bild, Uferschaum und Schattenflecken sind da');
+  check(await page.evaluate(() => { const n = parts.length; boom(0, 20, 3); return parts.length >= n + 3; }), 'Explosion mit Druckwelle und Funken');
+  await page.evaluate(() => { pause(true); toMenu(); });
+  await page.click('#gfxToggle', { force: true });
+  check(await page.evaluate(() => GFX.mode === 'schnell' && localStorage.getItem('kk-gfx') === 'schnell' && document.querySelector('#gfxToggle').textContent === 'Grafik: Schnell' && !GFX.contact.visible && sun.shadow.mapSize.x === 1024) && await lit() > 200,
+    'Grafik „Schnell“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');
+  await page.evaluate(() => localStorage.removeItem('kk-gfx'));
+
   console.log('Vulkan');
   await page.goto(base + '?normal');
   await page.waitForSelector('#startBtn', { state: 'visible' });
