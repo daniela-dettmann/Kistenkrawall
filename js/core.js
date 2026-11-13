@@ -28,7 +28,7 @@ const BASES=[{x:0,z:44},{x:0,z:-44}];
 const LIM=52;
 const BX=VOLCANO?8:18,BRIDGES=[-BX,BX],BANK=VOLCANO?12:6.2,ISL_RX=VOLCANO?15:6.2,ISL_RZ=VOLCANO?7:3.4;
 // ZS: how much further from the middle the banks lie than on the island map; shifts everything placed along them
-const ZS=BANK-6.2,CRATER={x:0,z:0,r:3.3};
+const ZS=BANK-6.2,CRATER={x:0,z:0,r:3.3},LAVA_END=55.5;
 // centre of the island a point belongs to: the volcano has a single one, the other maps one under each crossing
 const islCx=x=>VOLCANO?0:(x<0?BRIDGES[0]:BRIDGES[1]);
 // half width of each crossing: on the mountain the bridge (left) is wide, the pass (right) narrower but still fits tanks

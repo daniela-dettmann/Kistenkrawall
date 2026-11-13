@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 13. November 2026 · Live-Version auf `main`: `b9e85e9` (PR #18, damit auch #17 live); mit dem Merge von #19 kommt die Vulkan-Karte dazu
+Stand: 13. November 2026 · Live-Version auf `main`: `f2d1ca6` (PR #19, Vulkan-Karte)
 
 ## Links
 
@@ -33,6 +33,7 @@ Stand: 13. November 2026 · Live-Version auf `main`: `b9e85e9` (PR #18, damit au
 | #17 | Kein versehentliches Reinzoomen mehr auf dem Handy; Durchblick-Loch im Gebirge, damit Hänge die Figur nicht verdecken | gemergt |
 | #18 | Mehrspieler: Gast erkennt sofort, wenn der Host den Raum geschlossen hat; Mehrspieler-Test läuft nur noch lokal, auf GitHub nur der schnelle Test; Übergabedatei `docs/UEBERGABE.md`; damit geht auch #17 live | gemergt |
 | #19 | Dritte Karte „Vulkan“: Lavastrom mit großer Vulkaninsel, vier Brücken, Krater, Kisten auf der Insel, Ausbrüche sperren kurz eine Brücke | gemergt |
+| #20 | Vulkan nachgebessert: keine orangen Flecken mehr im Boden, dunkles Meer (auch in der Weihnachtsedition), Lavastrom endet an der Küste mit erkaltetem Gestein und Dampf, Lava weniger grell | gemergt |
 
 ## Was umgesetzt ist
 
@@ -89,7 +90,7 @@ Stand: 13. November 2026 · Live-Version auf `main`: `b9e85e9` (PR #18, damit au
 - In der Inselmitte steht der Vulkankegel mit Krater, Lavasee, Glut und Rauchsäule. Er ist nicht begehbar, man läuft links oder rechts daran vorbei.
 - Alle Kisten landen auf der Insel: blaue links vom Krater, gelbe rechts, Goldkisten direkt am Kraterrand.
 - Ausbruch: Etwa einmal pro Minute grollt der Vulkan. Eine der vier Brücken wird markiert (gelbe Ringe, Blinken auf der Minikarte) und nach 3,5 Sekunden Warnung einige Sekunden lang mit Lavabrocken beworfen, die allen dort Schaden machen. Die Ufer wechseln sich ab, damit es beide Teams gleich oft trifft. Die KI weicht in der Zeit auf die andere Brücke aus.
-- Aussehen: schwarzer Basalt, Asche, glühende Risse, verkohlte Bäume, warmes, dunstiges Licht.
+- Aussehen: schwarzer Basalt, Asche, verkohlte Bäume, warmes, dunstiges Licht, ringsum ein dunkles Meer. Der Lavastrom endet an beiden Küsten an erkaltetem Gestein, dort steigt Dampf auf.
 - Technik: Der Grundriss ist in `js/core.js` verallgemeinert (Lage der Brücken, Breite des Stroms, Inselform). Der Vulkan hat eine eigene Wegführung (`volcanoWaypoint` in `js/combat.js`): Ufer → Brückenkopf → Insel → um den Krater → Brücke → Ufer.
 - Funktioniert mit Spielstand, im Mehrspieler (der Host meldet Warnung und Lavabrocken an den Gast) und in der Weihnachtsedition (ohne Schneedecke und Eisschollen, die Lava bleibt).
 - Geprüft im Test und in einer simulierten Runde über acht Minuten: Beide Teams sammeln Kisten, die Welle kommt über die Insel, niemand läuft durch die Lava.

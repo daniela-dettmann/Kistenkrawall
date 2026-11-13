@@ -64,7 +64,7 @@ if(XMAS)(function(){
       }
       col.needsUpdate=true;
     }
-    if(o.material&&o.position.y===-1.65&&o.material.transparent){o.material.color.set(0x4f9fc9);}
+    if(!VOLCANO&&o.material&&o.position.y===-1.65&&o.material.transparent){o.material.color.set(0x4f9fc9);}
   });
   scene.traverse(o=>{if(o.isInstancedMesh&&o.count>2000){const c=new THREE.Color();for(let i=0;i<o.count;i++){o.getColorAt(i,c);c.lerp(new THREE.Color(0xeef4fa),0.85);o.setColorAt(i,c);}o.instanceColor.needsUpdate=true;}
     else if(o.isInstancedMesh&&o.count>200&&o.count<=2000&&o.geometry.type==='IcosahedronGeometry'){const c=new THREE.Color();for(let i=0;i<o.count;i++)o.setColorAt(i,c.set(ORN[i%ORN.length]));o.instanceColor.needsUpdate=true;}});

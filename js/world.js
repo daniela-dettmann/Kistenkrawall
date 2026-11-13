@@ -26,8 +26,6 @@ function volcanoColor(x,z,h){
   if(d<1.9)c.lerp(glow,clamp((1.9-d)/0.9,0,0.9));
   if(Math.abs(z)<BANK+3){if(h<-0.5)c.lerp(glow,clamp((-h-0.5)/1.6,0,0.85));}
   else if(h<-0.9)c.lerp(sand,clamp((-h-0.9)/1.2,0,1));
-  // glowing cracks in the basalt
-  if(sl<0.3&&h>-0.3&&Math.abs(Math.sin(x*0.83+Math.sin(z*0.6)*1.7)*Math.cos(z*0.71+Math.sin(x*0.5)*1.3))<0.035&&path>2.6&&d>5)c.lerp(glow,0.75);
   return c.multiplyScalar(1.05);
 }
 let lavaMat=null;
@@ -68,20 +66,26 @@ let lavaMat=null;
     return;
   }
   if(VOLCANO){
-    wm.color.set(0x24607e);
+    wm.color.set(0x1c4f6a);wm.opacity=0.94;   // a dark, deep sea, so the coast reads as a coast
     // lava: slow waves, bright veins drifting between dark crust; it lights itself, fog and shadows barely touch it
-    lavaMat=new THREE.MeshPhongMaterial({color:0xff7a1e,emissive:0xd84a0c,specular:0x000000,shininess:1});
+    lavaMat=new THREE.MeshPhongMaterial({color:0xe85a14,emissive:0xa02c06,specular:0x000000,shininess:1});
     lavaMat.onBeforeCompile=sh=>{
       sh.uniforms.uTime=timeU;
       sh.vertexShader='uniform float uTime;varying vec2 vLava;\n'+sh.vertexShader
         .replace('#include <begin_vertex>','vec3 transformed=vec3(position);transformed.z+=sin(position.x*0.3+uTime*0.5)*0.07+cos(position.y*0.4+uTime*0.6)*0.06;vLava=(modelMatrix*vec4(position,1.0)).xz;');
       sh.fragmentShader='uniform float uTime;varying vec2 vLava;\n'+sh.fragmentShader.replace('#include <tonemapping_fragment>',
-        `float lv=sin(vLava.x*0.9+uTime*0.22+sin(vLava.y*0.7)*1.4)*sin(vLava.y*1.1-uTime*0.17+sin(vLava.x*0.5)*1.2)+0.5*sin(vLava.x*0.27+vLava.y*0.33+uTime*0.12);
-        gl_FragColor.rgb=mix(vec3(0.2,0.06,0.03),gl_FragColor.rgb*1.2+vec3(0.25,0.12,0.0)*smoothstep(0.5,1.2,lv),smoothstep(-0.55,0.35,lv));
+        `float lv=sin(vLava.x*1.5+uTime*0.22+sin(vLava.y*1.1)*1.6)*sin(vLava.y*1.8-uTime*0.17+sin(vLava.x*0.8)*1.4)+0.45*sin(vLava.x*0.4+vLava.y*0.5+uTime*0.12);
+        gl_FragColor.rgb=mix(vec3(0.16,0.05,0.03),gl_FragColor.rgb+vec3(0.22,0.1,0.0)*smoothstep(0.6,1.2,lv),smoothstep(-0.15,0.6,lv));
         #include <tonemapping_fragment>`);
     };
-    const lava=new THREE.Mesh(new THREE.PlaneGeometry(116,(BANK+3)*2,58,14),lavaMat);
-    lava.rotation.x=-Math.PI/2;lava.position.y=-1.4;scene.add(lava);
+    // the stream ends at the coast on both sides; cooled rock marks the mouths (steam: volcano.js)
+    const lava=new THREE.Mesh(new THREE.PlaneGeometry(LAVA_END*2,(BANK+3)*2,56,14),lavaMat);
+    lava.rotation.x=-Math.PI/2;lava.position.y=-1.2;scene.add(lava);
+    const cool=new THREE.MeshLambertMaterial({color:0x2a2625});
+    for(const sx of [-1,1])for(let i=0;i<22;i++){
+      const r=0.9+srand()*1.5,m=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),cool);
+      m.position.set(sx*(LAVA_END-0.6+srand()*2.2),-1.75+srand()*0.35,(i/21*2-1)*(BANK+2.6)+(srand()-.5));m.rotation.set(srand()*3,srand()*3,srand()*3);m.scale.y=0.6;scene.add(m);
+    }
   }
   const w=new THREE.Mesh(new THREE.PlaneGeometry(420,420,130,130),wm);
   w.rotation.x=-Math.PI/2;w.position.y=-1.65;w.receiveShadow=true;scene.add(w);
@@ -289,7 +293,7 @@ function addBags(x0,z,x1){
     placed.push({x,z});
     if(trees<62){addTree(x,z,true);trees++;}else{addRock(x,z,0.7+srand()*0.8);rocks++;}
   }
-  for(let i=0;i<80;i++){const a=srand()*TAU,r=58+srand()*8;addTree(Math.cos(a)*r,Math.sin(a)*r,false);}
+  for(let i=0;i<80;i++){const a=srand()*TAU,r=58+srand()*8,x=Math.cos(a)*r,z=Math.sin(a)*r;if(VOLCANO&&hgtRaw(x,z)<-0.4)continue;addTree(x,z,false);}
   for(const s of [1,-1]){addBags(-10,s*35.5,-4);addBags(4,s*35.5,10);addBags(-26,s*(14+ZS),-21);addBags(21,s*(14+ZS),26);}
   // the river acts like a long wall with gaps at the two bridges
   if(VOLCANO)obstacles.push({x:CRATER.x,z:CRATER.z,r:CRATER.r});   // the cone; volcanoWaypoint in combat.js does the routing
