@@ -327,7 +327,10 @@ async function main() {
     const pport = 9124, ps = PeerServer({ port: pport, host: '127.0.0.1', path: '/' });
     await new Promise(r => setTimeout(r, 500));
     const q = '?normal&peerserver=127.0.0.1:' + pport;
-    const mkPage = async name => { const c = await browser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
+    // A browser of its own: the pages opened so far leave WebGL contexts behind, and Chromium drops the oldest
+    // ones once there are too many. In a shared browser that can hit a multiplayer page in the middle of a round.
+    const mpBrowser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+    const mkPage = async name => { const c = await mpBrowser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
       p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 120000 }); await p.waitForSelector('#startBtn', { state: 'visible', timeout: 120000 }); return p; };
     const host = await mkPage('Host'), guest = await mkPage('Gast');
     await host.evaluate(() => localStorage.setItem('kk-save', '{"format":1,"marker":"einzelspieler"}'));
@@ -375,7 +378,7 @@ async function main() {
     await guest.waitForFunction(() => MP === null, null, { timeout: 30000 }).catch(() => {});
     check(await guest.evaluate(() => MP === null && state === 'menu'), 'Host verlässt das Spiel: endet auch für den Gast');
     await host.evaluate(() => localStorage.removeItem('kk-save'));
-    await host.context().close(); await guest.context().close();
+    await mpBrowser.close();
   }
 
   console.log('Update-Hinweis');
