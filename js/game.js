@@ -20,7 +20,7 @@ function newGame(attract){
   const roles=['sammler','kaempfer','sammler','kaempfer'];
   for(let i=0;i<3;i++)spawnUnit(0,b0.x-2+i*2,b0.z-3,roles[i]);
   for(let i=0;i<nE;i++)spawnUnit(1,b1.x-3+i*2,b1.z+3,roles[i]);
-  for(let i=0;i<6;i++){const d=DROPS[i%2],ox=(i%4<2?-1:1)*rand(1.8,4),zm=ISL_RZ*0.7*Math.sqrt(Math.max(0,1-(ox/ISL_RX)**2));spawnCrate(d.x+ox,(i%3?1:-1)*rand(0.1,1)*zm,false,false,d.sort);}
+  for(let i=0;i<6;i++){const d=DROPS[i%2],sp=dropSpot(d,i%3?1:-1,false);spawnCrate(sp.x,sp.z,false,false,d.sort);}
   teams[0].openTarget=pickTarget(0);teams[1].openTarget=pickTarget(1);
   if(!attract){setPlayer(units[0]);units[0].role='sammler';camYaw=Math.PI;}
 }
@@ -126,10 +126,10 @@ function update(dt){
   if(spawnT<=0&&SIM){const pc=inPeace();spawnT=pc?rand(2.4,4):rand(3.5,6.5);if(loose<(pc?16:13)){spawnSide=-spawnSide;
       const goldLoose=crates.some(c=>c.gold&&c.state!=='stack'),isGold=!goldLoose&&Math.random()<(pc?0.08:0.14);
       // pick the deck with fewer crates on it so neither runs over; gold lands on either deck
-      const onDeck=d=>crates.filter(c=>c.state!=='stack'&&Math.abs(c.x-d.x)<ISL_RX+0.5&&Math.abs(c.z)<ISL_RZ+0.5).length;
-      const cand=DROPS.filter(d=>onDeck(d)<7);
-      if(cand.length){const d=cand.length>1&&!isGold?(onDeck(cand[0])<=onDeck(cand[1])?(Math.random()<0.65?cand[0]:cand[1]):(Math.random()<0.65?cand[1]:cand[0])):pick(cand);
-        const ox=(Math.random()<.5?-1:1)*rand(1.7,4.4),zm=ISL_RZ*0.72*Math.sqrt(Math.max(0,1-(ox/ISL_RX)**2));spawnCrate(d.x+ox,spawnSide*rand(0.1,1)*zm,true,isGold,d.sort);}}}
+      const deck=d=>crates.filter(c=>c.state!=='stack'&&onDeck(d,c)).length;
+      const cand=DROPS.filter(d=>deck(d)<7);
+      if(cand.length){const d=cand.length>1&&!isGold?(deck(cand[0])<=deck(cand[1])?(Math.random()<0.65?cand[0]:cand[1]):(Math.random()<0.65?cand[1]:cand[0])):pick(cand);
+        const sp=dropSpot(d,spawnSide,isGold);spawnCrate(sp.x,sp.z,true,isGold,d.sort);}}}
 
   // player control
   if(!(playing&&player&&player.alive))updateLockMarker(null);

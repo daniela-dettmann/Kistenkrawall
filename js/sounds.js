@@ -32,6 +32,7 @@ const SND=(function(){
       noise(c,0,0.42,0.13,'lowpass',1400,180,0.6);
       osc(c,'triangle',640,330,0.08,0.09,0.03);osc(c,'triangle',540,280,0.15,0.09,0.025);
     },
+    grollen(c){const o=osc(c,'sine',62,38,0,1.9,0.22,0.25);wobble(o,c,0,9,7,1.9);noise(c,0,2.0,0.16,'lowpass',320,70,0.7);osc(c,'triangle',96,50,0.5,1.2,0.07,0.2);},
     pick(c){const o=osc(c,'triangle',330,760,0,0.14,0.11);wobble(o,c,0,28,18,0.14);},
     stack(c){osc(c,'sine',560,520,0,0.07,0.14);osc(c,'sine',410,380,0.075,0.09,0.12);noise(c,0,0.04,0.05,'bandpass',2200,1800,2);},
     open(c){[N.C5,N.E5,N.G5,N.C6].forEach((f,i)=>{osc(c,'square',f,f,i*0.075,0.12,0.04);osc(c,'triangle',f*2,f*2,i*0.075,0.1,0.02);});},
@@ -75,7 +76,7 @@ const SOUND_LIST=[
   ['Treffer & Explosion',[['hit','Treffer'],['boom','Explosion']]],
   ['Kisten',[['pick','Kiste aufnehmen'],['stack','Kiste stapeln'],['open','Stapel öffnen'],['gold','Sonderkiste'],['recruit','Neuer Blechling']]],
   ['Werkstatt (gelbe Kisten)',[['ammo','Munition'],['repair','Reparatur'],['tempo','Tempo-Schub'],['shield','Schutzschild'],['build','Turm bauen']]],
-  ['Signale & Luftschlag',[['drum','Angriffssignal'],['plane','Flieger im Anflug'],['whistle','Bombe fällt']]],
+  ['Signale & Luftschlag',[['drum','Angriffssignal'],['plane','Flieger im Anflug'],['whistle','Bombe fällt'],['grollen','Vulkan grollt']]],
   ['Weihnachten',[['xhit','Treffer (Glöckchen)'],['sleigh','Schlittenglocken']]]
 ];
 function playSound(AC,noiseBuf,kind,vol,dest){

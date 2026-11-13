@@ -205,7 +205,7 @@ function resolve(u){
   if(Math.abs(u.z)<BANK&&islandE(u.x,u.z)>=0.9){ // on an island you can walk freely
     const bx=BRIDGES.find(b=>Math.abs(u.x-b)<crossW(b)+0.05);
     if(bx!==undefined){const lim=Math.max(0.15,crossW(bx)-0.25-ur);u.x=clamp(u.x,bx-lim,bx+lim);}
-    else if(islandE(u.x,u.z)<1.25){const bx=BRIDGES.reduce((a,b)=>Math.abs(u.x-b)<Math.abs(u.x-a)?b:a);const dx=(u.x-bx)/ISL_RX,dz=u.z/ISL_RZ,e=Math.hypot(dx,dz),lim=0.9-ur/ISL_RZ;if(e>lim){u.x=bx+dx/e*lim*ISL_RX;u.z=dz/e*lim*ISL_RZ;}}
+    else if(islandE(u.x,u.z)<1.25){const bx=islCx(u.x);const dx=(u.x-bx)/ISL_RX,dz=u.z/ISL_RZ,e=Math.hypot(dx,dz),lim=0.9-ur/ISL_RZ;if(e>lim){u.x=bx+dx/e*lim*ISL_RX;u.z=dz/e*lim*ISL_RZ;}}
     else u.z=(u.z>=0?1:-1)*BANK;
   }
   u.x=clamp(u.x,-LIM,LIM);u.z=clamp(u.z,-LIM,LIM);
@@ -269,10 +269,43 @@ function bandWaypoint(u,gx,gz){
   if(Math.abs(u.z)>2.8&&Math.abs(gx-bx)>1.3)return {x:bx,z:su*1.4};
   return null;
 }
+/* Volcano map: banks (1 / -1), the island (0) and the four bridges (2). Units are led bridge head -> landing ->
+   island and back; a bridge under fire from the volcano is avoided while the other one on that bank is open. */
+function volcanoWaypoint(u,gx,gz){
+  const zone=(x,z)=>Math.abs(z)>=BANK?(z>0?1:-1):islandE(x,z)<0.9?0:2;
+  const zu=zone(u.x,u.z),zg=zone(gx,gz),su=u.z>=0?1:-1,sg=gz>=0?1:-1,LAND=4.2,HEAD=BANK+1.2;
+  const near=(x,side)=>{const a=Math.abs(x-BRIDGES[0])<=Math.abs(x-BRIDGES[1])?BRIDGES[0]:BRIDGES[1],b=-a;
+    return typeof bridgeClosed==='function'&&bridgeClosed(a,side)&&!bridgeClosed(b,side)?b:a;};
+  if(zu===1||zu===-1){
+    if(zg===zu)return null;
+    const bx=near(zg===2&&sg===zu?gx:u.x,zu),onCor=Math.abs(u.x-bx)<1.3;
+    if(onCor&&zg===2&&sg===zu&&Math.abs(gx-bx)<3)return null;
+    return onCor?{x:bx,z:zu*LAND}:{x:bx,z:zu*HEAD};
+  }
+  if(zu===2){
+    const bx=u.x<0?BRIDGES[0]:BRIDGES[1];
+    if(zg===su)return Math.abs(gx-bx)>2.5?{x:bx,z:su*HEAD}:null;
+    if(zg===2&&sg===su&&Math.abs(gx-bx)<3)return null;
+    return {x:bx,z:su*LAND};
+  }
+  let via=null;
+  if(zg!==0){
+    const side=zg===2?sg:zg,bx=near(gx,side),atLand=Math.abs(u.x-bx)<1.2&&su===side&&Math.abs(u.z)>LAND-1.2;
+    if(atLand&&zg===2)return null;
+    via=atLand?{x:bx,z:side*HEAD}:{x:bx,z:side*LAND};
+  }
+  // the crater lies on the straight line: pass it on the side the line already leans to
+  const tx=via?via.x:gx,tz=via?via.z:gz,vx=tx-u.x,vz=tz-u.z,l=Math.hypot(vx,vz)||1,ur=u.r||0.45,R=CRATER.r+ur+0.5;
+  if(-u.x*vx-u.z*vz>0&&segDist(0,0,u.x,u.z,tx,tz)<R){
+    const nx=-vz/l,nz=vx/l,c=-u.x*nx-u.z*nz,k=(c>0?-1:1)*(R+0.8),zl=ISL_RZ*0.9-ur-0.2;
+    return {x:nx*k,z:clamp(nz*k,-zl,zl)};
+  }
+  return via;
+}
 function moveToward(u,gx,gz,dt,P,arrive){
   const dx=gx-u.x,dz=gz-u.z,d=Math.hypot(dx,dz);
   if(d<arrive)return true;
-  const wp=bandWaypoint(u,gx,gz)||wallWaypoint(u,gx,gz);
+  const wp=(VOLCANO?volcanoWaypoint(u,gx,gz):bandWaypoint(u,gx,gz))||wallWaypoint(u,gx,gz);
   const tx=wp?wp.x:gx,tz=wp?wp.z:gz,ex=tx-u.x,ez=tz-u.z,el=Math.hypot(ex,ez)||1;
   aiMove(u,ex/el,ez/el,dt,P.speed);return false;
 }

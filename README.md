@@ -29,6 +29,7 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/input.js` | Touch-, Maus- und Tastatursteuerung |
 | `js/hud.js` | HUD, Sprechblasen, Atmosphäre |
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
+| `js/mountain.js`, `js/volcano.js` | Karten Gebirge und Vulkan: Licht, Wetter, Krater und Ausbruch |
 | `js/save.js` | Spielstand speichern und fortsetzen |
 | `js/xmas.js` | Weihnachtsedition (1. November bis 10. Januar) |
 | `js/update.js` | Hinweis auf neue Versionen, Versionsanzeige |
@@ -60,7 +61,9 @@ Eine laufende Partie wird automatisch gespeichert, sobald das Spiel pausiert (au
 
 ## Karten
 
-Im Startmenü lässt sich zwischen **Insel** und **Gebirge** wählen. Beide folgen demselben Grundriss: Eine unpassierbare Mitte (Fluss bzw. Schlucht) wird bei x = −18 und x = +18 überquert, in der Mitte jedes Übergangs liegt ein Plateau, auf dem die Kisten landen. Deshalb funktionieren Bewegung und KI auf beiden Karten gleich. Auf dem Gebirge ist links eine breite Brücke, rechts ein enger Pass. Das Höhenprofil steht in `js/core.js` (`hgtMountain`), Licht, Horizont, Schneetreiben und Adler in `js/mountain.js`. Die Welt wird beim Laden gebaut, ein Kartenwechsel lädt die Seite neu. Zum Testen: `?karte=gebirge` oder `?karte=insel`.
+Im Startmenü lässt sich zwischen **Insel**, **Gebirge** und **Vulkan** wählen. Insel und Gebirge folgen demselben Grundriss: Eine unpassierbare Mitte (Fluss bzw. Schlucht) wird bei x = −18 und x = +18 überquert, in der Mitte jedes Übergangs liegt ein Plateau, auf dem die Kisten landen. Deshalb funktionieren Bewegung und KI auf beiden Karten gleich. Auf dem Gebirge ist links eine breite Brücke, rechts ein enger Pass. Das Höhenprofil steht in `js/core.js` (`hgtMountain`), Licht, Horizont, Schneetreiben und Adler in `js/mountain.js`. Die Welt wird beim Laden gebaut, ein Kartenwechsel lädt die Seite neu. Zum Testen: `?karte=gebirge`, `?karte=vulkan` oder `?karte=insel`.
+
+Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin liegt eine einzige große Insel mit dem Vulkankegel. Von jedem Ufer führen zwei Brücken (x = −8 und x = +8) auf die Insel, alle Kisten landen dort. Die Maße stehen in `js/core.js` (`BX`, `BANK`, `ISL_RX`, `ISL_RZ`, `ZS` verschiebt alles, was am Ufer steht), das Höhenprofil in `hgtVolcano`, die Wegführung in `volcanoWaypoint` (`js/combat.js`), Krater, Rauch und Ausbruch in `js/volcano.js`. Beim Ausbruch wird eine Brücke nach kurzer Warnung mit Lavabrocken beworfen; `bridgeClosed(bx, seite)` sagt der Wegführung und der Minikarte, welche.
 
 ## Mehrspieler (1 gegen 1)
 

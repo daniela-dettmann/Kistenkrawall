@@ -1,27 +1,23 @@
 # Kistenkrawall – Übergabe
 
-Stand: 9. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
+Stand: 13. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
 
 ## Wo wir stehen
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `2313272` (PR #16, Mehrspieler) |
-| `main` | `8f9a123` (PR #17 gemergt: Zoom-Sperre und Durchblick-Loch im Gebirge) |
-| Offener Pull Request | #18: Gast erkennt sofort, wenn der Host gegangen ist |
+| Live auf GitHub Pages | `b9e85e9` (PR #18; damit sind auch Zoom-Sperre und Durchblick-Loch aus #17 live) |
+| `main` | `b9e85e9` |
+| Offener Pull Request | #19: Karte „Vulkan“ |
 
-PR #17 ist zwar gemergt, aber nicht live: Beim Veröffentlichen ist der Test „Host verlässt das Spiel: endet auch für den Gast“ gescheitert. Er wackelte, weil der Gast nur über eine Verzögerung vom Abschied des Hosts erfuhr. PR #18 behebt das: Meldet der Vermittlungsserver während einer Runde, dass der Host nicht mehr da ist (`peer-unavailable`), beendet der Gast das Spiel sofort mit „Dein Gegner hat das Spiel verlassen.“ (`js/net.js`, `joinRoom`).
-
-Der letzte Testlauf von #18 wurde abgebrochen, als der GitHub-Zugang weg war. Er läuft mit dem nächsten Push neu.
-
-Neu in #18: Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (Dateien, Spiel, App, Spielstand, Musik, Weihnachten, Gebirge, Tonstudio, Update-Hinweis). GitHub setzt `CI=true`, daran erkennt `tests/smoke.cjs` das; `KK_MP_TEST=1` erzwingt den Mehrspieler-Test trotzdem.
+Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
 ## Was noch zu tun ist
 
-1. **PR #18 fertig machen.** Browser-Test auf GitHub muss grün sein, dann entscheidet Daniela über den Merge. Danach gehen #17 und #18 zusammen live. Prüfen, dass der Deploy auf `main` wirklich durchgelaufen ist, nicht nur der PR-Test.
-2. **Projektstand nachziehen** (nach dem Merge, siehe `CLAUDE.md`): Live-Version in `docs/PROJEKTSTAND.md` und in Google Drive eintragen. Die Drive-Fassung nennt im Moment fälschlich `8f9a123` als live; das wird dabei richtiggestellt.
-3. **Umzug nach GitLab: entschieden, wir bleiben auf GitHub.** Daniela hatte den Umzug überlegt, als GitHub nicht erreichbar war. Am 9. November 2026 hat sie entschieden: erst einmal bleibt alles auf GitHub (Repository und GitHub Pages).
-4. **Sicherung.** Eine ZIP-Datei und ein Git-Bundle vom Stand `0112df1` hat Daniela direkt bekommen. Hochladen nach Google Drive macht sie selbst.
+1. **PR #19 (Vulkan-Karte):** Browser-Test auf GitHub muss grün sein, dann entscheidet Daniela über den Merge. Danach den Deploy auf `main` prüfen und den Projektstand in Google Drive erneuern.
+2. **Tag, Nacht und Wetter** (beauftragt, kommt als eigener Pull Request nach dem Vulkan): Ein Tag dauert etwa 8 Minuten mit Morgen, Mittag, Abendrot und Nacht. Nachts Scheinwerfer an Blechlingen und Fahrzeugen, leuchtende Kisten, Hauptquartiere und Lava. Wetter je Karte: Insel Regen und Gewitter, Gebirge Schneesturm und Nebel, Vulkan Ascheregen. Nur Optik und Ton, keine Spielwirkung. Im Mehrspieler gibt der Host Uhrzeit und Wetter vor. Schalter im Menü zum Ausschalten.
+3. **Hosting zieht später zu AWS um.** Nur die Veröffentlichung, der Code bleibt auf GitHub. Der GitLab-Umzug ist vom Tisch (Entscheidung vom 9. November 2026). Einzelheiten zu AWS sind noch nicht besprochen. Zu beachten: Bei einer neuen Adresse muss die App neu installiert werden, Spielstand und Einstellungen fangen neu an.
+4. **Sicherung.** Eine ZIP-Datei und ein Git-Bundle vom Stand `0112df1` liegen in Google Drive.
 
 ## Offene Punkte ohne Auftrag
 

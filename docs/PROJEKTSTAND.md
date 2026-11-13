@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 6. November 2026 · Live-Version auf `main`: `2313272` (PR #16, #17 wurde wegen eines wackeligen Tests nicht veröffentlicht)
+Stand: 13. November 2026 · Live-Version auf `main`: `b9e85e9` (PR #18, damit auch #17 live); mit dem Merge von #19 kommt die Vulkan-Karte dazu
 
 ## Links
 
@@ -32,6 +32,7 @@ Stand: 6. November 2026 · Live-Version auf `main`: `2313272` (PR #16, #17 wurde
 | #16 | Mehrspieler 1 gegen 1 über Raumcode (WebRTC/PeerJS), Host rechnet, faire KI für beide Teams | gemergt |
 | #17 | Kein versehentliches Reinzoomen mehr auf dem Handy; Durchblick-Loch im Gebirge, damit Hänge die Figur nicht verdecken | gemergt |
 | #18 | Mehrspieler: Gast erkennt sofort, wenn der Host den Raum geschlossen hat; Mehrspieler-Test läuft nur noch lokal, auf GitHub nur der schnelle Test; Übergabedatei `docs/UEBERGABE.md`; damit geht auch #17 live | gemergt |
+| #19 | Dritte Karte „Vulkan“: Lavastrom mit großer Vulkaninsel, vier Brücken, Krater, Kisten auf der Insel, Ausbrüche sperren kurz eine Brücke | gemergt |
 
 ## Was umgesetzt ist
 
@@ -83,6 +84,16 @@ Stand: 6. November 2026 · Live-Version auf `main`: `2313272` (PR #16, #17 wurde
 - Die Weihnachtsedition gilt auf beiden Karten. Auf dem Gebirge hängen die Lichterketten an der Brücke, statt eines zweiten Schneefalls läuft das Schneetreiben.
 - Die Musik ist auf beiden Karten dieselbe.
 
+### Karte Vulkan
+- Dritte Karte in der Kartenwahl. Quer durch die Karte fließt ein Lavastrom, in seiner Mitte liegt eine große Vulkaninsel. Von jedem Ufer führen zwei Steinbrücken auf die Insel, zusammen vier. Alle Wege laufen über die Insel.
+- In der Inselmitte steht der Vulkankegel mit Krater, Lavasee, Glut und Rauchsäule. Er ist nicht begehbar, man läuft links oder rechts daran vorbei.
+- Alle Kisten landen auf der Insel: blaue links vom Krater, gelbe rechts, Goldkisten direkt am Kraterrand.
+- Ausbruch: Etwa einmal pro Minute grollt der Vulkan. Eine der vier Brücken wird markiert (gelbe Ringe, Blinken auf der Minikarte) und nach 3,5 Sekunden Warnung einige Sekunden lang mit Lavabrocken beworfen, die allen dort Schaden machen. Die Ufer wechseln sich ab, damit es beide Teams gleich oft trifft. Die KI weicht in der Zeit auf die andere Brücke aus.
+- Aussehen: schwarzer Basalt, Asche, glühende Risse, verkohlte Bäume, warmes, dunstiges Licht.
+- Technik: Der Grundriss ist in `js/core.js` verallgemeinert (Lage der Brücken, Breite des Stroms, Inselform). Der Vulkan hat eine eigene Wegführung (`volcanoWaypoint` in `js/combat.js`): Ufer → Brückenkopf → Insel → um den Krater → Brücke → Ufer.
+- Funktioniert mit Spielstand, im Mehrspieler (der Host meldet Warnung und Lavabrocken an den Gast) und in der Weihnachtsedition (ohne Schneedecke und Eisschollen, die Lava bleibt).
+- Geprüft im Test und in einer simulierten Runde über acht Minuten: Beide Teams sammeln Kisten, die Welle kommt über die Insel, niemand läuft durch die Lava.
+
 ### Mehrspieler (1 gegen 1)
 - Startmenü: „Gegen Freund spielen“ mit „Raum erstellen“ (Code anzeigen, kopieren, teilen) und „Raum beitreten“ (Code eingeben). Karte und Bauruhe wählt der Host vorher im Startmenü.
 - Direkte, verschlüsselte WebRTC-Verbindung, Vermittlung über den öffentlichen PeerJS-Server. Im gleichen WLAN läuft sie lokal. Noch kein TURN-Server, der Platz dafür ist vorbereitet (`NET_CFG.turn` in `js/net.js`).
@@ -114,6 +125,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Weihnachtsedition: Saisongrenzen, Kostüme, Geschenkkisten, Geschosse, Schlitten, Musik, Namen
 - Gebirge: Kartenwahl, Höhen von Schlucht, Brücke, Pass und Tal, Wegfindung über beide Wege, Runde mit Schneetreiben, Spielstand mit Karte, Weihnachtsedition auf dem Gebirge
 - Nur lokal (`node tests/smoke.cjs`, auf GitHub übersprungen): Mehrspieler mit zwei Browsern und lokalem Vermittlungsserver: Raumcode, Beitritt, voller Raum, Versionsunterschied, Rollen, faire KI, Steuerung des Gasts, ungültige Nachrichten, Pause, Abbruch und Wiederverbinden, Einzelspieler-Spielstand unberührt, Host verlässt das Spiel
+- Vulkan: Kartenwahl, Höhen von Lavastrom, Brücken, Insel und Krater, Wegfindung über die Insel und um den Krater (nie durch die Lava), Runde mit Kisten auf der Insel, Ausbruch (Sperre, Ausweichen, Schaden nur auf der Brücke), Weihnachtsedition auf dem Vulkan
 - Tonstudio und Update-Hinweis
 
 Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikkarte, drei Browserseiten gleichzeitig). Er läuft deshalb nur lokal vor dem Push; mit `KK_MP_TEST=1` lässt er sich auch auf GitHub erzwingen.
@@ -129,6 +141,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 | `js/save.js` | Spielstand |
 | `js/xmas.js` | Weihnachtsedition |
 | `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
+| `js/volcano.js` | Vulkan: Licht, Krater, Rauch, Ausbruch (Grundriss in `js/core.js`, Wegführung in `js/combat.js`) |
 | `js/update.js` | Update-Hinweis und Versionsanzeige |
 | `js/net.js` | Mehrspieler: Verbindung, Raumcode, Prüfung, Spielstand-Übertragung |
 | `vendor/`, `fonts/`, `icons/` | three.js, PeerJS, Schriften, App-Icons |
@@ -144,6 +157,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 - Auf echten Handys habe ich nichts ausprobiert, getestet wurde in Chromium ohne Grafikkarte. Wie flüssig die Weihnachtsedition auf älteren Geräten läuft, ist offen.
 - Gebirge auf dem iPhone: Schneetreiben (900 Flocken) und Weihnachtsdeko sind sparsam gebaut, auf einem echten Gerät aber nicht gemessen.
 - Mehrspieler übers Internet ohne TURN-Server: In manchen Netzen (vor allem Mobilfunk) kommt keine Verbindung zustande. Zwei echte Geräte über verschiedene Netze habe ich nicht getestet.
+- Vulkan: Auf echten Handys nicht gemessen. Das Gleichgewicht (Brücken näher beieinander, Ausbrüche) ist nur in simulierten Runden geprüft, nicht von Menschen gespielt.
 - Ein eigenes Bauruhe-Stück fürs Gebirge (im Auftrag optional) gibt es noch nicht.
 - Die Musik konnte ich nicht anhören, nur messen: keine Übersteuerung, keine Lücken, gleiche Lautstärke.
 - iPhone: iOS kann Daten von Web-Apps löschen, die etwa eine Woche nicht geöffnet wurden. Das betrifft auch den Spielstand.
