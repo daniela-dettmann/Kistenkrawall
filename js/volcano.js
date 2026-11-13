@@ -48,7 +48,7 @@ if(VOLCANO)(function(){
   // for a multiplayer guest: the host announces phases and bombs, damage arrives with the game state
   window.volcanoEvent=e=>{if(e[0]==='vp')setPhase(e[1],e[2],e[3]);else launch(e[1],e[2]);};
 
-  let last=performance.now(),tt=0,emberT=0;
+  let last=performance.now(),tt=0,emberT=0,steamT=0;
   (function tick(now){
     requestAnimationFrame(tick);
     const dt=Math.min(0.05,(now-last)/1000);last=now;
@@ -64,6 +64,8 @@ if(VOLCANO)(function(){
     }
     glow.material.opacity=0.75+Math.sin(tt*2.3)*0.12+(E.phase?0.2:0);glow.scale.setScalar(E.phase?12+Math.sin(tt*14):9);
     emberT-=dt;if(emberT<=0&&state==='play'){emberT=E.phase?0.15:0.9;puffs(rand(-0.8,0.8),topY+1.6,rand(-0.8,0.8),1,0xff8a3a,{size:0.5,up:2.2,life:1.3,spread:1.2});}
+    // steam where the lava runs into the sea
+    steamT-=dt;if(steamT<=0&&state==='play'){steamT=0.35;puffs((Math.random()<.5?-1:1)*(LAVA_END+rand(0,1.5)),-1,rand(-BANK-2,BANK+2),1,0xf2f2f2,{size:1.6,up:1.3,life:2.4,spread:0.8,grow:1.5,op:0.6});}
     for(const m of marks)if(m.visible){m.material.opacity=E.phase===1?0.45+0.45*Math.abs(Math.sin(tt*7)):0.9;m.material.color.set(E.phase===2?0xff4a1a:0xffd23a);}
     // bombs fly in a high arc from the crater to the bridge
     const sim=MP!=='guest';
