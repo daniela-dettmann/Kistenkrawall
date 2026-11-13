@@ -53,7 +53,7 @@ if(XMAS)(function(){
   /* ---------- Gelände, Wasser, Gras, Schneewälle ---------- */
   scene.traverse(o=>{
     if(!o.isMesh)return;
-    if(!MOUNTAIN&&o.material&&o.material.map===TX.ground&&o.geometry.attributes.color){
+    if(!MOUNTAIN&&!VOLCANO&&o.material&&o.material.map===TX.ground&&o.geometry.attributes.color){
       const p=o.geometry.attributes.position,col=o.geometry.attributes.color,snow=new THREE.Color(0xffffff),dirt=new THREE.Color(0xa99a86),c=new THREE.Color();
       for(let i=0;i<p.count;i++){
         const x=p.getX(i),z=p.getZ(i),h=p.getY(i);if(h<-1.05)continue;   // keep beach sand under water
@@ -101,7 +101,7 @@ if(XMAS)(function(){
   instanced(new THREE.IcosahedronGeometry(1,1),snowMat,caps);
 
   /* ---------- Lichterketten an den Brücken ---------- */
-  {const lights=[];for(const bx of BRIDGES){if(MOUNTAIN&&bx>0)continue;const cw=crossW(bx)-0.05;for(const sx of [-cw,cw])for(const side of [-1,1])for(let k=0;k<9;k++)
+  {const lights=[];for(const bx of BRIDGES){if((MOUNTAIN&&bx>0)||VOLCANO)continue;const cw=crossW(bx)-0.05;for(const sx of [-cw,cw])for(const side of [-1,1])for(let k=0;k<9;k++)
      lights.push({p:V(bx+sx,1.12,side*(2.9+k*0.79)),c:[RED,GOLD,0x3fa0ff,0x3fd46a][(k+(sx>0?1:0))%4]});}
    const lm=instanced(new THREE.SphereGeometry(0.085,8,6),new THREE.MeshBasicMaterial({color:0xffffff}),lights);if(lm)lm.castShadow=false;}
 
@@ -279,7 +279,7 @@ if(XMAS)(function(){
   flakes.frustumCulled=false;scene.add(flakes);
 
   const floes=[];
-  for(let i=0;i<(MOUNTAIN?0:16);i++){
+  for(let i=0;i<(MOUNTAIN||VOLCANO?0:16);i++){
     const m=new THREE.Mesh(new THREE.CylinderGeometry(rand(0.6,1.4),rand(0.7,1.5),0.16,7),snowMat);
     m.position.set(rand(-60,60),-1.58,rand(-5.5,5.5));m.rotation.y=rand(0,3);m.receiveShadow=true;scene.add(m);floes.push({m,v:rand(0.5,1.1)});
   }

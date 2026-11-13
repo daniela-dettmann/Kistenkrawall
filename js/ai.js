@@ -58,7 +58,7 @@ function pickFoe(u,range,P){
 /* Defensive strength of a team around one of its own bridgeheads, used to find the weaker flank */
 function sideStrength(team,bx){
   const s=team?-1:1;let v=0;
-  for(const u of units){if(!u.alive||u.team!==team)continue;if(Math.hypot(u.x-bx,u.z-s*17)>15)continue;
+  for(const u of units){if(!u.alive||u.team!==team)continue;if(Math.hypot(u.x-bx,u.z-s*(17+ZS))>15)continue;
     v+=(u.kind==='tank'?3:u.kind==='turm'?2.5:u.kind==='moerser'?2:u.kind==='buggy'?1.5:u.weapon!=='knipser'?1.4:1)*(0.5+0.5*u.hp/u.maxHp);}
   return v;
 }
@@ -70,16 +70,16 @@ function defendSpot(u){
     if(!e.alive||e.team===t||e.kind==='turm')continue;
     const inMine=t?e.z<2:e.z>-2,coming=e.attacker&&e.waveBx!==undefined;
     if(!inMine&&!coming)continue;
-    const bx=coming&&!inMine?e.waveBx:(e.x<0?-18:18),w=isVeh(e)?2:1;
+    const bx=coming&&!inMine?e.waveBx:(e.x<0?-BX:BX),w=isVeh(e)?2:1;
     if(bx<0)wL+=w;else wR+=w;
   }
   if(wL+wR===0)return null;
-  const side=((u.id*0.618)%1)<wL/(wL+wR)?-18:18;
-  return {x:side+((u.id%3)-1)*2.6,z:s*(13.5+(u.id%3)*1.4)};
+  const side=((u.id*0.618)%1)<wL/(wL+wR)?-BX:BX;
+  return {x:side+((u.id%3)-1)*2.6,z:s*(13.5+ZS+(u.id%3)*1.4)};
 }
 function homeGoal(t){return {x:rand(-24,24),z:BASES[t].z+(t?1:-1)*rand(7,24)};}
 /* Fixed patrol routes (for team 0; mirrored for Petrol): west bridgehead, east bridgehead, ring around the base */
-const ROUTES=[[[-18,12],[-25,20],[-13,25]],[[18,12],[25,20],[13,25]],[[-9,31],[9,31],[12,40],[-12,40]]];
+const ROUTES=[[[-BX,12+ZS],[-BX-7,20+ZS],[-BX+5,25+ZS]],[[BX,12+ZS],[BX+7,20+ZS],[BX-5,25+ZS]],[[-9,31+ZS*0.4],[9,31+ZS*0.4],[12,40],[-12,40]]];
 function setPatrol(u){
   if(u.routeId===undefined)u.routeId=u.id%3;
   const rid=inPeace()&&u.role!=='sammler'?2:u.routeId,r=ROUTES[rid];
@@ -153,7 +153,7 @@ function planWave(W){
     const len=g.units.length;
     g.units.forEach((u,i)=>{
       u.attacker=true;u.go=false;u.wrole=u._hunt?'jaeger':g.role;u._hunt=false;u.waveBx=g.bx;u.slot=i-(len-1)/2;u.grp=gi;u.pauseT=0;u.holdUntil=0;u.holdQuiet=0;
-      u.rally={x:g.bx+u.slot*D.spread*0.8,z:-15-Math.abs(u.slot)*1.2};u.thinkT=0;
+      u.rally={x:g.bx+u.slot*D.spread*0.8,z:-15-ZS-Math.abs(u.slot)*1.2};u.thinkT=0;
     });
     W.groups.push({bx:g.bx,role:g.role,ids:g.units.map(u=>u.id),go:false});
   });
@@ -229,7 +229,7 @@ function aiUpdate(u,dt){
       if(s*u.z<BANK+1.5){moveToward(u,bx+clamp(sl,-1,1)*0.9,s*(BANK+3),dt,P,1.2);break;}
       // 2) the pinning group holds the far bridgehead and draws fire while the flankers go round
       if(u.wrole==='binden'&&gameT<u.holdUntil){
-        if(moveToward(u,bx+sl*P.spread,s*(14+Math.abs(sl)*1.5),dt,P,1.8)){
+        if(moveToward(u,bx+sl*P.spread,s*(14+ZS+Math.abs(sl)*1.5),dt,P,1.8)){
           u.h+=clamp(angDiff(Math.atan2(h.x-u.x,h.z-u.z),u.h),-3*dt,3*dt);
           u.holdQuiet+=dt;if(u.holdQuiet>10)u.holdUntil=0; // nobody to bind: push on
         }

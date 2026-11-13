@@ -71,6 +71,8 @@ function validEvent(e){
   if(!Array.isArray(e)||!str(e[0],6))return false;
   switch(e[0]){
     case 'b':return e.length===4&&num(e[1],-90,90)&&num(e[2],-90,90)&&num(e[3],0,10);
+    case 'vp':return e.length===4&&int(e[1],0,2)&&num(e[2],-90,90)&&int(e[3],-1,1);
+    case 'vb':return e.length===3&&num(e[1],-90,90)&&num(e[2],-90,90);
     case 'f':return e.length===4&&str(e[1],12,/^[a-z]+$/)&&typeof SND[e[1]]==='function'&&num(e[2],-200,200)&&num(e[3],-200,200);
     case 't':return e.length===3&&str(e[1],140,TOAST_RE)&&num(e[2],0.5,5);
     case 's':return e.length===9&&int(e[1],1,1e7)&&int(e[2],0,7)&&int(e[3],0,1)&&num(e[4],-90,90)&&num(e[5],-90,90)&&num(e[6],-60,60)&&num(e[7],-60,60)&&num(e[8],0,5);
@@ -364,6 +366,7 @@ function guestShotMesh(w,team){
 function guestEvent(e){
   switch(e[0]){
     case 'b':boom(e[1],e[2],e[3]);break;
+    case 'vp':case 'vb':if(window.volcanoEvent)window.volcanoEvent(e);break;
     case 'f':sfx(e[1],e[2],e[3]);break;
     case 't':toast(e[1],e[2]);break;
     case 's':{const [,id,wi,team,x,z,vx,vz,life]=e;if(guestShots.has(id))break;const w=WEAPON_IDX[wi],m=guestShotMesh(w,team);m.rotation.y=Math.atan2(vx,vz);m.position.set(x,hgt(x,z)+1.1,z);scene.add(m);

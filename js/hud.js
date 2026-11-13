@@ -36,11 +36,15 @@ const mm=$('#mm'),mctx=mm.getContext('2d');
 function drawMap(){
   const S=mm.width,sc=S/(LIM*2+6),X=x=>(x+LIM+3)*sc,Z=z=>(z+LIM+3)*sc;
   mctx.clearRect(0,0,S,S);
-  mctx.fillStyle=MOUNTAIN?'rgba(225,232,242,.35)':'rgba(120,170,90,.35)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
-  mctx.fillStyle=MOUNTAIN?'rgba(40,52,70,.9)':'rgba(70,160,210,.85)';mctx.fillRect(X(-LIM),Z(-8.4),LIM*2*sc,16.8*sc);
+  const bz=8.4+ZS;
+  mctx.fillStyle=MOUNTAIN?'rgba(225,232,242,.35)':VOLCANO?'rgba(110,100,95,.45)':'rgba(120,170,90,.35)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
+  mctx.fillStyle=MOUNTAIN?'rgba(40,52,70,.9)':VOLCANO?'rgba(255,110,30,.9)':'rgba(70,160,210,.85)';mctx.fillRect(X(-LIM),Z(-bz),LIM*2*sc,bz*2*sc);
+  if(VOLCANO){mctx.fillStyle='#5a534f';mctx.beginPath();mctx.ellipse(X(0),Z(0),ISL_RX*sc,ISL_RZ*sc,0,0,TAU);mctx.fill();
+    mctx.fillStyle='#ff5a14';mctx.beginPath();mctx.arc(X(0),Z(0),CRATER.r*sc,0,TAU);mctx.fill();
+    for(const D of DROPS){mctx.strokeStyle=D.sort==='blau'?'#5aa0ff':'#ffc928';mctx.lineWidth=2.5;mctx.beginPath();mctx.ellipse(X(D.x),Z(0),3.6*sc,3.2*sc,0,0,TAU);mctx.stroke();}}
   if(MOUNTAIN){mctx.fillStyle='rgba(150,155,165,.9)';mctx.fillRect(X(BRIDGES[1]-10),Z(-6),20*sc,12*sc);}
-  for(const D of DROPS){mctx.fillStyle=MOUNTAIN?'#e8eef5':'#e2cf95';mctx.beginPath();mctx.ellipse(X(D.x),Z(0),ISL_RX*sc,ISL_RZ*sc,0,0,TAU);mctx.fill();mctx.strokeStyle=D.sort==='blau'?'#5aa0ff':'#ffc928';mctx.lineWidth=2.5;mctx.stroke();mctx.fillStyle='#b98a52';mctx.fillRect(X(D.x)-4,Z(-9),8,18*sc);}
-  mctx.fillStyle=MOUNTAIN?'#d8dde4':'#b98a52';for(const bx of BRIDGES)mctx.fillRect(X(bx)-crossW(bx)*sc,Z(-8.4),crossW(bx)*2*sc,16.8*sc);
+  if(!VOLCANO)for(const D of DROPS){mctx.fillStyle=MOUNTAIN?'#e8eef5':'#e2cf95';mctx.beginPath();mctx.ellipse(X(D.x),Z(0),ISL_RX*sc,ISL_RZ*sc,0,0,TAU);mctx.fill();mctx.strokeStyle=D.sort==='blau'?'#5aa0ff':'#ffc928';mctx.lineWidth=2.5;mctx.stroke();mctx.fillStyle='#b98a52';mctx.fillRect(X(D.x)-4,Z(-9),8,18*sc);}
+  mctx.fillStyle=MOUNTAIN?'#d8dde4':VOLCANO?'#8a8079':'#b98a52';for(const bx of BRIDGES){if(VOLCANO)for(const sd of [-1,1]){mctx.fillStyle=typeof bridgeClosed==='function'&&bridgeClosed(bx,sd)&&Math.floor(performance.now()/250)%2?'#ffe04a':'#8a8079';mctx.fillRect(X(bx)-crossW(bx)*sc,Z(sd>0?4.7:-bz),crossW(bx)*2*sc,(bz-4.7)*sc);}else mctx.fillRect(X(bx)-crossW(bx)*sc,Z(-8.4),crossW(bx)*2*sc,16.8*sc);}
   for(const h of hqs){mctx.fillStyle=h.dead?'#555':(h.team?'#1fb5a8':'#ff8a1f');mctx.fillRect(X(h.x)-7,Z(h.z)-6,14,12);}
   for(const p of pads){mctx.strokeStyle=p.team?'#1fb5a8':'#ff8a1f';mctx.lineWidth=2;mctx.strokeRect(X(p.x)-6,Z(p.z)-6,12,12);}
   mctx.fillStyle='#e9b46a';
@@ -151,7 +155,7 @@ function updateBirds(dt){
 const foams=[];
 (function(){
   const fg=new THREE.RingGeometry(0.28,0.5,18).rotateX(-Math.PI/2);
-  if(!MOUNTAIN)for(const bx of BRIDGES)for(const side of [-1,1])for(const sx of [-2.25,2.25])for(const sz of [4.8,7.6]){
+  if(!MOUNTAIN&&!VOLCANO)for(const bx of BRIDGES)for(const side of [-1,1])for(const sx of [-2.25,2.25])for(const sz of [4.8,7.6]){
     const m=new THREE.Mesh(fg,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.5,depthWrite:false}));
     const x=bx+sx*0.8,z=side*sz;m.position.set(x,-1.47,z);scene.add(m);foams.push({m,x,z,t:srand()*1.6});
   }

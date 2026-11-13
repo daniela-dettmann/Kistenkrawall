@@ -328,7 +328,7 @@ function spotValid(x,z,team){
   return true;
 }
 function autoPlaceTurret(team,boost){
-  const s=team?-1:1,cands=[[-24,14],[24,14],[-12,14],[12,14],[-6,19],[6,19],[0,24]].map(([x,z])=>({x:x+rand(-1.5,1.5),z:s*(z+rand(-1,1))}));
+  const s=team?-1:1,cands=[[-24,14],[24,14],[-12,14],[12,14],[-6,19],[6,19],[0,24]].map(([x,z])=>({x:x+rand(-1.5,1.5),z:s*(z+ZS+rand(-1,1))}));
   for(const c of cands.sort(()=>Math.random()-.5))if(spotValid(c.x,c.z,team)){buildTurret(team,c.x,c.z,boost);return;}
 }
 function turretUpdate(u,dt){

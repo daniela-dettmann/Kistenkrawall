@@ -266,6 +266,56 @@ async function main() {
   check(await page.evaluate(() => XMAS && MOUNTAIN && units.filter(u => u.kind === 'bot').every(u => u.bot.costume) && crates.every(c => c.bow) && !!window.xmasSleigh), 'Weihnachtsedition auf dem Gebirge');
   await page.evaluate(() => { endGame(true, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
 
+  console.log('Vulkan');
+  await page.goto(base + '?normal');
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await Promise.all([page.waitForNavigation(), page.click('#mapSeg [data-m="vulkan"]', { force: true })]);
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check(await page.evaluate(() => MAP === 'vulkan' && localStorage.getItem('kk-map') === 'vulkan' && document.querySelector('#mapSeg [data-m="vulkan"]').getAttribute('aria-pressed') === 'true'), 'Kartenwahl: Vulkan gewählt und gemerkt');
+  check(await page.evaluate(() => hgtRaw(30, 5) < -1.5 && hgtRaw(0, 9.5) < -1.5 && Math.abs(hgt(8, 9) - 0.38) < 0.05 && Math.abs(hgt(-8, -9) - 0.38) < 0.05 && hgt(9, 0) > 0.3 && hgtRaw(1.8, 0) > 4 && hgtRaw(0, 0) < hgtRaw(1.8, 0) - 1.5 && hgt(0, 44) < 1.5
+    && onPlatform(-12, 0) && !onPlatform(0, 9) && obstacles.some(o => o.x === 0 && o.z === 0 && o.r > 3)),
+    'Vulkan: Lavastrom, vier Brücken auf Laufhöhe, Insel mit Kegel und Krater');
+  check(await page.evaluate(() => {
+    const out = [];
+    const run = (kind, team, x0, z0, x1, z1) => {
+      const u = spawnUnit(team, x0, z0, 'kaempfer', kind); let i = 0, lava = 0, isl = false, minC = 99;
+      for (; i < 6000; i++) {
+        if (moveToward(u, x1, z1, 0.05, ALLY, 1.5)) break; resolve(u);
+        const e = islandE(u.x, u.z); if (e < 0.9) isl = true; minC = Math.min(minC, Math.hypot(u.x, u.z));
+        if (Math.abs(u.z) < BANK - 0.3 && e > 1.0 && !BRIDGES.some(b => Math.abs(u.x - b) < crossW(b) + 0.1)) lava++;
+      }
+      out.push(i < 6000 && isl && lava === 0 && minC > CRATER.r);
+      u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
+    };
+    for (const kind of [undefined, 'tank']) {
+      run(kind, 0, -5, 36, -5, -36); run(kind, 1, 5, -36, 5, 36);   // straight across, one lane each
+      run(kind, 0, -25, 30, 25, -30);                               // diagonally, changing lanes on the island
+      run(kind, 0, -11, 0.3, 11, 0.2);                              // across the island, around the crater
+      run(kind, 0, -9, 2, 3, 40);                                   // from the island back to the bank
+    }
+    return out.every(Boolean);
+  }), 'Wegfindung: Blechling und Panzer kommen über die Insel, um den Krater herum und nie durch die Lava');
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1500);
+  check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && !!window.volcano && crates.length >= 6
+    && crates.every(c => onPlatform(c.x, c.z) && Math.hypot(c.x, c.z) > CRATER.r + 0.5)), 'Runde auf dem Vulkan läuft, Kisten liegen auf der Insel neben dem Krater');
+  check(await page.evaluate(() => {
+    const u = spawnUnit(0, 8, 9, 'kaempfer'), v = spawnUnit(0, 8, 30, 'kaempfer');
+    volcano.erupt(8, 1);
+    const closed = bridgeClosed(8, 1) && !bridgeClosed(-8, 1) && !bridgeClosed(8, -1), wp = volcanoWaypoint(v, 8, -30);
+    let launched = 0; for (let i = 0; i < 240; i++) { volcano.step(0.05); launched = Math.max(launched, volcano.bombs.length); }
+    const ok = closed && wp && wp.x === -8 && launched > 0 && (u.hp < u.maxHp || !u.alive) && v.hp === v.maxHp && volcano.E.phase === 0 && !bridgeClosed(8, 1);
+    for (const w of [u, v]) if (w.alive) { w.alive = false; scene.remove(w.bot.g); scene.remove(w.bot.blob); w.tag.el.remove(); units.splice(units.indexOf(w), 1); }
+    return ok;
+  }), 'Ausbruch: Brücke wird gesperrt und umgangen, Lavabrocken treffen nur dort, danach ist sie wieder frei');
+  await page.evaluate(() => pause(true));
+  await page.goto(base + '?weihnachten&karte=vulkan');
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1200);
+  check(await page.evaluate(() => XMAS && VOLCANO && state === 'play' && units.filter(u => u.kind === 'bot').every(u => u.bot.costume) && crates.every(c => c.bow)), 'Weihnachtsedition auf dem Vulkan');
+  await page.evaluate(() => { endGame(true, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
+
   // The multiplayer test starts its own PeerServer and three browser pages. It is slow and flaky on
   // CI machines without a GPU, so it only runs locally (CI sets CI=true); KK_MP_TEST=1 forces it.
   const runMp = !process.env.CI || process.env.KK_MP_TEST === '1';
@@ -277,7 +327,10 @@ async function main() {
     const pport = 9124, ps = PeerServer({ port: pport, host: '127.0.0.1', path: '/' });
     await new Promise(r => setTimeout(r, 500));
     const q = '?normal&peerserver=127.0.0.1:' + pport;
-    const mkPage = async name => { const c = await browser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
+    // A browser of its own: the pages opened so far leave WebGL contexts behind, and Chromium drops the oldest
+    // ones once there are too many. In a shared browser that can hit a multiplayer page in the middle of a round.
+    const mpBrowser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+    const mkPage = async name => { const c = await mpBrowser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
       p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 120000 }); await p.waitForSelector('#startBtn', { state: 'visible', timeout: 120000 }); return p; };
     const host = await mkPage('Host'), guest = await mkPage('Gast');
     await host.evaluate(() => localStorage.setItem('kk-save', '{"format":1,"marker":"einzelspieler"}'));
@@ -325,7 +378,7 @@ async function main() {
     await guest.waitForFunction(() => MP === null, null, { timeout: 30000 }).catch(() => {});
     check(await guest.evaluate(() => MP === null && state === 'menu'), 'Host verlässt das Spiel: endet auch für den Gast');
     await host.evaluate(() => localStorage.removeItem('kk-save'));
-    await host.context().close(); await guest.context().close();
+    await mpBrowser.close();
   }
 
   console.log('Update-Hinweis');
