@@ -112,6 +112,7 @@ let lavaMat=null;
       '#include <begin_vertex>\nfloat sway=sin(uTime*1.8+instanceMatrix[3].x*0.35+instanceMatrix[3].z*0.22);transformed.x+=sway*0.09*position.y;transformed.z+=cos(uTime*1.3+instanceMatrix[3].x*0.2)*0.05*position.y;');
   };
   const N=MOUNTAIN?2200:VOLCANO?1500:6500,NF=MOUNTAIN||VOLCANO?0:760,im=new THREE.InstancedMesh(g,mat,N),fl=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075,0),new THREE.MeshLambertMaterial({color:0xffffff}),NF);
+  im.name='kkGrass';fl.name='kkFlowers';
   const d=new THREE.Object3D(),c=new THREE.Color();let n=0,f=0,tries=0;
   const FLC=[0xfff7e0,0xffd84a,0xff8fb1,0xb9a7ff];
   while((n<N||f<NF)&&tries<70000){

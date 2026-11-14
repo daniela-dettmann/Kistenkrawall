@@ -234,7 +234,7 @@ function update(dt){
         c.y=gy;c.vx=c.vz=0;
         if(c.chute){scene.remove(c.chute);c.chute=null;}if(c.ring){scene.remove(c.ring);c.ring=null;}
         c.m.rotation.x=0;c.m.rotation.z=0;
-        if(Math.abs(c.z)<BANK+1&&!onBridge(c.x,c.z)&&!onPlatform(c.x,c.z)){puffs(c.x,-1.5,c.z,4,0xdff4ff,{size:.6});removeCrate(c);continue;}
+        if(Math.abs(c.z)<BANK+1&&!onBridge(c.x,c.z)&&!onPlatform(c.x,c.z)){puffs(c.x,-1.5,c.z,4,0xdff4ff,{size:.6});if(window.gfxSplash)gfxSplash(c.x,c.z,true);removeCrate(c);continue;}
         const pad=pads.find(p=>Math.hypot(p.x-c.x,p.z-c.z)<1.8&&p.stack.length<8);
         if(pad)addToPad(c,pad,null);else{c.state='ground';puffs(c.x,c.y-0.3,c.z,2,0xc9b48a);}
       }

@@ -30,7 +30,8 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/hud.js` | HUD, Sprechblasen, Atmosphäre |
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
 | `js/mountain.js`, `js/volcano.js` | Karten Gebirge und Vulkan: Licht, Wetter, Krater und Ausbruch |
-| `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
+| `js/gfx.js` | Grafik: Qualitätsschalter, Bildausgabe, Uferschaum, Lavaglut, runde Kanten, Schattierung, Zusammenfassen |
+| `js/look.js` | Aussehen: Wind, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz, Lichtsaum, Spuren, Explosionen, Mündungsfeuer |
 | `js/daynight.js` | Tag, Nacht und Wetter |
 | `js/save.js` | Spielstand speichern und fortsetzen |
 | `js/xmas.js` | Weihnachtsedition (1. November bis 10. Januar) |
@@ -81,14 +82,14 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 
 `js/gfx.js` hängt sich an das Bestehende an und gilt auf allen Karten. Im Startmenü steht „Grafik: Schön / Schnell“ (gemerkt; zum Testen `?grafik=schoen` oder `?grafik=schnell`).
 
-- **Schön:** Das Bild wird erst in einen Zwischenspeicher gezeichnet und dann mit drei kleinen Durchgängen nachbearbeitet: weicher Schein um Helles (auf Schnee nur um echte Lichter), etwas mehr Kontrast und Farbe, warme Lichter, kühle Schatten, dunklere Ecken. Dazu Druckwelle und Funken bei Explosionen, Staub hinter Fahrzeugen, Schattenflecken unter Bäumen und Felsen, Schatten in voller Auflösung.
-- **Schnell:** ohne Nachbearbeitung und Zusatzeffekte, kleinere Schatten, geringere Bildauflösung.
-- In beiden Stufen: Uferschaum und helles Flachwasser, Glut an den Lavaufern, unregelmäßiger Boden statt Kachelmuster, nasser Saum am Wasser. Dafür wird das Höhenprofil beim Laden einmal in eine kleine Textur geschrieben (`hgtTex`).
+- **Bildausgabe:** Beide Stufen zeichnen direkt auf den Bildschirm, damit die Kantenglättung des Geräts greift. Helle Stellen fängt eine eigene Belichtungskurve weich ab (`CustomToneMapping` in `js/render.js`: unter 0,62 bleibt jede Farbe, darüber läuft sie weich gegen 0,95, nichts wird reinweiß). Eine frühere Fassung zeichnete „Schön“ über einen Zwischenspeicher mit Schein- und Farbdurchgängen; auf dem iPhone krisselten dort die Kanten und das Bild überstrahlte.
+- **Beide Stufen:** Uferschaum und helles Flachwasser, Glut an den Lavaufern, unregelmäßiger Boden, nasser Saum am Wasser (Höhenprofil als Textur `hgtTex`), abgerundete Kanten an Kisten, Blechlingen, Fahrzeugen und Hauptquartieren (`gfxRoundBox`), Schattierung in Senken, an Baumfüßen und unter Brücken (beim Laden in die Bodenfarben gerechnet), Gras blendet in der Ferne aus, Schatten rasten auf ganze Schattenpixel ein (kein Kriechen der Schattenkanten), Wind in Bäumen, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz (`js/look.js`).
+- **Nur Schön:** volle Auflösung (bis 2-fach), Schatten 2048, schärfere Texturen aus flachem Winkel, dunklere Bildecken (Überlagerung im Seitenrahmen), Lichtsaum an Einheiten, Schattenflecken unter Bäumen, Mündungsfeuer, Explosionen mit Feuerball, Rauch und Glut, Druckwelle und Funken, Fahrzeugstaub, Spuren in Schnee und Asche.
+- **Schnell:** Auflösung bis 1,5-fach, Schatten 1024, ohne die Extras aus „Schön“.
 - Läuft das Spiel zweimal hintereinander unter 24 Bildern pro Sekunde und hat man nichts fest gewählt, stellt es von selbst auf „Schnell“.
-- Schlägt die Nachbearbeitung fehl, zeichnet das Spiel wie früher direkt (kein schwarzes Bild).
 - **Weniger Zeichenvorgänge:** Bäume, Felsen, Sandsäcke, Schilf und Brücken (`STATIC_ROOTS` in `js/world.js`) werden beim Laden je Material und Kartenviertel zu wenigen großen Netzen zusammengefasst, die Inseln am Horizont (`FAR_ROOTS`) zu einem einzigen. Kleinteile der Blechlinge werfen keinen Schatten mehr. Auf der Insel sinken die Zeichenvorgänge pro Bild von etwa 1400 auf 400. Wer neue feste Deko baut, hängt sie an `STATIC_ROOTS` an; alles, was sich später bewegt oder ändert, darf dort nicht hinein.
 - **FPS-Anzeige:** Schalter im Startmenü (`?fps` zum Testen). Zeigt Bilder pro Sekunde, das längste Bild der letzten halben Sekunde, Zeichenvorgänge und Dreiecke.
-- Shader anderer Dateien bleiben erhalten: `gfxChain` hängt sich hinter vorhandene `onBeforeCompile`-Funktionen (Wasser, Lava, Durchblick-Loch).
+- Shader anderer Dateien bleiben erhalten: `gfxChain` hängt sich hinter vorhandene `onBeforeCompile`-Funktionen und gibt jeder Änderung ein Kennzeichen (`customProgramCacheKey`), damit three.js einen geänderten Shader nie einem Material ohne diese Änderung gibt (Wasser, Lava, Durchblick-Loch).
 
 ## Tag, Nacht und Wetter
 

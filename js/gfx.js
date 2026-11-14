@@ -1,8 +1,9 @@
 /* Kistenkrawall: Grafik-Paket für alle Karten.
    - Qualitätsschalter „Schön / Schnell“ (Menü, gemerkt; ?grafik=schoen|schnell). Ruckelt es, schaltet das Spiel
      von selbst auf „Schnell“, solange man nichts fest gewählt hat.
-   - Bildeffekte (nur „Schön“): weicher Schein um Helles, etwas mehr Kontrast und Farbe, warme Lichter,
-     kühle Schatten, dunklere Bildecken.
+   - Direkt auf den Bildschirm gezeichnet; helle Stellen werden in jedem Material weich abgefangen (render.js).
+   - Abgerundete Kanten, Schattierung in Senken, Gras blendet in der Ferne aus, Schatten rasten auf ganze Schattenpixel ein.
+   - Weiteres Aussehen (Wind, Wolkenschatten, Spuren, Explosionen, Metallglanz, Lichtsaum, Wasserspiegelung): look.js.
    - Wasser und Lava: Schaum und helles Flachwasser am Ufer, Glut an den Lavaufern.
    - Boden: großflächige Helligkeitsunterschiede gegen das Kachelmuster, nasser Saum am Wasser.
    - Schattenflecken unter Bäumen und Felsen, damit nichts schwebt.
@@ -16,7 +17,7 @@ const GFX={
     return 'schoen';
   })(),
   chosen:(function(){try{return !!localStorage.getItem('kk-gfx');}catch(e){return false;}})()||/[?&#]grafik=/i.test(location.search+location.hash),
-  post:null,ok:true
+  ok:true
 };
 const gfxFine=()=>GFX.mode==='schoen';
 
@@ -34,7 +35,16 @@ const hgtTex=(function(){
 })();
 const HGT_GLSL='float kkHgt(vec2 p){vec2 u=p/172.0+0.5;if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0)return -3.2;return texture2D(uHgt,u*(176.0/177.0)+0.5/177.0).r*4.0-3.2;}\n';
 // add to a material's shader without losing what other files already hooked in (mountain.js, world.js)
-function gfxChain(mat,fn){const prev=mat.onBeforeCompile;mat.onBeforeCompile=sh=>{if(prev)prev(sh);fn(sh);};mat.needsUpdate=true;}
+// Each chained change gets a tag. three.js reuses compiled shaders between materials whose settings match; the
+// tags (and the material's own original hook) keep a changed shader from being handed to a material without it.
+function gfxChain(mat,fn,tag){
+  const prev=mat.onBeforeCompile;
+  if(!mat.userData.kkBase)mat.userData.kkBase=String(prev);
+  mat.onBeforeCompile=function(sh,r){if(prev)prev.call(this,sh,r);fn(sh);};
+  mat.userData.kkTags=(mat.userData.kkTags||[]).concat(tag||'x');
+  const key=mat.userData.kkTags.join(',')+'|'+mat.userData.kkBase;mat.customProgramCacheKey=()=>key;
+  mat.needsUpdate=true;
+}
 
 /* ---------- Water: shallow tint and foam along the shore ---------- */
 scene.traverse(o=>{
@@ -52,7 +62,7 @@ scene.traverse(o=>{
       kf=clamp(kf,0.0,1.0)*smoothstep(-0.05,0.12,kd);
       gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(0.94,0.97,1.0),kf*0.6);gl_FragColor.a=max(gl_FragColor.a,kf*0.85);
       #include <tonemapping_fragment>`);
-  });
+  },'foam');
 });
 /* ---------- Lava: brighter glow where it meets the banks ---------- */
 if(lavaMat)gfxChain(lavaMat,sh=>{
@@ -61,7 +71,7 @@ if(lavaMat)gfxChain(lavaMat,sh=>{
     `float ld=-1.2-kkHgt(vLava);
     gl_FragColor.rgb+=vec3(0.42,0.2,0.03)*smoothstep(0.7,0.0,ld)*(0.75+0.25*sin(uTime*1.7+vLava.x*0.9+vLava.y*0.7));
     #include <tonemapping_fragment>`);
-});
+},'lavaglow');
 /* ---------- Ground: large-scale variation against the tiling, a wet seam along the water ---------- */
 scene.traverse(o=>{
   if(!o.isMesh||!o.material||o.material.map!==TX.ground||!o.geometry.attributes.color)return;
@@ -74,7 +84,7 @@ scene.traverse(o=>{
       float kg=texture2D(map,vKkG.xz*0.021).g;float kg2=texture2D(map,vKkG.xz*0.006+0.37).r;
       diffuseColor.rgb*=0.8+0.13*kg+0.07*kg2;   // only ever darkens: bright ground (snow, sand) must not burn out
       diffuseColor.rgb*=1.0-0.3*uWet*smoothstep(-0.95,-1.5,vKkG.y)*step(-1.75,vKkG.y);`);
-  });
+  },'ground');
 });
 
 /* ---------- Merge static scenery: far fewer draw calls ----------
@@ -131,6 +141,95 @@ scene.traverse(o=>{
   }
   GFX.merged={roots:gone.length,meshes:made};
 })();
+/* ---------- Soft contact shadows under trees and rocks ---------- */
+(function(){
+  const list=obstacles.filter(o=>!o.low&&o.r<3);if(!list.length)return;
+  const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,2,32,32,32);
+  r.addColorStop(0,'rgba(0,0,0,.55)');r.addColorStop(.55,'rgba(0,0,0,.28)');r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,64,64);
+  const mat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  const im=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),mat,list.length),d=new THREE.Object3D();
+  list.forEach((o,i)=>{const s=o.r*3.4+0.6;d.position.set(o.x,hgt(o.x,o.z)+0.05,o.z);d.scale.set(s,1,s);d.updateMatrix();im.setMatrixAt(i,d.matrix);});
+  im.renderOrder=1;scene.add(im);GFX.contact=im;
+})();
+
+/* ---------- Effects: shock wave and sparks on explosions, dust behind vehicles ---------- */
+const gfxRingG=new THREE.RingGeometry(0.78,1,28).rotateX(-Math.PI/2);
+{const _boom=boom;
+ boom=function(x,z,size){
+   _boom(x,z,size);
+   if(!gfxFine()||parts.length>230)return;
+   const m=new THREE.Mesh(gfxRingG,new THREE.MeshBasicMaterial({color:0xfff0d0,transparent:true,opacity:0.8,depthWrite:false}));
+   m.position.set(x,hgt(x,z)+0.12,z);m.scale.setScalar(0.3);scene.add(m);
+   parts.push({m,vx:0,vy:0,vz:0,life:0.45,max:0.45,boom:size*1.9});
+   sparks(x,hgt(x,z)+0.7,z,Math.min(10,4+Math.round(size*1.5)),0xffc66a);
+ };}
+const gfxDust=MOUNTAIN?0xf4f7fb:VOLCANO?0x6f665f:0xcdb78c;
+setInterval(()=>{
+  if(!gfxFine()||state!=='play'||document.hidden||parts.length>200)return;
+  for(const u of units){
+    if(!u.alive||!isVeh(u)||!u.moving||u.kind==='turm')continue;
+    const a=u.hull||0;puffs(u.x-Math.sin(a)*1.3+rand(-0.4,0.4),hgt(u.x,u.z)+0.2,u.z-Math.cos(a)*1.3+rand(-0.4,0.4),1,gfxDust,{size:0.75,up:0.35,life:0.9,spread:0.6,op:0.42});
+  }
+},140);
+
+/* ---------- Drawing: straight to the screen ----------
+   An earlier version drew into an off-screen buffer and added glow, colour grading and dark corners in three extra
+   passes. On the iPhone that made the picture shimmer at edges (the device's own edge smoothing did not apply) and
+   look washed out. Now the exposure curve sits in every material (render.js), glow only comes from real lights
+   (explosions, muzzle flashes, lava, gold crates) and the dark corners are a simple overlay on the page. */
+(function(){
+  const v=document.createElement('div');v.id='vignette';v.setAttribute('aria-hidden','true');
+  v.style.cssText='position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 58%,rgba(12,10,24,.3) 100%)';
+  canvas.insertAdjacentElement('afterend',v);GFX.vignette=v;
+  renderer.info.autoReset=false;   // count the whole frame
+  // The shadow map is redrawn every second frame only: it costs about as much as the picture itself.
+  renderer.shadowMap.autoUpdate=false;let frameNo=0;
+  window.gfxRender=function(){
+    renderer.info.reset();
+    renderer.shadowMap.needsUpdate=(frameNo++&1)===0||state==='menu';
+    renderer.render(scene,camera);
+  };
+})();
+
+/* ---------- Shadow: follows the view and snaps to whole shadow pixels ----------
+   Moving the shadow area by fractions of a shadow pixel makes every shadow edge crawl and flicker. The centre is
+   therefore rounded to the shadow map's own grid, seen from the sun. */
+{const _uc=updateCamera,UP=new THREE.Vector3(0,1,0),ax=new THREE.Vector3(),ay=new THREE.Vector3(),d=new THREE.Vector3(),c=new THREE.Vector3();
+ updateCamera=function(dt){
+   _uc(dt);
+   const half=30;
+   if(player&&state!=='menu'){const yaw=camMode==='taktik'?TAC_YAW:camYaw;c.set(player.x+Math.sin(yaw)*6,0,player.z+Math.cos(yaw)*6);}else c.set(camLook.x,0,camLook.z);
+   d.copy(SUN_OFF).normalize();ax.crossVectors(UP,d).normalize();ay.crossVectors(d,ax);
+   const t=2*half/sun.shadow.mapSize.x,px=c.dot(ax),py=c.dot(ay);
+   c.addScaledVector(ax,Math.round(px/t)*t-px).addScaledVector(ay,Math.round(py/t)*t-py);
+   sun.target.position.copy(c);sun.position.copy(c).add(SUN_OFF);
+ };}
+
+/* ---------- Rounded edges: boxes get a small bevel that catches the light ---------- */
+const gfxRoundCache=new Map();
+function gfxRoundBox(w,h,d){
+  const key=[w,h,d].map(v=>v.toFixed(3)).join(',');if(gfxRoundCache.has(key))return gfxRoundCache.get(key);
+  const r=Math.min(0.1,Math.min(w,h,d)*0.14),hs=[w/2,h/2,d/2],g=new THREE.BoxGeometry(1,1,1,3,3,3),p=g.attributes.position,n=g.attributes.normal;
+  const map=(v,hw)=>v<-0.16?-hw+(v+0.5)*3*r:v>0.16?hw-(0.5-v)*3*r:v*6*(hw-r);
+  const q=[0,0,0],inn=[0,0,0];
+  for(let i=0;i<p.count;i++){
+    q[0]=map(p.getX(i),hs[0]);q[1]=map(p.getY(i),hs[1]);q[2]=map(p.getZ(i),hs[2]);
+    let l=0;for(let k=0;k<3;k++){inn[k]=Math.max(-(hs[k]-r),Math.min(hs[k]-r,q[k]));l+=(q[k]-inn[k])**2;}
+    l=Math.sqrt(l);
+    if(l>1e-6){for(let k=0;k<3;k++)q[k]=inn[k]+(q[k]-inn[k])/l*r;n.setXYZ(i,(q[0]-inn[0])/r,(q[1]-inn[1])/r,(q[2]-inn[2])/r);}
+    p.setXYZ(i,q[0],q[1],q[2]);
+  }
+  g.userData.kkRound=true;g.computeBoundingSphere();gfxRoundCache.set(key,g);return g;
+}
+function gfxRoundParts(root){
+  root.traverse(o=>{
+    if(!o.isMesh||o.isInstancedMesh||!o.geometry||o.geometry.type!=='BoxGeometry'||o.geometry.userData.kkRound)return;
+    const P=o.geometry.parameters;if(Math.min(P.width,P.height,P.depth)<0.12)return;
+    o.geometry=gfxRoundBox(P.width,P.height,P.depth);
+  });
+}
+G.crate=gfxRoundBox(1,1,1);for(const c of crates)c.m.geometry=G.crate;
+
 /* Blechlinge and vehicles: each one was about 20 separate parts, drawn twice a frame. Parts that sit in the same
    joint and share a material are joined into one mesh; joints (legs, arms, turret, weapon, wheels) stay movable.
    Small joined parts no longer draw into the shadow map. */
@@ -166,111 +265,47 @@ function gfxMergeParts(root,keep){
   });
 }
 // the two headquarters: about 60 parts each (more with Christmas decoration)
-try{for(const q of hqs){if(!q.g)continue;const keep=new Set();for(const v of Object.values(q))for(const x of Array.isArray(v)?v:[v])if(x&&x.isObject3D)keep.add(x);gfxMergeParts(q.g,keep);}}catch(e){console.warn(e);}
+try{for(const q of hqs){if(!q.g)continue;gfxRoundParts(q.g);const keep=new Set();for(const v of Object.values(q))for(const x of Array.isArray(v)?v:[v])if(x&&x.isObject3D)keep.add(x);gfxMergeParts(q.g,keep);}}catch(e){console.warn(e);}
 {const _spawn=spawnUnit;
  spawnUnit=function(){
    const u=_spawn.apply(this,arguments);
    try{if(u&&u.bot&&u.bot.g){
      // parts the game moves or swaps on their own stay as they are
      const keep=new Set();for(const v of Object.values(u.bot))for(const x of Array.isArray(v)?v:[v])if(x&&x.isObject3D)keep.add(x);
-     gfxMergeParts(u.bot.g,keep);
+     gfxRoundParts(u.bot.g);gfxMergeParts(u.bot.g,keep);
    }}catch(e){console.warn(e);}
    return u;
  };}
-(function(){
-})();
 
-/* ---------- Soft contact shadows under trees and rocks ---------- */
-(function(){
-  const list=obstacles.filter(o=>!o.low&&o.r<3);if(!list.length)return;
-  const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,2,32,32,32);
-  r.addColorStop(0,'rgba(0,0,0,.55)');r.addColorStop(.55,'rgba(0,0,0,.28)');r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,64,64);
-  const mat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
-  const im=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),mat,list.length),d=new THREE.Object3D();
-  list.forEach((o,i)=>{const s=o.r*3.4+0.6;d.position.set(o.x,hgt(o.x,o.z)+0.05,o.z);d.scale.set(s,1,s);d.updateMatrix();im.setMatrixAt(i,d.matrix);});
-  im.renderOrder=1;scene.add(im);GFX.contact=im;
-})();
-
-/* ---------- Effects: shock wave and sparks on explosions, dust behind vehicles ---------- */
-const gfxRingG=new THREE.RingGeometry(0.78,1,28).rotateX(-Math.PI/2);
-{const _boom=boom;
- boom=function(x,z,size){
-   _boom(x,z,size);
-   if(!gfxFine()||parts.length>230)return;
-   const m=new THREE.Mesh(gfxRingG,new THREE.MeshBasicMaterial({color:0xfff0d0,transparent:true,opacity:0.8,depthWrite:false}));
-   m.position.set(x,hgt(x,z)+0.12,z);m.scale.setScalar(0.3);scene.add(m);
-   parts.push({m,vx:0,vy:0,vz:0,life:0.45,max:0.45,boom:size*1.9});
-   sparks(x,hgt(x,z)+0.7,z,Math.min(10,4+Math.round(size*1.5)),0xffc66a);
- };}
-const gfxDust=MOUNTAIN?0xf4f7fb:VOLCANO?0x6f665f:0xcdb78c;
-setInterval(()=>{
-  if(!gfxFine()||state!=='play'||document.hidden||parts.length>200)return;
-  for(const u of units){
-    if(!u.alive||!isVeh(u)||!u.moving||u.kind==='turm')continue;
-    const a=u.hull||0;puffs(u.x-Math.sin(a)*1.3+rand(-0.4,0.4),hgt(u.x,u.z)+0.2,u.z-Math.cos(a)*1.3+rand(-0.4,0.4),1,gfxDust,{size:0.75,up:0.35,life:0.9,spread:0.6,op:0.42});
+/* ---------- Ground: soft shading in hollows, at the foot of trees and rocks, under bridges ----------
+   Computed once while loading and written into the ground's vertex colours, so it costs nothing while playing. */
+scene.traverse(o=>{
+  if(!o.isMesh||!o.material||o.material.map!==TX.ground||!o.geometry.attributes.color)return;
+  const P=o.geometry.attributes.position,C=o.geometry.attributes.color,S=Math.round(Math.sqrt(P.count));if(S*S!==P.count)return;
+  const H=i=>P.getY(i),trees=obstacles.filter(b=>!b.low&&b.r<3);
+  let darkened=0;
+  for(let j=0;j<S;j++)for(let k=0;k<S;k++){
+    const i=j*S+k,h=H(i),x=P.getX(i),z=P.getZ(i);let sum=0,cnt=0;
+    for(const st of [2,5])for(const [dj,dk] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+      const jj=j+dj*st,kk=k+dk*st;if(jj<0||kk<0||jj>=S||kk>=S)continue;sum+=H(jj*S+kk);cnt++;}
+    let f=1-clamp(((sum/cnt)-h)*0.22,0,0.3);
+    for(const b of trees){const dd=Math.hypot(x-b.x,z-b.z),R=b.r*1.9+0.7;if(dd<R)f*=1-0.32*(1-dd/R);}
+    if(onBridge(x,z)&&h<0.25)f*=0.62;
+    if(f<0.999){C.setXYZ(i,C.getX(i)*f,C.getY(i)*f,C.getZ(i)*f);darkened++;}
   }
-},140);
+  C.needsUpdate=true;GFX.ao=darkened;
+});
 
-/* ---------- Post-processing: glow, colour grade, vignette ---------- */
-(function(){
-  const QUAD=new THREE.Mesh(new THREE.PlaneGeometry(2,2)),qScene=new THREE.Scene(),qCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);qScene.add(QUAD);
-  const VS='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}';
-  // snow is nearly white everywhere: only real lights may glow there
-  const THR=MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO)?0.97:0.96;   // only real lights glow: sand, sky and snow are bright but must not bloom
-  const bright=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{t:{value:null},px:{value:new THREE.Vector2()},thr:{value:THR}},vertexShader:VS,
-    fragmentShader:`uniform sampler2D t;uniform vec2 px;uniform float thr;varying vec2 vUv;
-      vec3 b(vec2 o){vec3 c=texture2D(t,vUv+o*px).rgb;float l=max(c.r,max(c.g,c.b));return c*smoothstep(thr,thr+0.14,l);}
-      void main(){gl_FragColor=vec4(b(vec2(0.0))*0.3+(b(vec2(-3.2,0.0))+b(vec2(3.2,0.0)))*0.12+(b(vec2(-1.4,0.0))+b(vec2(1.4,0.0)))*0.23,1.0);}`});
-  const blur=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{t:{value:null},px:{value:new THREE.Vector2()}},vertexShader:VS,
-    fragmentShader:`uniform sampler2D t;uniform vec2 px;varying vec2 vUv;
-      void main(){vec3 c=texture2D(t,vUv).rgb*0.3+(texture2D(t,vUv+vec2(0.0,-3.2)*px).rgb+texture2D(t,vUv+vec2(0.0,3.2)*px).rgb)*0.12+(texture2D(t,vUv+vec2(0.0,-1.4)*px).rgb+texture2D(t,vUv+vec2(0.0,1.4)*px).rgb)*0.23;gl_FragColor=vec4(c,1.0);}`});
-  const final=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{t:{value:null},b:{value:null},glow:{value:0.4}},vertexShader:VS,
-    fragmentShader:`uniform sampler2D t;uniform sampler2D b;uniform float glow;varying vec2 vUv;
-      void main(){
-        vec3 c=texture2D(t,vUv).rgb+texture2D(b,vUv).rgb*glow;
-        float l=dot(c,vec3(0.299,0.587,0.114));
-        c=mix(vec3(l),c,1.09);c=(c-0.5)*1.05+0.47;
-        c-=max(c-0.7,0.0)*0.6;   // soft shoulder: highlights keep their detail instead of clipping
-        c+=vec3(0.014,0.005,-0.012)*smoothstep(0.5,1.0,l)+vec3(-0.012,0.0,0.022)*(1.0-smoothstep(0.0,0.45,l));
-        c*=mix(0.8,1.0,smoothstep(0.92,0.3,length(vUv-0.5)));
-        gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);
-      }`});
-  let rt=null,ba=null,bb=null,W=0,H=0;
-  const size=new THREE.Vector2();
-  function ensure(){
-    renderer.getDrawingBufferSize(size);
-    if(rt&&size.x===W&&size.y===H)return;
-    W=size.x;H=size.y;[rt,ba,bb].forEach(x=>x&&x.dispose());
-    const opt={minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,format:THREE.RGBAFormat};
-    rt=renderer.capabilities.isWebGL2?new THREE.WebGLMultisampleRenderTarget(W,H,opt):new THREE.WebGLRenderTarget(W,H,opt);
-    if(rt.samples!==undefined)rt.samples=4;
-    const w=Math.max(2,W>>2),h=Math.max(2,H>>2);
-    ba=new THREE.WebGLRenderTarget(w,h,Object.assign({depthBuffer:false},opt));bb=new THREE.WebGLRenderTarget(w,h,Object.assign({depthBuffer:false},opt));
-    bright.uniforms.px.value.set(1/w,1/h);blur.uniforms.px.value.set(1/w,1/h);
-  }
-  const pass=(mat,target)=>{QUAD.material=mat;renderer.setRenderTarget(target);renderer.render(qScene,qCam);};
-  GFX.post={final,bright};
-  // called by the main loop instead of renderer.render
-  renderer.info.autoReset=false;   // count the whole frame, not just the last small pass
-  // The shadow map is redrawn every second frame only. It costs about as much as the picture itself,
-  // and at 30 updates a second nobody sees the difference.
-  renderer.shadowMap.autoUpdate=false;let frameNo=0;
-  window.gfxRender=function(){
-    renderer.info.reset();
-    renderer.shadowMap.needsUpdate=(frameNo++&1)===0||state==='menu';
-    if(!gfxFine()||!GFX.ok){renderer.render(scene,camera);return;}
-    try{
-      ensure();
-      renderer.setRenderTarget(rt);renderer.render(scene,camera);
-      bright.uniforms.t.value=rt.texture;pass(bright,ba);
-      blur.uniforms.t.value=ba.texture;pass(blur,bb);
-      final.uniforms.t.value=rt.texture;final.uniforms.b.value=bb.texture;pass(final,null);
-    }catch(e){
-      // never leave a black screen: fall back to plain drawing for good
-      console.warn('Bildeffekte abgeschaltet',e);GFX.ok=false;renderer.setRenderTarget(null);renderer.render(scene,camera);
-    }
-  };
-})();
+/* ---------- Grass: fades out in the distance, where single blades are thinner than a pixel and flicker ---------- */
+GFX.fade={a:{value:42},b:{value:58}};
+scene.traverse(o=>{
+  if(!o.isInstancedMesh||(o.name!=='kkGrass'&&o.name!=='kkFlowers'))return;
+  gfxChain(o.material,sh=>{
+    sh.uniforms.uFadeA=GFX.fade.a;sh.uniforms.uFadeB=GFX.fade.b;
+    sh.vertexShader='uniform float uFadeA;uniform float uFadeB;\n'+sh.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\n{vec4 kkI=modelMatrix*instanceMatrix*vec4(0.0,0.0,0.0,1.0);transformed*=1.0-smoothstep(uFadeA,uFadeB,distance(kkI.xyz,cameraPosition));}');
+  },'fade');
+});
 
 /* ---------- FPS display: frames per second, time per frame, draw calls ---------- */
 (function(){
@@ -299,6 +334,12 @@ function gfxApply(){
   const s=gfxFine()?2048:1024;
   if(sun.shadow.mapSize.x!==s){sun.shadow.mapSize.set(s,s);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}
   if(GFX.contact)GFX.contact.visible=gfxFine();
+  if(GFX.vignette)GFX.vignette.hidden=!gfxFine();
+  if(GFX.fade){GFX.fade.a.value=gfxFine()?42:34;GFX.fade.b.value=gfxFine()?58:46;}
+  // sharper textures at shallow angles: the ground in the distance no longer shimmers
+  const an=Math.min(gfxFine()?16:4,renderer.capabilities.getMaxAnisotropy());
+  if(!GFX.texs){GFX.texs=new Set(Object.values(TX));scene.traverse(o=>{if(o.material&&o.material.map)GFX.texs.add(o.material.map);});}
+  for(const t of GFX.texs)if(t&&t.isTexture&&t.anisotropy!==an){t.anisotropy=an;t.needsUpdate=true;}
   if(typeof resize==='function')resize();
   const b=$('#gfxToggle');if(b){b.textContent='Grafik: '+(gfxFine()?'Schön':'Schnell');b.setAttribute('aria-pressed',gfxFine()?'true':'false');}
 }
