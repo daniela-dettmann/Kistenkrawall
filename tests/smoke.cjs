@@ -278,6 +278,17 @@ async function main() {
     return sum;
   });
   check(await page.evaluate(() => GFX.ok && !!GFX.water && !!GFX.contact && GFX.contact.visible && sun.shadow.mapSize.x === 2048) && await lit() > 200, 'Grafik „Schön“: Bildeffekte zeichnen ein Bild, Uferschaum und Schattenflecken sind da');
+  check(await page.evaluate(() => {
+    DN.fixed = 0.5; for (let i = 0; i < 40; i++) updateMood(0.05); updateCamera(0.05); gfxRender();
+    const gl = renderer.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    let hot = 0; for (let i = 0; i < w * h; i++) if (Math.max(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]) >= 250) hot++;
+    DN.fixed = null; return hot / (w * h) < 0.02;
+  }), 'Grafik „Schön“ überstrahlt nicht: unter 2 % ganz helle Bildpunkte am Mittag');
+  check(await page.evaluate(() => {
+    const u = spawnUnit(0, 0, 30, 'kaempfer'); let n = 0; u.bot.g.traverse(o => { if (o.isMesh && o.visible) n++; });
+    u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
+    return n <= 17 && renderer.shadowMap.autoUpdate === false;
+  }), 'Blechlinge sind je Gelenk zusammengefasst, der Schatten wird nur jedes zweite Bild neu gezeichnet');
   check(await page.evaluate(() => { const n = parts.length; boom(0, 20, 3); return parts.length >= n + 3; }), 'Explosion mit Druckwelle und Funken');
   check(await page.evaluate(() => { gfxRender(); return GFX.merged.roots > 200 && GFX.merged.meshes < 80 && renderer.info.render.calls < 700 && obstacles.length > 80; }), 'Bäume, Felsen und Brücken sind zusammengefasst: unter 700 Zeichenvorgänge pro Bild');
   await page.evaluate(() => { pause(true); toMenu(); });

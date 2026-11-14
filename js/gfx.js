@@ -22,14 +22,17 @@ const gfxFine=()=>GFX.mode==='schoen';
 
 /* ---------- Height map of the terrain as a texture (for shore foam, lava glow, wet ground) ---------- */
 const hgtTex=(function(){
-  const S=256,d=new Uint8Array(S*S*4);
+  // One texel per terrain vertex (the ground mesh has 177 x 177 of them), so the shore in the texture is exactly
+  // the shore of the mesh. A coarser, shifted grid gave a jagged, flickering foam line. Heights between -3.2 and
+  // 0.8 are all the water and lava shaders need, which keeps 8 bits precise enough (1.6 cm a step).
+  const S=177,d=new Uint8Array(S*S*4);
   for(let j=0;j<S;j++)for(let i=0;i<S;i++){
-    const h=hgtRaw((i+0.5)/S*172-86,(j+0.5)/S*172-86),v=Math.round(clamp((h+4)/8,0,1)*255),k=(j*S+i)*4;
+    const h=hgtRaw(i/(S-1)*172-86,j/(S-1)*172-86),v=Math.round(clamp((h+3.2)/4,0,1)*255),k=(j*S+i)*4;
     d[k]=d[k+1]=d[k+2]=v;d[k+3]=255;
   }
   const t=new THREE.DataTexture(d,S,S,THREE.RGBAFormat);t.magFilter=t.minFilter=THREE.LinearFilter;t.needsUpdate=true;return t;
 })();
-const HGT_GLSL='float kkHgt(vec2 p){vec2 u=p/172.0+0.5;if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0)return -4.0;return texture2D(uHgt,u).r*8.0-4.0;}\n';
+const HGT_GLSL='float kkHgt(vec2 p){vec2 u=p/172.0+0.5;if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0)return -3.2;return texture2D(uHgt,u*(176.0/177.0)+0.5/177.0).r*4.0-3.2;}\n';
 // add to a material's shader without losing what other files already hooked in (mountain.js, world.js)
 function gfxChain(mat,fn){const prev=mat.onBeforeCompile;mat.onBeforeCompile=sh=>{if(prev)prev(sh);fn(sh);};mat.needsUpdate=true;}
 
@@ -44,9 +47,10 @@ scene.traverse(o=>{
     sh.fragmentShader='uniform sampler2D uHgt;uniform vec3 uShallow;varying vec2 vKkW;\n'+(/uniform float uTime/.test(sh.fragmentShader)?'':'uniform float uTime;\n')+HGT_GLSL+sh.fragmentShader.replace('#include <tonemapping_fragment>',
       `float kd=-1.65-kkHgt(vKkW);
       gl_FragColor.rgb=mix(gl_FragColor.rgb,uShallow,(1.0-smoothstep(0.0,1.5,kd))*0.5);
-      float kf=smoothstep(0.5,0.02,kd)*(0.5+0.5*sin(kd*13.0-uTime*2.0+sin(vKkW.x*0.7+vKkW.y*0.6)*2.2));
-      kf=clamp(kf*1.2,0.0,1.0);
-      gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(1.0),kf*0.8);gl_FragColor.a=max(gl_FragColor.a,kf);
+      // a soft, slow band of foam; hard stripes right at the edge flicker when the waves move
+      float kf=smoothstep(0.6,0.08,kd)*(0.55+0.45*sin(kd*7.0-uTime*1.3+sin(vKkW.x*0.5+vKkW.y*0.45)*1.8));
+      kf=clamp(kf,0.0,1.0)*smoothstep(-0.05,0.12,kd);
+      gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(0.94,0.97,1.0),kf*0.6);gl_FragColor.a=max(gl_FragColor.a,kf*0.85);
       #include <tonemapping_fragment>`);
   });
 });
@@ -83,7 +87,8 @@ scene.traverse(o=>{
     root.updateMatrixWorld(true);
     let ok=true;root.traverse(o=>{if(o.isInstancedMesh||o.isPoints||o.isSprite||o.isLine)ok=false;});
     if(!ok)continue;
-    const cell=(root.position.x>=0?1:0)+(root.position.z>=0?2:0);
+    // a 3 x 3 grid: the camera and the shadow only ever see a few cells, the rest is skipped entirely
+    const ci=v=>Math.max(0,Math.min(2,Math.floor((v+54)/36))),cell=ci(root.position.x)+3*ci(root.position.z);
     root.traverse(o=>{
       if(!o.isMesh)return;
       let vis=true;for(let q=o;q;q=q.parent)if(!q.visible)vis=false;
@@ -126,16 +131,50 @@ scene.traverse(o=>{
   }
   GFX.merged={roots:gone.length,meshes:made};
 })();
-/* Small parts of Blechlinge and vehicles (bolts, antennas, eyes) no longer draw into the shadow map:
-   nobody sees their shadow, but each one cost a draw call per frame. */
+/* Blechlinge and vehicles: each one was about 20 separate parts, drawn twice a frame. Parts that sit in the same
+   joint and share a material are joined into one mesh; joints (legs, arms, turret, weapon, wheels) stay movable.
+   Small joined parts no longer draw into the shadow map. */
+function gfxMergeParts(root,keep){
+  const visit=node=>{
+    const kids=node.children.slice(),groups=new Map();
+    for(const c of kids){
+      if(c.children.length){visit(c);continue;}
+      if(!c.isMesh||c.isInstancedMesh||!c.visible||keep.has(c)||Array.isArray(c.material)||!c.geometry.attributes.normal)continue;
+      const key=c.material.uuid+(c.geometry.attributes.uv?'u':'-');
+      (groups.get(key)||groups.set(key,[]).get(key)).push(c);
+    }
+    for(const list of groups.values()){
+      if(list.length<2)continue;
+      const pos=[],nor=[],uvs=[],uv=!!list[0].geometry.attributes.uv;let n=0;
+      for(const c of list){
+        c.updateMatrix();
+        const g=(c.geometry.index?c.geometry.toNonIndexed():c.geometry.clone()).applyMatrix4(c.matrix);
+        pos.push(g.attributes.position.array);nor.push(g.attributes.normal.array);if(uv)uvs.push(g.attributes.uv.array);n+=g.attributes.position.array.length;g.dispose();
+        node.remove(c);
+      }
+      const join=(l,len)=>{const a=new Float32Array(len);let k=0;for(const x of l){a.set(x,k);k+=x.length;}return a;},g=new THREE.BufferGeometry();
+      g.setAttribute('position',new THREE.BufferAttribute(join(pos,n),3));g.setAttribute('normal',new THREE.BufferAttribute(join(nor,n),3));
+      if(uv)g.setAttribute('uv',new THREE.BufferAttribute(join(uvs,n/3*2),2));
+      const m=new THREE.Mesh(g,list[0].material);m.castShadow=list.some(c=>c.castShadow);m.receiveShadow=list[0].receiveShadow;node.add(m);
+    }
+  };
+  visit(root);
+  root.traverse(o=>{
+    if(!o.isMesh||!o.castShadow)return;
+    if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();
+    if(o.geometry.boundingSphere.radius*Math.max(o.scale.x,o.scale.y,o.scale.z)<0.4)o.castShadow=false;
+  });
+}
+// the two headquarters: about 60 parts each (more with Christmas decoration)
+try{for(const q of hqs){if(!q.g)continue;const keep=new Set();for(const v of Object.values(q))for(const x of Array.isArray(v)?v:[v])if(x&&x.isObject3D)keep.add(x);gfxMergeParts(q.g,keep);}}catch(e){console.warn(e);}
 {const _spawn=spawnUnit;
  spawnUnit=function(){
    const u=_spawn.apply(this,arguments);
-   try{if(u&&u.bot&&u.bot.g)u.bot.g.traverse(o=>{
-     if(!o.isMesh||!o.castShadow)return;
-     if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();
-     if(o.geometry.boundingSphere.radius*Math.max(o.scale.x,o.scale.y,o.scale.z)<0.3)o.castShadow=false;
-   });}catch(e){}
+   try{if(u&&u.bot&&u.bot.g){
+     // parts the game moves or swaps on their own stay as they are
+     const keep=new Set();for(const v of Object.values(u.bot))for(const x of Array.isArray(v)?v:[v])if(x&&x.isObject3D)keep.add(x);
+     gfxMergeParts(u.bot.g,keep);
+   }}catch(e){console.warn(e);}
    return u;
  };}
 (function(){
@@ -177,7 +216,7 @@ setInterval(()=>{
   const QUAD=new THREE.Mesh(new THREE.PlaneGeometry(2,2)),qScene=new THREE.Scene(),qCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);qScene.add(QUAD);
   const VS='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}';
   // snow is nearly white everywhere: only real lights may glow there
-  const THR=MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO)?0.97:0.93;
+  const THR=MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO)?0.97:0.96;   // only real lights glow: sand, sky and snow are bright but must not bloom
   const bright=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{t:{value:null},px:{value:new THREE.Vector2()},thr:{value:THR}},vertexShader:VS,
     fragmentShader:`uniform sampler2D t;uniform vec2 px;uniform float thr;varying vec2 vUv;
       vec3 b(vec2 o){vec3 c=texture2D(t,vUv+o*px).rgb;float l=max(c.r,max(c.g,c.b));return c*smoothstep(thr,thr+0.14,l);}
@@ -185,14 +224,14 @@ setInterval(()=>{
   const blur=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{t:{value:null},px:{value:new THREE.Vector2()}},vertexShader:VS,
     fragmentShader:`uniform sampler2D t;uniform vec2 px;varying vec2 vUv;
       void main(){vec3 c=texture2D(t,vUv).rgb*0.3+(texture2D(t,vUv+vec2(0.0,-3.2)*px).rgb+texture2D(t,vUv+vec2(0.0,3.2)*px).rgb)*0.12+(texture2D(t,vUv+vec2(0.0,-1.4)*px).rgb+texture2D(t,vUv+vec2(0.0,1.4)*px).rgb)*0.23;gl_FragColor=vec4(c,1.0);}`});
-  const final=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{t:{value:null},b:{value:null},glow:{value:0.45}},vertexShader:VS,
+  const final=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{t:{value:null},b:{value:null},glow:{value:0.4}},vertexShader:VS,
     fragmentShader:`uniform sampler2D t;uniform sampler2D b;uniform float glow;varying vec2 vUv;
       void main(){
         vec3 c=texture2D(t,vUv).rgb+texture2D(b,vUv).rgb*glow;
         float l=dot(c,vec3(0.299,0.587,0.114));
         c=mix(vec3(l),c,1.09);c=(c-0.5)*1.05+0.47;
-        c-=max(c-0.74,0.0)*0.55;   // soft shoulder: highlights keep their detail instead of clipping
-        c+=vec3(0.022,0.008,-0.016)*smoothstep(0.5,1.0,l)+vec3(-0.012,0.0,0.022)*(1.0-smoothstep(0.0,0.45,l));
+        c-=max(c-0.7,0.0)*0.6;   // soft shoulder: highlights keep their detail instead of clipping
+        c+=vec3(0.014,0.005,-0.012)*smoothstep(0.5,1.0,l)+vec3(-0.012,0.0,0.022)*(1.0-smoothstep(0.0,0.45,l));
         c*=mix(0.8,1.0,smoothstep(0.92,0.3,length(vUv-0.5)));
         gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);
       }`});
@@ -213,8 +252,12 @@ setInterval(()=>{
   GFX.post={final,bright};
   // called by the main loop instead of renderer.render
   renderer.info.autoReset=false;   // count the whole frame, not just the last small pass
+  // The shadow map is redrawn every second frame only. It costs about as much as the picture itself,
+  // and at 30 updates a second nobody sees the difference.
+  renderer.shadowMap.autoUpdate=false;let frameNo=0;
   window.gfxRender=function(){
     renderer.info.reset();
+    renderer.shadowMap.needsUpdate=(frameNo++&1)===0||state==='menu';
     if(!gfxFine()||!GFX.ok){renderer.render(scene,camera);return;}
     try{
       ensure();

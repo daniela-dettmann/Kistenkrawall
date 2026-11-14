@@ -98,7 +98,10 @@ const DN={
     if(kind==='regen'&&s>0.3&&playing){rainT-=dt;if(rainT<=0){rainT=1.05;sound('regen',0.5*s);}}
 
     /* sun or moon: direction, colour, strength */
-    const day=1-night,az=(p-0.5)*2.6+0.63,h=night>0.5?0.72:Math.max(0.32,Math.min(1,el));
+    // The light moves in small steps (every 2.5 s of game time), not every frame: a light that turns
+    // continuously makes every shadow edge crawl and flicker.
+    const day=1-night,ps=DN.fixed!==null?p:Math.round(p*192)/192,els=Math.sin((ps-0.25)*TAU)+0.38,
+      az=(ps-0.5)*2.6+0.63,h=night>0.5?0.72:Math.max(0.32,Math.min(1,els));
     SUN_OFF.set(Math.cos(az)*38*(1.25-h*0.5),16+h*26,Math.sin(az)*38*(1.25-h*0.5));
     sky.material.uniforms.sunDir.value.copy(SUN_OFF).normalize();
     const dim=1-0.3*s*(kind==='dunst'?0.5:1);
@@ -131,7 +134,7 @@ const DN={
 
     /* night lights */
     const lit=night>0.05&&state!=='menu';
-    lantern.intensity=lit&&player&&player.alive?night*1.15:0;
+    lantern.intensity=lit&&player&&player.alive?night*(MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO)?0.5:0.85):0;   // snow reflects far more light than grass
     if(lit&&player)lantern.position.set(player.x,hgt(player.x,player.z)+2.4,player.z);
     let bi=0,ci=0;
     if(lit){
