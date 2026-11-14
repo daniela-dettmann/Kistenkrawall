@@ -407,7 +407,7 @@ function loop(now){
     checkOrientation();
     if((state==='play'&&$('#rotate').hidden)||state==='menu')update(dt);
     updateCamera(dt);
-    if(!glLost)renderer.render(scene,camera);
+    if(!glLost){if(window.gfxRender)window.gfxRender();else renderer.render(scene,camera);}
     updateTags();
     hudT-=dt;if(hudT<=0&&state==='play'){hudT=.1;updateHud();drawMap();}
   }catch(err){
