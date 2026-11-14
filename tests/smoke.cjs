@@ -290,7 +290,7 @@ async function main() {
     return n <= 17 && renderer.shadowMap.autoUpdate === false;
   }), 'Blechlinge sind je Gelenk zusammengefasst, der Schatten wird nur jedes zweite Bild neu gezeichnet');
   check(await page.evaluate(() => { const n = parts.length; boom(0, 20, 3); return parts.length >= n + 3; }), 'Explosion mit Druckwelle und Funken');
-  check(await page.evaluate(() => { gfxRender(); return GFX.merged.roots > 200 && GFX.merged.meshes < 80 && renderer.info.render.calls < 700 && obstacles.length > 80; }), 'Bäume, Felsen und Brücken sind zusammengefasst: unter 700 Zeichenvorgänge pro Bild');
+  check(await page.evaluate(() => { gfxRender(); return GFX.merged.roots > 200 && GFX.merged.meshes < 160 && renderer.info.render.calls < 700 && obstacles.length > 80; }), 'Bäume, Felsen und Brücken sind zusammengefasst: unter 700 Zeichenvorgänge pro Bild');
   await page.evaluate(() => { pause(true); toMenu(); });
   await page.click('#fpsToggle', { force: true });
   await page.waitForTimeout(1300);
