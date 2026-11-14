@@ -46,7 +46,7 @@ if(XMAS)(function(){
     if(!items.length)return null;
     const im=new THREE.InstancedMesh(geo,mat,items.length),d=new THREE.Object3D(),c=new THREE.Color();
     items.forEach((it,i)=>{d.position.copy(it.p);d.rotation.set(it.rx||0,it.ry||0,it.rz||0);d.scale.copy(it.s||new THREE.Vector3(1,1,1));d.updateMatrix();im.setMatrixAt(i,d.matrix);if(it.c!=null)im.setColorAt(i,c.set(it.c));});
-    im.castShadow=true;scene.add(im);return im;
+    im.castShadow=geo.type!=='SphereGeometry';scene.add(im);return im;   // tiny baubles and lights: no shadow, they are far too small to see one
   }
   const V=(x,y,z)=>new THREE.Vector3(x,y,z);
 
@@ -104,14 +104,14 @@ if(XMAS)(function(){
       caps.push({p:tmp.clone(),s:V(r*0.86,r*0.34,r*0.86),ry:srand()*3});
     }
   });
-  instanced(new THREE.SphereGeometry(0.11,10,8),new THREE.MeshPhongMaterial({color:0xffffff,specular:0xffffff,shininess:120}),balls);
+  instanced(new THREE.SphereGeometry(0.11,7,5),new THREE.MeshPhongMaterial({color:0xffffff,specular:0xffffff,shininess:120}),balls);
   instanced(new THREE.OctahedronGeometry(1,0),new THREE.MeshBasicMaterial({color:GOLD}),stars);
-  instanced(new THREE.IcosahedronGeometry(1,1),snowMat,caps);
+  instanced(new THREE.IcosahedronGeometry(1,0),snowMat,caps);
 
   /* ---------- Lichterketten an den Brücken ---------- */
   {const lights=[];for(const bx of BRIDGES){if((MOUNTAIN&&bx>0)||VOLCANO)continue;const cw=crossW(bx)-0.05;for(const sx of [-cw,cw])for(const side of [-1,1])for(let k=0;k<9;k++)
      lights.push({p:V(bx+sx,1.12,side*(2.9+k*0.79)),c:[RED,GOLD,0x3fa0ff,0x3fd46a][(k+(sx>0?1:0))%4]});}
-   const lm=instanced(new THREE.SphereGeometry(0.085,8,6),new THREE.MeshBasicMaterial({color:0xffffff}),lights);if(lm)lm.castShadow=false;}
+   const lm=instanced(new THREE.SphereGeometry(0.085,6,4),new THREE.MeshBasicMaterial({color:0xffffff}),lights);if(lm)lm.castShadow=false;}
 
   /* ---------- Hauptquartiere als Lebkuchenhäuser ---------- */
   const ginger=texMat(0xb86a32,canvasTex(128,(g,S)=>{

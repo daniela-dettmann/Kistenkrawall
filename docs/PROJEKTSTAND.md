@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 14. November 2026 · Live-Version auf `main`: `b6c2436` (PR #21, Grafik-Paket); mit dem Merge von #22 kommen Tag, Nacht und Wetter dazu
+Stand: 14. November 2026 · Live-Version auf `main`: `4883d22` (PR #22: Tag, Nacht und Wetter, flüssiger, FPS-Anzeige); mit dem Merge von #23 kommt die Nachbesserung für das iPhone dazu
 
 ## Links
 
@@ -36,6 +36,7 @@ Stand: 14. November 2026 · Live-Version auf `main`: `b6c2436` (PR #21, Grafik-P
 | #20 | Vulkan nachgebessert: keine orangen Flecken mehr im Boden, dunkles Meer (auch in der Weihnachtsedition), Lavastrom endet an der Küste mit erkaltetem Gestein und Dampf, Lava weniger grell | gemergt |
 | #21 | Grafik-Paket für alle Karten: Schalter „Schön / Schnell“, Bildeffekte (Schein, Farbe, dunklere Ecken), Uferschaum und Flachwasser, Lavaglut am Ufer, Bodendetails, Schattenflecken, Druckwelle und Funken, Fahrzeugstaub | gemergt |
 | #22 | Tag, Nacht und Wetter auf allen Karten: Tageslauf über 8 Minuten, Abendrot, Mondnacht mit Sternen, Laterne und Lichtkegeln, leuchtende Kisten; Regen und Gewitter, Schneesturm, Ascheregen; Schalter im Menü. Dazu: flüssiger (Zeichenvorgänge pro Bild auf unter ein Drittel), FPS-Anzeige, Helligkeit in „Schön“ gedämpft, Winterlicht in der Weihnachtsedition | gemergt |
+| #23 | Nach Danielas Test auf dem iPhone 15 Pro Max (33 FPS, Flimmern am Ufer, überhellte Stellen): Schatten nur jedes zweite Bild, Blechlinge und Hauptquartiere zusammengefasst, Weihnachtsdeko mit halb so vielen Dreiecken, Schaumkante am Ufer neu, Sonne wandert in Schritten, Schein nur noch um echte Lichter | gemergt |
 
 ## Was umgesetzt ist
 
@@ -104,6 +105,10 @@ Stand: 14. November 2026 · Live-Version auf `main`: `b6c2436` (PR #21, Grafik-P
 - Schnell: ohne Nachbearbeitung, kleinere Schatten, geringere Auflösung.
 - Fällt die Nachbearbeitung auf einem Gerät aus, zeichnet das Spiel wie vorher.
 - Geschwindigkeit: Bäume, Felsen, Sandsäcke und Brücken werden beim Laden zu wenigen großen Netzen zusammengefasst. Vorher wurde jedes Teil einzeln gezeichnet, zweimal pro Bild (Bild und Schatten). Auf der Insel sinken die Zeichenvorgänge von etwa 1400 auf 400, in der Taktik-Ansicht von 890 auf 260.
+- Nachbesserung nach dem ersten Test auf dem iPhone 15 Pro Max (33 FPS bei 815 Zeichenvorgängen und 685.000 Dreiecken in der Weihnachtsedition, spät in der Runde): Die Schattenkarte wird nur noch jedes zweite Bild neu gezeichnet. Blechlinge, Fahrzeuge und Hauptquartiere sind je Gelenk und Material zusammengefasst. Die feste Deko liegt in einem 3-mal-3-Raster, sodass nur die sichtbaren Felder gezeichnet werden. Kugeln, Lichter und Schneehauben der Weihnachtsdeko haben weniger Dreiecke und werfen keinen Schatten. In derselben nachgestellten Szene sinken die Dreiecke von 678.000 auf rund 360.000, die Zeichenvorgänge von 688 auf rund 570.
+- Flimmern am Ufer behoben: Die Höhenkarte für Schaum und Lavaglut hat jetzt genau einen Punkt pro Geländepunkt. Vorher war sie gröber und versetzt, die Schaumkante war gezackt und flackerte. Der Schaum ist weicher und langsamer.
+- Die Sonne wandert in kleinen Schritten alle 2,5 Sekunden statt in jedem Bild, damit Schattenkanten nicht ständig kriechen.
+- Überhellte Stellen: Der Schein greift nur noch bei echten Lichtern (Schwelle 0,96), nicht mehr bei Sand, Himmel und Schnee. Helle Flächen werden stärker abgefangen. Die Laterne ist auf Schnee halb so stark. Gemessen in sieben Szenen: kein Bildpunkt über 250 von 255.
 - FPS-Anzeige im Startmenü einschaltbar: Bilder pro Sekunde, längstes Bild, Zeichenvorgänge, Dreiecke.
 - Helle Flächen fressen in „Schön“ nicht mehr aus (weiche Obergrenze für Lichter, Boden wird nicht mehr aufgehellt). Die Weihnachtsedition hat ein kühles Winterlicht mit bläulichen Schatten, damit der Schnee wie Schnee aussieht.
 
@@ -148,6 +153,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Gebirge: Kartenwahl, Höhen von Schlucht, Brücke, Pass und Tal, Wegfindung über beide Wege, Runde mit Schneetreiben, Spielstand mit Karte, Weihnachtsedition auf dem Gebirge
 - Nur lokal (`node tests/smoke.cjs`, auf GitHub übersprungen): Mehrspieler mit zwei Browsern und lokalem Vermittlungsserver: Raumcode, Beitritt, voller Raum, Versionsunterschied, Rollen, faire KI, Steuerung des Gasts, ungültige Nachrichten, Pause, Abbruch und Wiederverbinden, Einzelspieler-Spielstand unberührt, Host verlässt das Spiel
 - Vulkan: Kartenwahl, Höhen von Lavastrom, Brücken, Insel und Krater, Wegfindung über die Insel und um den Krater (nie durch die Lava), Runde mit Kisten auf der Insel, Ausbruch (Sperre, Ausweichen, Schaden nur auf der Brücke), Weihnachtsedition auf dem Vulkan
+- Helligkeit: unter 2 % ganz helle Bildpunkte am Mittag in „Schön“; Blechlinge zusammengefasst, Schatten jedes zweite Bild
 - Geschwindigkeit: feste Deko ist zusammengefasst, unter 700 Zeichenvorgänge pro Bild; FPS-Anzeige einschaltbar
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
 - Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Schalter aus
