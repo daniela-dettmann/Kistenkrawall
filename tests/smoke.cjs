@@ -289,7 +289,11 @@ async function main() {
     u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
     return n <= 17 && renderer.shadowMap.autoUpdate === false;
   }), 'Blechlinge sind je Gelenk zusammengefasst, der Schatten wird nur jedes zweite Bild neu gezeichnet');
-  check(await page.evaluate(() => { const n = parts.length; boom(0, 20, 3); return parts.length >= n + 3; }), 'Explosion mit Druckwelle und Funken');
+  check(await page.evaluate(() => { const n = parts.length; boom(0, 20, 3); return parts.length >= n + 8; }), 'Explosion mit Druckwelle, Funken, Feuerball, Rauch und Glut');
+  check(await page.evaluate(() => renderer.toneMapping === THREE.CustomToneMapping && !document.querySelector('#vignette').hidden && GFX.ao > 1000 && G.crate.userData.kkRound
+    && LOOK.wind.value >= 1 && LOOK.rim.value > 0 && !!M.metal.envMap && GFX.fade.a.value > 30 && typeof gfxSplash === 'function'), 'Schön: Belichtungskurve, dunklere Ecken, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus');
+  check(await page.evaluate(() => { const n = parts.length; const u = units.find(v => v.alive && v.team === 0 && v.kind === 'bot'); const was = gameT; const pc = inPeace; inPeace = () => false; u.cd = 0; u.carry = null;
+    const ok = fire(u, u.h); inPeace = pc; return ok && parts.length > n; }), 'Mündungsfeuer beim Schießen');
   check(await page.evaluate(() => { gfxRender(); return GFX.merged.roots > 200 && GFX.merged.meshes < 160 && renderer.info.render.calls < 700 && obstacles.length > 80; }), 'Bäume, Felsen und Brücken sind zusammengefasst: unter 700 Zeichenvorgänge pro Bild');
   await page.evaluate(() => { pause(true); toMenu(); });
   await page.click('#fpsToggle', { force: true });
@@ -299,6 +303,7 @@ async function main() {
   await page.click('#gfxToggle', { force: true });
   check(await page.evaluate(() => GFX.mode === 'schnell' && localStorage.getItem('kk-gfx') === 'schnell' && document.querySelector('#gfxToggle').textContent === 'Grafik: Schnell' && !GFX.contact.visible && sun.shadow.mapSize.x === 1024) && await lit() > 200,
     'Grafik „Schnell“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');
+  check(await page.evaluate(() => document.querySelector('#vignette').hidden && LOOK.rim.value === 0 || (updateMood(0.05), document.querySelector('#vignette').hidden && LOOK.rim.value === 0)), 'Schnell: ohne dunkle Ecken und Lichtsaum');
   await page.evaluate(() => localStorage.removeItem('kk-gfx'));
 
   console.log('Tag, Nacht und Wetter');

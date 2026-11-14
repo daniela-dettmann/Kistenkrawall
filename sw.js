@@ -34,6 +34,7 @@ const PRECACHE = [
   './js/xmas.js',
   './js/gfx.js',
   './js/daynight.js',
+  './js/look.js',
   './js/net.js',
   './vendor/peerjs-1.5.4.min.js',
   './js/update.js',

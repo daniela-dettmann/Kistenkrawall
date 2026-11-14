@@ -5,6 +5,12 @@ const canvas=$('#c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
 renderer.shadowMap.enabled=true;
+// Exposure curve: colours below 0.62 stay exactly as they are, brighter ones roll off softly towards 0.95 instead of
+// clipping to white. It runs inside every material, so the picture goes straight to the screen (and keeps the
+// device's own edge smoothing) without a separate post-processing pass.
+THREE.ShaderChunk.tonemapping_pars_fragment=THREE.ShaderChunk.tonemapping_pars_fragment.replace('vec3 CustomToneMapping( vec3 color ) { return color; }',
+  'vec3 CustomToneMapping( vec3 color ) { color *= toneMappingExposure; vec3 o = max( color - 0.62, 0.0 ); return min( color, 0.62 ) + 0.33 * ( 1.0 - exp( -o / 0.33 ) ); }');
+renderer.toneMapping=THREE.CustomToneMapping;renderer.toneMappingExposure=1.0;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 // If the device resets the GPU (low memory, long time in background), three.js restores the
 // context by itself; meanwhile the game pauses and shows a hint instead of a frozen picture.

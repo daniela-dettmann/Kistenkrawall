@@ -106,7 +106,7 @@ if(XMAS)(function(){
   });
   instanced(new THREE.SphereGeometry(0.11,7,5),new THREE.MeshPhongMaterial({color:0xffffff,specular:0xffffff,shininess:120}),balls);
   instanced(new THREE.OctahedronGeometry(1,0),new THREE.MeshBasicMaterial({color:GOLD}),stars);
-  instanced(new THREE.IcosahedronGeometry(1,0),snowMat,caps);
+  {const capMat=snowMat.clone();capMat.userData.sway=true;instanced(new THREE.IcosahedronGeometry(1,0),capMat,caps);}   // snow on the crowns sways with them (look.js)
 
   /* ---------- Lichterketten an den Brücken ---------- */
   {const lights=[];for(const bx of BRIDGES){if((MOUNTAIN&&bx>0)||VOLCANO)continue;const cw=crossW(bx)-0.05;for(const sx of [-cw,cw])for(const side of [-1,1])for(let k=0;k<9;k++)
