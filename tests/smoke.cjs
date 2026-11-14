@@ -279,11 +279,42 @@ async function main() {
   });
   check(await page.evaluate(() => GFX.ok && !!GFX.water && !!GFX.contact && GFX.contact.visible && sun.shadow.mapSize.x === 2048) && await lit() > 200, 'Grafik „Schön“: Bildeffekte zeichnen ein Bild, Uferschaum und Schattenflecken sind da');
   check(await page.evaluate(() => { const n = parts.length; boom(0, 20, 3); return parts.length >= n + 3; }), 'Explosion mit Druckwelle und Funken');
+  check(await page.evaluate(() => { gfxRender(); return GFX.merged.roots > 200 && GFX.merged.meshes < 80 && renderer.info.render.calls < 700 && obstacles.length > 80; }), 'Bäume, Felsen und Brücken sind zusammengefasst: unter 700 Zeichenvorgänge pro Bild');
   await page.evaluate(() => { pause(true); toMenu(); });
+  await page.click('#fpsToggle', { force: true });
+  await page.waitForTimeout(1300);
+  check(await page.evaluate(() => !document.querySelector('#fps').hidden && /FPS/.test(document.querySelector('#fps').textContent) && localStorage.getItem('kk-fps') === '1'), 'FPS-Anzeige lässt sich einschalten');
+  await page.evaluate(() => localStorage.removeItem('kk-fps'));
   await page.click('#gfxToggle', { force: true });
   check(await page.evaluate(() => GFX.mode === 'schnell' && localStorage.getItem('kk-gfx') === 'schnell' && document.querySelector('#gfxToggle').textContent === 'Grafik: Schnell' && !GFX.contact.visible && sun.shadow.mapSize.x === 1024) && await lit() > 200,
     'Grafik „Schnell“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');
   await page.evaluate(() => localStorage.removeItem('kk-gfx'));
+
+  console.log('Tag, Nacht und Wetter');
+  await page.goto(base + '?normal&karte=insel');
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check(await page.evaluate(() => DN.on && document.querySelector('#dnToggle').textContent === 'Tag, Nacht & Wetter: an' && DN.kind === 'regen'), 'Tag und Nacht: Standard ist an');
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1200);
+  const mood = n => page.evaluate(n => { for (let i = 0; i < n; i++) updateMood(0.05); }, n);
+  await mood(60);
+  const dayI = await page.evaluate(() => sun.intensity);
+  check(await page.evaluate(() => DN.night === 0 && !DN.lights.stars.visible && DN.lights.lantern.intensity === 0 && DN.lights.beams.every(b => !b.visible)), 'Rundenbeginn am Tag: keine Sterne, keine Lampen');
+  await page.evaluate(() => { gameT = 290; });   // the clock follows the game time: 290 s after the start it is night
+  await mood(200);
+  check(await page.evaluate(d => DN.night > 0.9 && DN.lights.stars.visible && DN.lights.lantern.intensity > 0.5 && DN.lights.beams.some(b => b.visible) && DN.lights.crateGlow.some(g => g.visible)
+    && DN.lights.hqGlow.every(g => g.visible) && sun.intensity < d * 0.5 && sun.intensity > 0.2, dayI), 'Nacht folgt der Spielzeit: Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht');
+  await page.evaluate(() => { DN.fixed = 0.5; DN.setWeather('regen', true); });
+  await mood(400);
+  check(await page.evaluate(() => DN.night === 0 && DN.wx.s > 0.8 && DN.lights.wPts.visible && scene.fog.far < 150 && DN.wx.storm), 'Regen und Gewitter: Tropfen, dichterer Dunst');
+  await page.evaluate(() => DN.setWeather('klar', false));
+  await mood(700);
+  check(await page.evaluate(() => DN.wx.s === 0 && !DN.lights.wPts.visible && Math.abs(scene.fog.far - 170) < 1), 'Wetter klart wieder auf');
+  await page.evaluate(() => { DN.fixed = null; pause(true); toMenu(); });
+  await page.click('#dnToggle', { force: true });
+  check(await page.evaluate(() => { state = 'play'; gameT = 290; for (let i = 0; i < 200; i++) updateMood(0.05); const ok = !DN.on && localStorage.getItem('kk-dn') === '0' && DN.night === 0 && !DN.lights.stars.visible; state = 'menu'; return ok; }),
+    'Schalter aus: es bleibt Tag, wird gemerkt');
+  await page.evaluate(() => localStorage.removeItem('kk-dn'));
 
   console.log('Vulkan');
   await page.goto(base + '?normal');
@@ -345,12 +376,15 @@ async function main() {
     const { PeerServer } = require('peer');
     const pport = 9124, ps = PeerServer({ port: pport, host: '127.0.0.1', path: '/' });
     await new Promise(r => setTimeout(r, 500));
-    const q = '?normal&peerserver=127.0.0.1:' + pport;
+    // three game pages render at once without a GPU: plain graphics keep that fast enough to load in time
+    const q = '?normal&grafik=schnell&peerserver=127.0.0.1:' + pport;
     // A browser of its own: the pages opened so far leave WebGL contexts behind, and Chromium drops the oldest
     // ones once there are too many. In a shared browser that can hit a multiplayer page in the middle of a round.
     const mpBrowser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+    // Loading is slow here: the pages already open keep rendering in software and share one graphics process with
+    // the page being loaded. Measured: 6 s for the first page, 31 s for the second, 126 s for the third.
     const mkPage = async name => { const c = await mpBrowser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
-      p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 120000 }); await p.waitForSelector('#startBtn', { state: 'visible', timeout: 120000 }); return p; };
+      p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 300000 }); await p.waitForSelector('#startBtn', { state: 'visible', timeout: 300000 }); return p; };
     const host = await mkPage('Host'), guest = await mkPage('Gast');
     await host.evaluate(() => localStorage.setItem('kk-save', '{"format":1,"marker":"einzelspieler"}'));
     await host.click('#netBtn', { force: true }); await host.click('#netHostBtn', { force: true });

@@ -1,5 +1,8 @@
 /* Kistenkrawall: Gelände, Wasser, Gras, Inseln, Wolken, Deko und Hindernisse, Basen */
 'use strict';
+// Things that never move or change after loading (trees, rocks, sandbags, bridges, far scenery).
+// gfx.js merges them into a few large meshes, which saves most of the draw calls.
+const STATIC_ROOTS=[],FAR_ROOTS=[];   // FAR_ROOTS: islands on the horizon, one colour per part, no fog
 /* ---------- Terrain ---------- */
 // Mountain colours: snow on flat ground, grey-blue rock on steep slopes and in the chasm, trodden paths
 function mountainColor(x,z,h){
@@ -84,7 +87,7 @@ let lavaMat=null;
     const cool=new THREE.MeshLambertMaterial({color:0x2a2625});
     for(const sx of [-1,1])for(let i=0;i<22;i++){
       const r=0.9+srand()*1.5,m=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),cool);
-      m.position.set(sx*(LAVA_END-0.6+srand()*2.2),-1.75+srand()*0.35,(i/21*2-1)*(BANK+2.6)+(srand()-.5));m.rotation.set(srand()*3,srand()*3,srand()*3);m.scale.y=0.6;scene.add(m);
+      m.position.set(sx*(LAVA_END-0.6+srand()*2.2),-1.75+srand()*0.35,(i/21*2-1)*(BANK+2.6)+(srand()-.5));m.rotation.set(srand()*3,srand()*3,srand()*3);m.scale.y=0.6;scene.add(m);STATIC_ROOTS.push(m);
     }
   }
   const w=new THREE.Mesh(new THREE.PlaneGeometry(420,420,130,130),wm);
@@ -150,7 +153,7 @@ if(!MOUNTAIN)(function(){
       const band=new THREE.Mesh(new THREE.CylinderGeometry(0.66,0.72,0.9,10),mat(0xd2483c));band.position.y=3;lh.add(band);
       const top=new THREE.Mesh(new THREE.ConeGeometry(0.8,0.9,10),mat(0xd2483c));top.position.y=5.5;lh.add(top);
       g.add(lh);}
-    scene.add(g);
+    scene.add(g);FAR_ROOTS.push(g);
   }
 })();
 
@@ -260,13 +263,13 @@ function addTree(x,z,block){
     const blobs=[[0,2.2,0,1.05],[0.65,1.85,0.2,0.72],[-0.55,1.95,-0.25,0.78],[0.1,2.8,0.1,0.7]];
     for(const [bx,by,bz,r] of blobs){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(r*s,1),lm);m.position.set(bx*s,by*s,bz*s);m.scale.y=0.9;g.add(m);}
   }
-  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(g);
+  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(g);STATIC_ROOTS.push(g);
   if(block)obstacles.push({x,z,r:0.6});
 }
 function addRock(x,z,s){
   const m=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),rockMat);
   m.position.set(x,hgt(x,z)+s*0.35,z);m.rotation.set(srand()*3,srand()*3,srand()*3);m.scale.y=0.75;
-  m.castShadow=m.receiveShadow=true;scene.add(m);obstacles.push({x,z,r:s*0.95});
+  m.castShadow=m.receiveShadow=true;scene.add(m);STATIC_ROOTS.push(m);obstacles.push({x,z,r:s*0.95});
 }
 const walls=[];
 function addBags(x0,z,x1){
@@ -277,7 +280,7 @@ function addBags(x0,z,x1){
     for(let l=0;l<2;l++){
       const m=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.34,0.55),bagMat);
       m.position.set(x+(l?0.4:0),hgt(x,z)+0.17+l*0.32,z);m.rotation.y=(srand()-.5)*0.2;
-      m.castShadow=m.receiveShadow=true;scene.add(m);
+      m.castShadow=m.receiveShadow=true;scene.add(m);STATIC_ROOTS.push(m);
     }
     obstacles.push({x,z,r:0.5,low:true});
   }
@@ -299,7 +302,7 @@ function addBags(x0,z,x1){
   if(VOLCANO)obstacles.push({x:CRATER.x,z:CRATER.z,r:CRATER.r});   // the cone; volcanoWaypoint in combat.js does the routing
   else walls.push({a:-LIM-4,b:BRIDGES[0]-CW[0],z:0,noA:true},{a:BRIDGES[0]+CW[0],b:BRIDGES[1]-CW[1],z:0},{a:BRIDGES[1]+CW[1],b:LIM+4,z:0,noB:true});
   // reed and stones along the banks
-  if(!MOUNTAIN&&!VOLCANO)for(let i=0;i<60;i++){const x=(srand()*2-1)*50,s=srand()<.5?1:-1,z=s*(8.9+srand()*1.3);if(BRIDGES.some(bx=>Math.abs(x-bx)<4))continue;const m=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.9+srand()*0.6,4),leafPal[0]);m.position.set(x,hgtRaw(x,z)+0.4,z);scene.add(m);}
+  if(!MOUNTAIN&&!VOLCANO)for(let i=0;i<60;i++){const x=(srand()*2-1)*50,s=srand()<.5?1:-1,z=s*(8.9+srand()*1.3);if(BRIDGES.some(bx=>Math.abs(x-bx)<4))continue;const m=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.9+srand()*0.6,4),leafPal[0]);m.position.set(x,hgtRaw(x,z)+0.4,z);scene.add(m);STATIC_ROOTS.push(m);}
   // bridges
   const plank=texMat(0x9a6a3c,TX.plank,0.05,{shininess:6}),dk=texMat(0x6b4423,TX.plank,0.05,{shininess:6});
   // volcano: four stone bridges, each from a bank over the lava onto the island
@@ -316,7 +319,7 @@ function addBags(x0,z,x1){
       }
       for(const pz of [-len*0.18,len*0.22]){const pil=new THREE.Mesh(new THREE.BoxGeometry(cw*2-0.6,4,1.3),dark);pil.position.set(0,-2.05,pz);g.add(pil);
         const arch=new THREE.Mesh(new THREE.BoxGeometry(cw*2-0.2,0.5,2.1),stone);arch.position.set(0,-0.3,pz);g.add(arch);}
-      scene.add(g);
+      scene.add(g);STATIC_ROOTS.push(g);
     }
   }
   for(const bx of BRIDGES){
@@ -334,7 +337,7 @@ function addBags(x0,z,x1){
       for(const sx of [-1.5,1.5]){const beam=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.3,6.9),dk);beam.position.set(sx,0.05,side*6.05);beam.castShadow=true;g.add(beam);}
       const abut=new THREE.Mesh(new THREE.BoxGeometry(cw*2+0.6,2.6,1.3),rockMat);abut.position.set(0,-1.12,side*9.15);abut.castShadow=abut.receiveShadow=true;g.add(abut);
     }
-    scene.add(g);
+    scene.add(g);STATIC_ROOTS.push(g);
   }
 })();
 

@@ -31,6 +31,7 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
 | `js/mountain.js`, `js/volcano.js` | Karten Gebirge und Vulkan: Licht, Wetter, Krater und Ausbruch |
 | `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
+| `js/daynight.js` | Tag, Nacht und Wetter |
 | `js/save.js` | Spielstand speichern und fortsetzen |
 | `js/xmas.js` | Weihnachtsedition (1. November bis 10. Januar) |
 | `js/update.js` | Hinweis auf neue Versionen, Versionsanzeige |
@@ -85,7 +86,19 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 - In beiden Stufen: Uferschaum und helles Flachwasser, Glut an den Lavaufern, unregelmäßiger Boden statt Kachelmuster, nasser Saum am Wasser. Dafür wird das Höhenprofil beim Laden einmal in eine kleine Textur geschrieben (`hgtTex`).
 - Läuft das Spiel zweimal hintereinander unter 24 Bildern pro Sekunde und hat man nichts fest gewählt, stellt es von selbst auf „Schnell“.
 - Schlägt die Nachbearbeitung fehl, zeichnet das Spiel wie früher direkt (kein schwarzes Bild).
+- **Weniger Zeichenvorgänge:** Bäume, Felsen, Sandsäcke, Schilf und Brücken (`STATIC_ROOTS` in `js/world.js`) werden beim Laden je Material und Kartenviertel zu wenigen großen Netzen zusammengefasst, die Inseln am Horizont (`FAR_ROOTS`) zu einem einzigen. Kleinteile der Blechlinge werfen keinen Schatten mehr. Auf der Insel sinken die Zeichenvorgänge pro Bild von etwa 1400 auf 400. Wer neue feste Deko baut, hängt sie an `STATIC_ROOTS` an; alles, was sich später bewegt oder ändert, darf dort nicht hinein.
+- **FPS-Anzeige:** Schalter im Startmenü (`?fps` zum Testen). Zeigt Bilder pro Sekunde, das längste Bild der letzten halben Sekunde, Zeichenvorgänge und Dreiecke.
 - Shader anderer Dateien bleiben erhalten: `gfxChain` hängt sich hinter vorhandene `onBeforeCompile`-Funktionen (Wasser, Lava, Durchblick-Loch).
+
+## Tag, Nacht und Wetter
+
+`js/daynight.js`, auf allen Karten, nur Optik und Ton. Schalter im Startmenü „Tag, Nacht & Wetter: an/aus“ (gemerkt; `?tagnacht=an|aus`).
+
+- **Tageszeit:** hängt an der Spielzeit `gameT`. Ein Tag dauert 8 Minuten (`DN.DAY`), die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten wird es Abend, die Nacht dauert etwa drei Minuten. Weil der Gast im Mehrspieler die Spielzeit des Hosts kennt, sehen beide dieselbe Tageszeit. Der Spielstand speichert die Spielzeit und damit auch die Tageszeit.
+- **Licht:** Das Modul läuft direkt nach `updateMood` und verändert dessen Ergebnis: Sonnenstand (`SUN_OFF`), Farben von Sonne, Himmel und Dunst, Abendrot, Mondlicht, Sterne.
+- **Nachts:** eine echte Lampe (Laterne am eigenen Blechling); alles andere sind gemalte Lichtflecken (Lichtkegel vor Einheiten, Kisten, Hauptquartiere). So bleibt die Zahl der Lichter gleich und nichts ruckelt beim Umschalten.
+- **Wetter:** Insel Regen und Gewitter (Blitz, Donner), Gebirge Schneesturm mit Nebel (das vorhandene Schneetreiben weht stärker, `window.wxWind`), Vulkan Ascheregen, Weihnachtsedition auf der Insel nur Dunst. Wer das Spiel rechnet, würfelt das Wetter; der Gast bekommt es alle paar Sekunden gemeldet (`wx`). Wettertöne spielt jedes Gerät selbst.
+- Zum Testen: `DN.fixed = 0` (Mitternacht) bis `0.5` (Mittag), `DN.setWeather('regen', true)`.
 
 ## Weihnachtsedition
 

@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 13. November 2026 · Live-Version auf `main`: `9bd13ec` (PR #20, Vulkan nachgebessert); mit dem Merge von #21 kommt das Grafik-Paket dazu
+Stand: 14. November 2026 · Live-Version auf `main`: `b6c2436` (PR #21, Grafik-Paket); mit dem Merge von #22 kommen Tag, Nacht und Wetter dazu
 
 ## Links
 
@@ -35,6 +35,7 @@ Stand: 13. November 2026 · Live-Version auf `main`: `9bd13ec` (PR #20, Vulkan n
 | #19 | Dritte Karte „Vulkan“: Lavastrom mit großer Vulkaninsel, vier Brücken, Krater, Kisten auf der Insel, Ausbrüche sperren kurz eine Brücke | gemergt |
 | #20 | Vulkan nachgebessert: keine orangen Flecken mehr im Boden, dunkles Meer (auch in der Weihnachtsedition), Lavastrom endet an der Küste mit erkaltetem Gestein und Dampf, Lava weniger grell | gemergt |
 | #21 | Grafik-Paket für alle Karten: Schalter „Schön / Schnell“, Bildeffekte (Schein, Farbe, dunklere Ecken), Uferschaum und Flachwasser, Lavaglut am Ufer, Bodendetails, Schattenflecken, Druckwelle und Funken, Fahrzeugstaub | gemergt |
+| #22 | Tag, Nacht und Wetter auf allen Karten: Tageslauf über 8 Minuten, Abendrot, Mondnacht mit Sternen, Laterne und Lichtkegeln, leuchtende Kisten; Regen und Gewitter, Schneesturm, Ascheregen; Schalter im Menü. Dazu: flüssiger (Zeichenvorgänge pro Bild auf unter ein Drittel), FPS-Anzeige, Helligkeit in „Schön“ gedämpft, Winterlicht in der Weihnachtsedition | gemergt |
 
 ## Was umgesetzt ist
 
@@ -102,6 +103,18 @@ Stand: 13. November 2026 · Live-Version auf `main`: `9bd13ec` (PR #20, Vulkan n
 - In beiden Stufen: Schaum und helles Flachwasser am Ufer, Glut dort, wo Lava auf Land trifft, unregelmäßigerer Boden, nasser Saum am Wasser.
 - Schnell: ohne Nachbearbeitung, kleinere Schatten, geringere Auflösung.
 - Fällt die Nachbearbeitung auf einem Gerät aus, zeichnet das Spiel wie vorher.
+- Geschwindigkeit: Bäume, Felsen, Sandsäcke und Brücken werden beim Laden zu wenigen großen Netzen zusammengefasst. Vorher wurde jedes Teil einzeln gezeichnet, zweimal pro Bild (Bild und Schatten). Auf der Insel sinken die Zeichenvorgänge von etwa 1400 auf 400, in der Taktik-Ansicht von 890 auf 260.
+- FPS-Anzeige im Startmenü einschaltbar: Bilder pro Sekunde, längstes Bild, Zeichenvorgänge, Dreiecke.
+- Helle Flächen fressen in „Schön“ nicht mehr aus (weiche Obergrenze für Lichter, Boden wird nicht mehr aufgehellt). Die Weihnachtsedition hat ein kühles Winterlicht mit bläulichen Schatten, damit der Schnee wie Schnee aussieht.
+
+### Tag, Nacht und Wetter (alle Karten)
+- Ein Tag dauert 8 Minuten. Die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten kommt das Abendrot, dann etwa drei Minuten Nacht, dann der Morgen. Die erste Welle fällt bei sechs Minuten Bauruhe in die Nacht.
+- Nachts: Mondlicht, Sterne, eine Laterne am eigenen Blechling, Lichtkegel vor allen Blechlingen und Fahrzeugen, leuchtende Kisten und Hauptquartiere. Die Lava leuchtet von selbst und erhellt die Vulkannacht.
+- Wetter kommt und geht von selbst: auf der Insel Regen, manchmal mit Gewitter (Blitz und Donner), im Gebirge Schneesturm mit Nebel, am Vulkan Ascheregen. In der Weihnachtsedition auf der Insel gibt es statt Regen nur Dunst, dort schneit es ja schon.
+- Nur Optik und Ton: Sichtweite, Zielen und KI bleiben gleich.
+- Im Mehrspieler sehen beide dieselbe Tageszeit und dasselbe Wetter.
+- Schalter „Tag, Nacht & Wetter: an/aus“ im Startmenü, wird gemerkt. Aus heißt: immer Tag, kein Wetter.
+- Neue Töne im Tonstudio: Regen, Donner.
 
 ### Mehrspieler (1 gegen 1)
 - Startmenü: „Gegen Freund spielen“ mit „Raum erstellen“ (Code anzeigen, kopieren, teilen) und „Raum beitreten“ (Code eingeben). Karte und Bauruhe wählt der Host vorher im Startmenü.
@@ -135,7 +148,9 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Gebirge: Kartenwahl, Höhen von Schlucht, Brücke, Pass und Tal, Wegfindung über beide Wege, Runde mit Schneetreiben, Spielstand mit Karte, Weihnachtsedition auf dem Gebirge
 - Nur lokal (`node tests/smoke.cjs`, auf GitHub übersprungen): Mehrspieler mit zwei Browsern und lokalem Vermittlungsserver: Raumcode, Beitritt, voller Raum, Versionsunterschied, Rollen, faire KI, Steuerung des Gasts, ungültige Nachrichten, Pause, Abbruch und Wiederverbinden, Einzelspieler-Spielstand unberührt, Host verlässt das Spiel
 - Vulkan: Kartenwahl, Höhen von Lavastrom, Brücken, Insel und Krater, Wegfindung über die Insel und um den Krater (nie durch die Lava), Runde mit Kisten auf der Insel, Ausbruch (Sperre, Ausweichen, Schaden nur auf der Brücke), Weihnachtsedition auf dem Vulkan
+- Geschwindigkeit: feste Deko ist zusammengefasst, unter 700 Zeichenvorgänge pro Bild; FPS-Anzeige einschaltbar
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
+- Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Schalter aus
 - Tonstudio und Update-Hinweis
 
 Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikkarte, drei Browserseiten gleichzeitig). Er läuft deshalb nur lokal vor dem Push; mit `KK_MP_TEST=1` lässt er sich auch auf GitHub erzwingen.
@@ -152,6 +167,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 | `js/xmas.js` | Weihnachtsedition |
 | `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
 | `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
+| `js/daynight.js` | Tag, Nacht und Wetter |
 | `js/volcano.js` | Vulkan: Licht, Krater, Rauch, Ausbruch (Grundriss in `js/core.js`, Wegführung in `js/combat.js`) |
 | `js/update.js` | Update-Hinweis und Versionsanzeige |
 | `js/net.js` | Mehrspieler: Verbindung, Raumcode, Prüfung, Spielstand-Übertragung |
@@ -168,7 +184,9 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 - Auf echten Handys habe ich nichts ausprobiert, getestet wurde in Chromium ohne Grafikkarte. Wie flüssig die Weihnachtsedition auf älteren Geräten läuft, ist offen.
 - Gebirge auf dem iPhone: Schneetreiben (900 Flocken) und Weihnachtsdeko sind sparsam gebaut, auf einem echten Gerät aber nicht gemessen.
 - Mehrspieler übers Internet ohne TURN-Server: In manchen Netzen (vor allem Mobilfunk) kommt keine Verbindung zustande. Zwei echte Geräte über verschiedene Netze habe ich nicht getestet.
+- Geschwindigkeit: Gemessen sind Zeichenvorgänge, nicht Bilder pro Sekunde auf einem echten Gerät. Ob das iPhone 15 Pro Max damit 60 FPS hält, zeigt erst die FPS-Anzeige dort. Im Stromsparmodus begrenzt iOS Webseiten auf 30 FPS. Die Weihnachtsedition zeichnet mit Kugeln und Lichtern gut doppelt so viele Dreiecke wie die normale Fassung.
 - Grafik-Paket: nur im Browser ohne Grafikkarte geprüft. Wie flüssig „Schön“ auf echten Handys läuft und ob die Farben dort stimmen, ist offen; der Schalter und das automatische Herunterschalten sind die Absicherung.
+- Tag, Nacht und Wetter: nur im Browser ohne Grafikkarte geprüft. Ob die Nacht auf einem Handy-Bildschirm im Hellen noch gut lesbar ist, ist offen. Der Regen besteht aus Punkten statt Strichen. Im Mehrspieler-Test wird die Wettermeldung an den Gast nicht eigens geprüft.
 - Vulkan: Auf echten Handys nicht gemessen. Das Gleichgewicht (Brücken näher beieinander, Ausbrüche) ist nur in simulierten Runden geprüft, nicht von Menschen gespielt.
 - Ein eigenes Bauruhe-Stück fürs Gebirge (im Auftrag optional) gibt es noch nicht.
 - Die Musik konnte ich nicht anhören, nur messen: keine Übersteuerung, keine Lücken, gleiche Lautstärke.

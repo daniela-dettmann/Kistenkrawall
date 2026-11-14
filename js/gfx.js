@@ -68,10 +68,78 @@ scene.traverse(o=>{
     sh.fragmentShader='uniform float uWet;varying vec3 vKkG;\n'+sh.fragmentShader.replace('#include <map_fragment>',
       `#include <map_fragment>
       float kg=texture2D(map,vKkG.xz*0.021).g;float kg2=texture2D(map,vKkG.xz*0.006+0.37).r;
-      diffuseColor.rgb*=0.8+0.2*kg+0.16*kg2;
+      diffuseColor.rgb*=0.8+0.13*kg+0.07*kg2;   // only ever darkens: bright ground (snow, sand) must not burn out
       diffuseColor.rgb*=1.0-0.3*uWet*smoothstep(-0.95,-1.5,vKkG.y)*step(-1.75,vKkG.y);`);
   });
 });
+
+/* ---------- Merge static scenery: far fewer draw calls ----------
+   Every tree, rock, sandbag and bridge plank used to be drawn on its own, twice (picture and shadow).
+   Their triangles are baked into world space and joined per material and map quarter. */
+(function(){
+  const groups=new Map(),gone=[];
+  for(const root of STATIC_ROOTS){
+    if(!root.parent)continue;
+    root.updateMatrixWorld(true);
+    let ok=true;root.traverse(o=>{if(o.isInstancedMesh||o.isPoints||o.isSprite||o.isLine)ok=false;});
+    if(!ok)continue;
+    const cell=(root.position.x>=0?1:0)+(root.position.z>=0?2:0);
+    root.traverse(o=>{
+      if(!o.isMesh)return;
+      let vis=true;for(let q=o;q;q=q.parent)if(!q.visible)vis=false;
+      if(!vis||Array.isArray(o.material))return;
+      const src=o.geometry,at=src.attributes;if(!at.position||!at.normal)return;
+      const key=[o.material.uuid,cell,o.castShadow?1:0,o.receiveShadow?1:0,at.uv?1:0].join('|');
+      let G=groups.get(key);if(!G)groups.set(key,G={mat:o.material,cast:o.castShadow,recv:o.receiveShadow,uv:!!at.uv,pos:[],nor:[],uvs:[]});
+      const g=(src.index?src.toNonIndexed():src.clone()).applyMatrix4(o.matrixWorld);
+      G.pos.push(g.attributes.position.array);G.nor.push(g.attributes.normal.array);if(G.uv)G.uvs.push(g.attributes.uv.array);
+      g.dispose();
+    });
+    gone.push(root);
+  }
+  const join=(list,n)=>{const a=new Float32Array(n);let k=0;for(const x of list){a.set(x,k);k+=x.length;}return a;};
+  let made=0;
+  for(const G of groups.values()){
+    const n=G.pos.reduce((s,x)=>s+x.length,0),g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(join(G.pos,n),3));
+    g.setAttribute('normal',new THREE.BufferAttribute(join(G.nor,n),3));
+    if(G.uv)g.setAttribute('uv',new THREE.BufferAttribute(join(G.uvs,n/3*2),2));
+    const m=new THREE.Mesh(g,G.mat);m.castShadow=G.cast;m.receiveShadow=G.recv;m.matrixAutoUpdate=false;scene.add(m);made++;
+  }
+  for(const r of gone){r.parent.remove(r);r.traverse(o=>{if(o.isMesh)o.geometry.dispose();});}
+  // islands on the horizon: every part had a material of its own; their colours move into the vertices
+  if(FAR_ROOTS.length){
+    const pos=[],nor=[],col=[];
+    for(const root of FAR_ROOTS){
+      root.updateMatrixWorld(true);
+      root.traverse(o=>{
+        if(!o.isMesh||!o.geometry.attributes.normal)return;
+        const g=(o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone()).applyMatrix4(o.matrixWorld),n=g.attributes.position.count,c=new Float32Array(n*3);
+        for(let i=0;i<n;i++){c[i*3]=o.material.color.r;c[i*3+1]=o.material.color.g;c[i*3+2]=o.material.color.b;}
+        pos.push(g.attributes.position.array);nor.push(g.attributes.normal.array);col.push(c);g.dispose();
+      });
+      root.parent.remove(root);
+    }
+    const n=pos.reduce((s,x)=>s+x.length,0),g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(join(pos,n),3));g.setAttribute('normal',new THREE.BufferAttribute(join(nor,n),3));g.setAttribute('color',new THREE.BufferAttribute(join(col,n),3));
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true,fog:false}));m.matrixAutoUpdate=false;scene.add(m);made++;
+  }
+  GFX.merged={roots:gone.length,meshes:made};
+})();
+/* Small parts of Blechlinge and vehicles (bolts, antennas, eyes) no longer draw into the shadow map:
+   nobody sees their shadow, but each one cost a draw call per frame. */
+{const _spawn=spawnUnit;
+ spawnUnit=function(){
+   const u=_spawn.apply(this,arguments);
+   try{if(u&&u.bot&&u.bot.g)u.bot.g.traverse(o=>{
+     if(!o.isMesh||!o.castShadow)return;
+     if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();
+     if(o.geometry.boundingSphere.radius*Math.max(o.scale.x,o.scale.y,o.scale.z)<0.3)o.castShadow=false;
+   });}catch(e){}
+   return u;
+ };}
+(function(){
+})();
 
 /* ---------- Soft contact shadows under trees and rocks ---------- */
 (function(){
@@ -122,7 +190,8 @@ setInterval(()=>{
       void main(){
         vec3 c=texture2D(t,vUv).rgb+texture2D(b,vUv).rgb*glow;
         float l=dot(c,vec3(0.299,0.587,0.114));
-        c=mix(vec3(l),c,1.09);c=(c-0.5)*1.06+0.5;
+        c=mix(vec3(l),c,1.09);c=(c-0.5)*1.05+0.47;
+        c-=max(c-0.74,0.0)*0.55;   // soft shoulder: highlights keep their detail instead of clipping
         c+=vec3(0.022,0.008,-0.016)*smoothstep(0.5,1.0,l)+vec3(-0.012,0.0,0.022)*(1.0-smoothstep(0.0,0.45,l));
         c*=mix(0.8,1.0,smoothstep(0.92,0.3,length(vUv-0.5)));
         gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);
@@ -158,6 +227,27 @@ setInterval(()=>{
       console.warn('Bildeffekte abgeschaltet',e);GFX.ok=false;renderer.setRenderTarget(null);renderer.render(scene,camera);
     }
   };
+})();
+
+/* ---------- FPS display: frames per second, time per frame, draw calls ---------- */
+(function(){
+  const el=document.createElement('div');el.id='fps';el.hidden=true;
+  el.style.cssText='position:fixed;left:calc(12px + env(safe-area-inset-left));top:calc(122px + env(safe-area-inset-top));z-index:60;font:700 11px/1.2 ui-monospace,Menlo,monospace;color:#fff;background:rgba(10,20,26,.72);padding:4px 9px;border-radius:8px;pointer-events:none;white-space:nowrap';
+  document.body.appendChild(el);
+  let on=false;try{on=localStorage.getItem('kk-fps')==='1';}catch(e){}
+  if(/[?&#]fps\b/i.test(location.search+location.hash))on=true;
+  const btn=$('#fpsToggle'),label=()=>{if(btn){btn.textContent='FPS-Anzeige: '+(on?'an':'aus');btn.setAttribute('aria-pressed',on?'true':'false');}el.hidden=!on;};
+  if(btn)btn.addEventListener('click',()=>{on=!on;try{localStorage.setItem('kk-fps',on?'1':'0');}catch(e){}label();});
+  label();
+  let n=0,t0=performance.now(),worst=0,prev=t0;
+  (function tick(now){
+    requestAnimationFrame(tick);
+    worst=Math.max(worst,now-prev);prev=now;n++;
+    if(now-t0<500)return;
+    const fps=n*1000/(now-t0);GFX.fps=fps;
+    if(on)el.textContent=Math.round(fps)+' FPS · längstes Bild '+Math.round(worst)+' ms · '+renderer.info.render.calls+' Aufrufe · '+Math.round(renderer.info.render.triangles/1000)+'k Dreiecke · '+(gfxFine()?'Schön':'Schnell');
+    n=0;t0=now;worst=0;
+  })(t0);
 })();
 
 /* ---------- Quality switch ---------- */
