@@ -376,7 +376,8 @@ async function main() {
     const { PeerServer } = require('peer');
     const pport = 9124, ps = PeerServer({ port: pport, host: '127.0.0.1', path: '/' });
     await new Promise(r => setTimeout(r, 500));
-    const q = '?normal&peerserver=127.0.0.1:' + pport;
+    // three game pages render at once without a GPU: plain graphics keep that fast enough to load in time
+    const q = '?normal&grafik=schnell&peerserver=127.0.0.1:' + pport;
     // A browser of its own: the pages opened so far leave WebGL contexts behind, and Chromium drops the oldest
     // ones once there are too many. In a shared browser that can hit a multiplayer page in the middle of a round.
     const mpBrowser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
