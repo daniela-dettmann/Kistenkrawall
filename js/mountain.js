@@ -45,7 +45,7 @@ if(MOUNTAIN)(function(){
     t+=dt;
     const gust=1+Math.sin(t*0.35)*0.6,A=geo.attributes.position.array,cx=camera.position.x,cy=camera.position.y,cz=camera.position.z;
     for(let i=0;i<N;i++){
-      A[i*3]+=dt*(5.5*gust+(i%5));A[i*3+1]-=dt*(1.4+(i%7)*0.15);A[i*3+2]+=Math.sin(t+i)*dt*0.6;
+      A[i*3]+=dt*(5.5*gust+(i%5))*(window.wxWind||1);A[i*3+1]-=dt*(1.4+(i%7)*0.15);A[i*3+2]+=Math.sin(t+i)*dt*0.6;
       if(A[i*3]>cx+36||A[i*3+1]<cy-14){A[i*3]=cx-36+rand(0,10);A[i*3+1]=cy+rand(-6,14);A[i*3+2]=cz+rand(-36,36);}
       if(Math.abs(A[i*3+2]-cz)>36)A[i*3+2]=cz+rand(-36,36);
     }

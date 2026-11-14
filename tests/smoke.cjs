@@ -285,6 +285,32 @@ async function main() {
     'Grafik „Schnell“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');
   await page.evaluate(() => localStorage.removeItem('kk-gfx'));
 
+  console.log('Tag, Nacht und Wetter');
+  await page.goto(base + '?normal&karte=insel');
+  await page.waitForSelector('#startBtn', { state: 'visible' });
+  check(await page.evaluate(() => DN.on && document.querySelector('#dnToggle').textContent === 'Tag, Nacht & Wetter: an' && DN.kind === 'regen'), 'Tag und Nacht: Standard ist an');
+  await page.click('#startBtn', { force: true });
+  await page.waitForTimeout(1200);
+  const mood = n => page.evaluate(n => { for (let i = 0; i < n; i++) updateMood(0.05); }, n);
+  await mood(60);
+  const dayI = await page.evaluate(() => sun.intensity);
+  check(await page.evaluate(() => DN.night === 0 && !DN.lights.stars.visible && DN.lights.lantern.intensity === 0 && DN.lights.beams.every(b => !b.visible)), 'Rundenbeginn am Tag: keine Sterne, keine Lampen');
+  await page.evaluate(() => { gameT = 290; });   // the clock follows the game time: 290 s after the start it is night
+  await mood(200);
+  check(await page.evaluate(d => DN.night > 0.9 && DN.lights.stars.visible && DN.lights.lantern.intensity > 0.5 && DN.lights.beams.some(b => b.visible) && DN.lights.crateGlow.some(g => g.visible)
+    && DN.lights.hqGlow.every(g => g.visible) && sun.intensity < d * 0.5 && sun.intensity > 0.2, dayI), 'Nacht folgt der Spielzeit: Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht');
+  await page.evaluate(() => { DN.fixed = 0.5; DN.setWeather('regen', true); });
+  await mood(400);
+  check(await page.evaluate(() => DN.night === 0 && DN.wx.s > 0.8 && DN.lights.wPts.visible && scene.fog.far < 150 && DN.wx.storm), 'Regen und Gewitter: Tropfen, dichterer Dunst');
+  await page.evaluate(() => DN.setWeather('klar', false));
+  await mood(700);
+  check(await page.evaluate(() => DN.wx.s === 0 && !DN.lights.wPts.visible && Math.abs(scene.fog.far - 170) < 1), 'Wetter klart wieder auf');
+  await page.evaluate(() => { DN.fixed = null; pause(true); toMenu(); });
+  await page.click('#dnToggle', { force: true });
+  check(await page.evaluate(() => { state = 'play'; gameT = 290; for (let i = 0; i < 200; i++) updateMood(0.05); const ok = !DN.on && localStorage.getItem('kk-dn') === '0' && DN.night === 0 && !DN.lights.stars.visible; state = 'menu'; return ok; }),
+    'Schalter aus: es bleibt Tag, wird gemerkt');
+  await page.evaluate(() => localStorage.removeItem('kk-dn'));
+
   console.log('Vulkan');
   await page.goto(base + '?normal');
   await page.waitForSelector('#startBtn', { state: 'visible' });

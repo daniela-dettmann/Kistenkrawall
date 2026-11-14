@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 13. November 2026 · Live-Version auf `main`: `9bd13ec` (PR #20, Vulkan nachgebessert); mit dem Merge von #21 kommt das Grafik-Paket dazu
+Stand: 14. November 2026 · Live-Version auf `main`: `b6c2436` (PR #21, Grafik-Paket); mit dem Merge von #22 kommen Tag, Nacht und Wetter dazu
 
 ## Links
 
@@ -35,6 +35,7 @@ Stand: 13. November 2026 · Live-Version auf `main`: `9bd13ec` (PR #20, Vulkan n
 | #19 | Dritte Karte „Vulkan“: Lavastrom mit großer Vulkaninsel, vier Brücken, Krater, Kisten auf der Insel, Ausbrüche sperren kurz eine Brücke | gemergt |
 | #20 | Vulkan nachgebessert: keine orangen Flecken mehr im Boden, dunkles Meer (auch in der Weihnachtsedition), Lavastrom endet an der Küste mit erkaltetem Gestein und Dampf, Lava weniger grell | gemergt |
 | #21 | Grafik-Paket für alle Karten: Schalter „Schön / Schnell“, Bildeffekte (Schein, Farbe, dunklere Ecken), Uferschaum und Flachwasser, Lavaglut am Ufer, Bodendetails, Schattenflecken, Druckwelle und Funken, Fahrzeugstaub | gemergt |
+| #22 | Tag, Nacht und Wetter auf allen Karten: Tageslauf über 8 Minuten, Abendrot, Mondnacht mit Sternen, Laterne und Lichtkegeln, leuchtende Kisten; Regen und Gewitter, Schneesturm, Ascheregen; Schalter im Menü | gemergt |
 
 ## Was umgesetzt ist
 
@@ -103,6 +104,15 @@ Stand: 13. November 2026 · Live-Version auf `main`: `9bd13ec` (PR #20, Vulkan n
 - Schnell: ohne Nachbearbeitung, kleinere Schatten, geringere Auflösung.
 - Fällt die Nachbearbeitung auf einem Gerät aus, zeichnet das Spiel wie vorher.
 
+### Tag, Nacht und Wetter (alle Karten)
+- Ein Tag dauert 8 Minuten. Die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten kommt das Abendrot, dann etwa drei Minuten Nacht, dann der Morgen. Die erste Welle fällt bei sechs Minuten Bauruhe in die Nacht.
+- Nachts: Mondlicht, Sterne, eine Laterne am eigenen Blechling, Lichtkegel vor allen Blechlingen und Fahrzeugen, leuchtende Kisten und Hauptquartiere. Die Lava leuchtet von selbst und erhellt die Vulkannacht.
+- Wetter kommt und geht von selbst: auf der Insel Regen, manchmal mit Gewitter (Blitz und Donner), im Gebirge Schneesturm mit Nebel, am Vulkan Ascheregen. In der Weihnachtsedition auf der Insel gibt es statt Regen nur Dunst, dort schneit es ja schon.
+- Nur Optik und Ton: Sichtweite, Zielen und KI bleiben gleich.
+- Im Mehrspieler sehen beide dieselbe Tageszeit und dasselbe Wetter.
+- Schalter „Tag, Nacht & Wetter: an/aus“ im Startmenü, wird gemerkt. Aus heißt: immer Tag, kein Wetter.
+- Neue Töne im Tonstudio: Regen, Donner.
+
 ### Mehrspieler (1 gegen 1)
 - Startmenü: „Gegen Freund spielen“ mit „Raum erstellen“ (Code anzeigen, kopieren, teilen) und „Raum beitreten“ (Code eingeben). Karte und Bauruhe wählt der Host vorher im Startmenü.
 - Direkte, verschlüsselte WebRTC-Verbindung, Vermittlung über den öffentlichen PeerJS-Server. Im gleichen WLAN läuft sie lokal. Noch kein TURN-Server, der Platz dafür ist vorbereitet (`NET_CFG.turn` in `js/net.js`).
@@ -136,6 +146,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Nur lokal (`node tests/smoke.cjs`, auf GitHub übersprungen): Mehrspieler mit zwei Browsern und lokalem Vermittlungsserver: Raumcode, Beitritt, voller Raum, Versionsunterschied, Rollen, faire KI, Steuerung des Gasts, ungültige Nachrichten, Pause, Abbruch und Wiederverbinden, Einzelspieler-Spielstand unberührt, Host verlässt das Spiel
 - Vulkan: Kartenwahl, Höhen von Lavastrom, Brücken, Insel und Krater, Wegfindung über die Insel und um den Krater (nie durch die Lava), Runde mit Kisten auf der Insel, Ausbruch (Sperre, Ausweichen, Schaden nur auf der Brücke), Weihnachtsedition auf dem Vulkan
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
+- Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Schalter aus
 - Tonstudio und Update-Hinweis
 
 Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikkarte, drei Browserseiten gleichzeitig). Er läuft deshalb nur lokal vor dem Push; mit `KK_MP_TEST=1` lässt er sich auch auf GitHub erzwingen.
@@ -152,6 +163,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 | `js/xmas.js` | Weihnachtsedition |
 | `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
 | `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
+| `js/daynight.js` | Tag, Nacht und Wetter |
 | `js/volcano.js` | Vulkan: Licht, Krater, Rauch, Ausbruch (Grundriss in `js/core.js`, Wegführung in `js/combat.js`) |
 | `js/update.js` | Update-Hinweis und Versionsanzeige |
 | `js/net.js` | Mehrspieler: Verbindung, Raumcode, Prüfung, Spielstand-Übertragung |
@@ -169,6 +181,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 - Gebirge auf dem iPhone: Schneetreiben (900 Flocken) und Weihnachtsdeko sind sparsam gebaut, auf einem echten Gerät aber nicht gemessen.
 - Mehrspieler übers Internet ohne TURN-Server: In manchen Netzen (vor allem Mobilfunk) kommt keine Verbindung zustande. Zwei echte Geräte über verschiedene Netze habe ich nicht getestet.
 - Grafik-Paket: nur im Browser ohne Grafikkarte geprüft. Wie flüssig „Schön“ auf echten Handys läuft und ob die Farben dort stimmen, ist offen; der Schalter und das automatische Herunterschalten sind die Absicherung.
+- Tag, Nacht und Wetter: nur im Browser ohne Grafikkarte geprüft. Ob die Nacht auf einem Handy-Bildschirm im Hellen noch gut lesbar ist, ist offen. Der Regen besteht aus Punkten statt Strichen. Im Mehrspieler-Test wird die Wettermeldung an den Gast nicht eigens geprüft.
 - Vulkan: Auf echten Handys nicht gemessen. Das Gleichgewicht (Brücken näher beieinander, Ausbrüche) ist nur in simulierten Runden geprüft, nicht von Menschen gespielt.
 - Ein eigenes Bauruhe-Stück fürs Gebirge (im Auftrag optional) gibt es noch nicht.
 - Die Musik konnte ich nicht anhören, nur messen: keine Übersteuerung, keine Lücken, gleiche Lautstärke.
