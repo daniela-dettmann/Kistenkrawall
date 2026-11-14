@@ -381,8 +381,10 @@ async function main() {
     // A browser of its own: the pages opened so far leave WebGL contexts behind, and Chromium drops the oldest
     // ones once there are too many. In a shared browser that can hit a multiplayer page in the middle of a round.
     const mpBrowser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+    // Loading is slow here: the pages already open keep rendering in software and share one graphics process with
+    // the page being loaded. Measured: 6 s for the first page, 31 s for the second, 126 s for the third.
     const mkPage = async name => { const c = await mpBrowser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
-      p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 120000 }); await p.waitForSelector('#startBtn', { state: 'visible', timeout: 120000 }); return p; };
+      p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 300000 }); await p.waitForSelector('#startBtn', { state: 'visible', timeout: 300000 }); return p; };
     const host = await mkPage('Host'), guest = await mkPage('Gast');
     await host.evaluate(() => localStorage.setItem('kk-save', '{"format":1,"marker":"einzelspieler"}'));
     await host.click('#netBtn', { force: true }); await host.click('#netHostBtn', { force: true });
