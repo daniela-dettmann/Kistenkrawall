@@ -279,7 +279,12 @@ async function main() {
   });
   check(await page.evaluate(() => GFX.ok && !!GFX.water && !!GFX.contact && GFX.contact.visible && sun.shadow.mapSize.x === 2048) && await lit() > 200, 'Grafik „Schön“: Bildeffekte zeichnen ein Bild, Uferschaum und Schattenflecken sind da');
   check(await page.evaluate(() => { const n = parts.length; boom(0, 20, 3); return parts.length >= n + 3; }), 'Explosion mit Druckwelle und Funken');
+  check(await page.evaluate(() => { gfxRender(); return GFX.merged.roots > 200 && GFX.merged.meshes < 80 && renderer.info.render.calls < 700 && obstacles.length > 80; }), 'Bäume, Felsen und Brücken sind zusammengefasst: unter 700 Zeichenvorgänge pro Bild');
   await page.evaluate(() => { pause(true); toMenu(); });
+  await page.click('#fpsToggle', { force: true });
+  await page.waitForTimeout(1300);
+  check(await page.evaluate(() => !document.querySelector('#fps').hidden && /FPS/.test(document.querySelector('#fps').textContent) && localStorage.getItem('kk-fps') === '1'), 'FPS-Anzeige lässt sich einschalten');
+  await page.evaluate(() => localStorage.removeItem('kk-fps'));
   await page.click('#gfxToggle', { force: true });
   check(await page.evaluate(() => GFX.mode === 'schnell' && localStorage.getItem('kk-gfx') === 'schnell' && document.querySelector('#gfxToggle').textContent === 'Grafik: Schnell' && !GFX.contact.visible && sun.shadow.mapSize.x === 1024) && await lit() > 200,
     'Grafik „Schnell“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');

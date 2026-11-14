@@ -50,6 +50,14 @@ if(XMAS)(function(){
   }
   const V=(x,y,z)=>new THREE.Vector3(x,y,z);
 
+  // Winter light: nearly white sun, bluish sky light and blue shadows, so the snow reads as snow and not as sand
+  if(!MOUNTAIN&&!VOLCANO){
+    MOOD.sun=[new THREE.Color(0xfff6ec),new THREE.Color(0xffd6c2)];
+    MOOD.sky=[new THREE.Color(0xdfeaff),new THREE.Color(0xd9d4ee)];
+    MOOD.hor=[new THREE.Color(0xe6edf5),new THREE.Color(0xe9c4b4)];
+    MOOD.top=[new THREE.Color(0x5d8fc9),new THREE.Color(0x56679c)];
+    hemi.groundColor.set(0x8ea2c4);
+  }
   /* ---------- Gelände, Wasser, Gras, Schneewälle ---------- */
   scene.traverse(o=>{
     if(!o.isMesh)return;
@@ -59,7 +67,7 @@ if(XMAS)(function(){
         const x=p.getX(i),z=p.getZ(i),h=p.getY(i);if(h<-1.05)continue;   // keep beach sand under water
         c.setRGB(col.getX(i),col.getY(i),col.getZ(i));
         const path=pathDist(x,z),k=h<-0.6?0.4:0.93;
-        c.lerp(snow,k);if(path<2.0)c.lerp(dirt,(1-path/2)*0.45);
+        c.lerp(snow,k);if(path<2.0)c.lerp(dirt,(1-path/2)*0.3);
         col.setXYZ(i,c.r,c.g,c.b);
       }
       col.needsUpdate=true;
