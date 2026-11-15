@@ -1,6 +1,5 @@
 /* Kistenkrawall: mehr Tiefe und mehr Leben, auf allen Karten (lädt nach gfx.js und daynight.js).
-   - Lichtsaum an Blechlingen und Fahrzeugen (nur „Schön“), Metallglanz mit Spiegelung des Himmels.
-   - Wasser spiegelt flach angeschaut den Himmel, dazu ein weicher Glanzpfad Richtung Sonne.
+   - Lichtsaum an Blechlingen und Fahrzeugen (nur „Hoch“), Metallglanz mit Spiegelung des Himmels.
    - Wind in Bäumen und Büschen (bei Sturm stärker), Wolkenschatten über der Karte, Morgennebel in Senken.
    - Spuren in Schnee und Asche, Spritzer im Wasser, Mündungsfeuer, Explosionen mit Feuerball, Rauch und Glut.
    Alles nur Optik; im Mehrspieler zeichnet jedes Gerät die Effekte selbst. */
@@ -43,19 +42,6 @@ const LOOK={rim:{value:0.32},rimC:{value:new THREE.Color(0xfff2dc)},wind:{value:
   {const _spawn=spawnUnit;spawnUnit=function(){const u=_spawn.apply(this,arguments);try{dress(u);}catch(e){console.warn(e);}return u;};}
   for(const u of units)dress(u);
 
-  /* ---------- Water: reflects the sky when seen flat, a soft glittering path towards the sun ---------- */
-  if(GFX.water)gfxChain(GFX.water.mat,sh=>{
-    sh.uniforms.uSkyHor=sky.material.uniforms.hor;sh.uniforms.uSunDir=sky.material.uniforms.sunDir;sh.uniforms.uDay=LOOK.day;
-    sh.fragmentShader='uniform vec3 uSkyHor;uniform vec3 uSunDir;uniform float uDay;\n'+sh.fragmentShader.replace('#include <tonemapping_fragment>',
-      `{vec3 kkN=normalize(normal),kkV=normalize(vViewPosition);
-        float kkF=pow(1.0-clamp(dot(kkN,kkV),0.0,1.0),3.0);
-        gl_FragColor.rgb=mix(gl_FragColor.rgb,uSkyHor,kkF*0.5);
-        vec3 kkS=normalize((viewMatrix*vec4(uSunDir,0.0)).xyz);
-        float kkG=pow(max(dot(kkN,normalize(kkS+kkV)),0.0),40.0);
-        gl_FragColor.rgb+=vec3(1.0,0.92,0.75)*kkG*0.22*uDay;}
-      #include <tonemapping_fragment>`);
-  },'fresnel');
-
   /* ---------- Wind: trees, bushes and palms sway; the trunk stays put, the crown moves ---------- */
   const swayMats=new Set([...leafPal,...pineMat,trunkMat,charMat]);
   scene.traverse(o=>{if(o.isInstancedMesh&&o.material&&o.material.userData&&o.material.userData.sway)swayMats.add(o.material);});
@@ -73,6 +59,9 @@ const LOOK={rim:{value:0.32},rimC:{value:new THREE.Color(0xfff2dc)},wind:{value:
   },'sway');
 
   /* ---------- Cloud shadows drift over the map ---------- */
+  // The cloud meshes in the sky used to cast real shadows: hard dark blots that looked like stains on the water and
+  // cost about 80 extra draw calls in every shadow pass. The soft shadows below replace them.
+  if(typeof clouds!=='undefined')for(const c of clouds)c.traverse(o=>{if(o.isMesh)o.castShadow=false;});
   scene.traverse(o=>{
     if(!o.isMesh||!o.material||o.material.map!==TX.ground||!o.geometry.attributes.color)return;
     gfxChain(o.material,sh=>{
@@ -130,14 +119,7 @@ const LOOK={rim:{value:0.32},rimC:{value:new THREE.Color(0xfff2dc)},wind:{value:
     const s=new THREE.Sprite(flashMat(color));s.position.set(x,y,z);s.scale.setScalar(0.3);scene.add(s);
     parts.push({m:s,vx:0,vy:0,vz:0,life,max:life,boom:size});
   }
-  const ringG=new THREE.RingGeometry(0.7,1,24).rotateX(-Math.PI/2);
-  window.gfxSplash=function(x,z,big){
-    if(MOUNTAIN||parts.length>240)return;
-    const y=VOLCANO&&Math.abs(z)<BANK+3?-1.15:-1.6,lava=VOLCANO&&Math.abs(z)<BANK+3;
-    const m=new THREE.Mesh(ringG,new THREE.MeshBasicMaterial({color:lava?0xffb050:0xffffff,transparent:true,opacity:0.7,depthWrite:false}));
-    m.position.set(x,y+0.03,z);m.scale.setScalar(0.3);scene.add(m);parts.push({m,vx:0,vy:0,vz:0,life:0.8,max:0.8,boom:big?2.6:1.4});
-    puffs(x,y+0.2,z,big?6:3,lava?0xff8a3a:0xeaf6ff,{size:0.5,up:1.8,life:0.7,spread:1.6,op:0.8});
-  };
+  // splashes: water.js
   /* muzzle flash */
   {const _fire=fire;
    fire=function(u,ang){

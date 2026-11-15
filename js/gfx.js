@@ -1,10 +1,11 @@
 /* Kistenkrawall: Grafik-Paket für alle Karten.
-   - Qualitätsschalter „Schön / Schnell“ (Menü, gemerkt; ?grafik=schoen|schnell). Ruckelt es, schaltet das Spiel
-     von selbst auf „Schnell“, solange man nichts fest gewählt hat.
+   - Qualitätsschalter „Grafik: Hoch / Niedrig“ (Menü, gemerkt; ?grafik=hoch|niedrig, alt auch schoen|schnell).
+     Intern heißen die Stufen weiter 'schoen' und 'schnell', damit gespeicherte Einstellungen gültig bleiben. Ruckelt es, schaltet das Spiel
+     von selbst auf „Niedrig“, solange man nichts fest gewählt hat.
    - Direkt auf den Bildschirm gezeichnet; helle Stellen werden in jedem Material weich abgefangen (render.js).
    - Abgerundete Kanten, Schattierung in Senken, Gras blendet in der Ferne aus, Schatten rasten auf ganze Schattenpixel ein.
    - Weiteres Aussehen (Wind, Wolkenschatten, Spuren, Explosionen, Metallglanz, Lichtsaum, Wasserspiegelung): look.js.
-   - Wasser und Lava: Schaum und helles Flachwasser am Ufer, Glut an den Lavaufern.
+   - Lava: Glut an den Ufern (das Wasser steht in water.js).
    - Boden: großflächige Helligkeitsunterschiede gegen das Kachelmuster, nasser Saum am Wasser.
    - Schattenflecken unter Bäumen und Felsen, damit nichts schwebt.
    - Effekte: Druckwelle und Funken bei Explosionen, Staub hinter Fahrzeugen.
@@ -12,7 +13,7 @@
 'use strict';
 const GFX={
   mode:(function(){
-    const q=/[?&#]grafik=(schoen|schnell)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase();
+    const q=/[?&#]grafik=(schoen|schnell|hoch|niedrig)/i.exec(location.search+location.hash);if(q)return /schoen|hoch/i.test(q[1])?'schoen':'schnell';
     try{const m=localStorage.getItem('kk-gfx');if(m==='schoen'||m==='schnell')return m;}catch(e){}
     return 'schoen';
   })(),
@@ -46,24 +47,6 @@ function gfxChain(mat,fn,tag){
   mat.needsUpdate=true;
 }
 
-/* ---------- Water: shallow tint and foam along the shore ---------- */
-scene.traverse(o=>{
-  if(!o.isMesh||!o.material||o.position.y!==-1.65||!o.material.transparent)return;
-  const shallow={value:o.material.color.clone().lerp(new THREE.Color(0xffffff),0.42)};
-  GFX.water={mat:o.material,shallow};
-  gfxChain(o.material,sh=>{
-    sh.uniforms.uHgt={value:hgtTex};sh.uniforms.uShallow=shallow;sh.uniforms.uTime=timeU;
-    sh.vertexShader='varying vec2 vKkW;\n'+sh.vertexShader.replace('#include <project_vertex>','vKkW=(modelMatrix*vec4(transformed,1.0)).xz;\n#include <project_vertex>');
-    sh.fragmentShader='uniform sampler2D uHgt;uniform vec3 uShallow;varying vec2 vKkW;\n'+(/uniform float uTime/.test(sh.fragmentShader)?'':'uniform float uTime;\n')+HGT_GLSL+sh.fragmentShader.replace('#include <tonemapping_fragment>',
-      `float kd=-1.65-kkHgt(vKkW);
-      gl_FragColor.rgb=mix(gl_FragColor.rgb,uShallow,(1.0-smoothstep(0.0,1.5,kd))*0.5);
-      // a soft, slow band of foam; hard stripes right at the edge flicker when the waves move
-      float kf=smoothstep(0.6,0.08,kd)*(0.55+0.45*sin(kd*7.0-uTime*1.3+sin(vKkW.x*0.5+vKkW.y*0.45)*1.8));
-      kf=clamp(kf,0.0,1.0)*smoothstep(-0.05,0.12,kd);
-      gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(0.94,0.97,1.0),kf*0.6);gl_FragColor.a=max(gl_FragColor.a,kf*0.85);
-      #include <tonemapping_fragment>`);
-  },'foam');
-});
 /* ---------- Lava: brighter glow where it meets the banks ---------- */
 if(lavaMat)gfxChain(lavaMat,sh=>{
   sh.uniforms.uHgt={value:hgtTex};
@@ -323,7 +306,7 @@ scene.traverse(o=>{
     worst=Math.max(worst,now-prev);prev=now;n++;
     if(now-t0<500)return;
     const fps=n*1000/(now-t0);GFX.fps=fps;
-    if(on)el.textContent=Math.round(fps)+' FPS · längstes Bild '+Math.round(worst)+' ms · '+renderer.info.render.calls+' Aufrufe · '+Math.round(renderer.info.render.triangles/1000)+'k Dreiecke · '+(gfxFine()?'Schön':'Schnell');
+    if(on)el.textContent=Math.round(fps)+' FPS · längstes Bild '+Math.round(worst)+' ms · '+renderer.info.render.calls+' Aufrufe · '+Math.round(renderer.info.render.triangles/1000)+'k Dreiecke · '+(gfxFine()?'Hoch':'Niedrig');
     n=0;t0=now;worst=0;
   })(t0);
 })();
@@ -341,7 +324,7 @@ function gfxApply(){
   if(!GFX.texs){GFX.texs=new Set(Object.values(TX));scene.traverse(o=>{if(o.material&&o.material.map)GFX.texs.add(o.material.map);});}
   for(const t of GFX.texs)if(t&&t.isTexture&&t.anisotropy!==an){t.anisotropy=an;t.needsUpdate=true;}
   if(typeof resize==='function')resize();
-  const b=$('#gfxToggle');if(b){b.textContent='Grafik: '+(gfxFine()?'Schön':'Schnell');b.setAttribute('aria-pressed',gfxFine()?'true':'false');}
+  const b=$('#gfxToggle');if(b){b.textContent='Grafik: '+(gfxFine()?'Hoch':'Niedrig');b.setAttribute('aria-pressed',gfxFine()?'true':'false');}
 }
 function gfxSet(mode,byUser){
   GFX.mode=mode==='schnell'?'schnell':'schoen';
@@ -360,7 +343,7 @@ gfxApply();
     if(now-t0>=4000){
       const fps=n*1000/(now-t0);n=0;t0=now;
       slow=fps<24?slow+1:0;
-      if(slow>=2&&gfxFine()&&!GFX.chosen&&!navigator.webdriver){gfxSet('schnell',false);toast('Grafik auf „Schnell“ gestellt, damit es flüssig läuft. Ändern im Menü.',3.5);}
+      if(slow>=2&&gfxFine()&&!GFX.chosen&&!navigator.webdriver){gfxSet('schnell',false);toast('Grafik auf „Niedrig“ gestellt, damit es flüssig läuft. Ändern im Menü.',3.5);}
     }
   })(t0);
 })();
