@@ -31,6 +31,7 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
 | `js/mountain.js`, `js/volcano.js` | Karten Gebirge und Vulkan: Licht, Wetter, Krater und Ausbruch |
 | `js/gfx.js` | Grafik: Qualitätsschalter, Bildausgabe, Uferschaum, Lavaglut, runde Kanten, Schattierung, Zusammenfassen |
+| `js/snow.js` | Schnee: Spurenkarte, Verwehungen (bremsen), Schneehauben, Schneestaub |
 | `js/water.js` | Wasser: Tiefenfarbe aus Küstenabstand, Uferschaum, Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzer |
 | `js/look.js` | Aussehen: Wind, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz, Lichtsaum, Spuren, Explosionen, Mündungsfeuer |
 | `js/daynight.js` | Tag, Nacht und Wetter |
@@ -95,6 +96,10 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 ## Wasser
 
 `js/water.js` hängt einen Shader an das Wassermaterial aus `js/world.js`. Beim Laden entsteht eine 256er-Textur über die Karte: Rot = Abstand zur Küste (Zweipass-Abstandsrechnung, bis 16 Einheiten), Grün = Wassertiefe. Daraus Tiefenfarbe (`uDeep`, `uShallow`, je Karte), Uferschaum und eine zweite, pulsierende Schaumlinie. Wellen aus zwei gegenläufigen Normalen-Texturen, Himmelsspiegelung über die Himmelsfarben aus `sky`, Glitzern über die Sonnenrichtung. `WATER.q` schaltet Glitzern und zweite Linie für „Niedrig“ ab. `gfxSplash(x, z, groß)` macht Schaumring, Tropfen und Gischt.
+
+## Schnee
+
+`js/snow.js`, nur auf dem Gebirge und in der Weihnachtsedition auf der Insel (`SNOW.on`). Eine eigene kleine Szene mit Kamera von oben zeichnet in eine Textur (`SNOW.target()`, 512 bzw. 256): Fußabdrücke und Reifenrillen mit Maximum-Mischung, alle 0,1 s eine Subtraktion von 2/255 zum Zuschneien. Der Bodenshader liest sie (Kennzeichen `trail`). Verwehungen und Hauben sind ein einziges Instanzen-Netz; `SNOW.drifts` und `SNOW.inDrift(x, z)` liefern die Bremszonen, `moveUnit` ist umhüllt (`SNOW.slow` = 0,82).
 
 ## Tag, Nacht und Wetter
 

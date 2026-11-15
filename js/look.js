@@ -81,7 +81,7 @@ const LOOK={rim:{value:0.32},rimC:{value:new THREE.Color(0xfff2dc)},wind:{value:
   }
 
   /* ---------- Footprints in snow and ash, tracks behind vehicles ---------- */
-  const snowy=MOUNTAIN||VOLCANO||(typeof XMAS!=='undefined'&&XMAS);
+  const snowy=VOLCANO;   // ash only: snow maps press their tracks into the snow itself (snow.js)
   const PN=260,printMat=new THREE.MeshBasicMaterial({color:VOLCANO?0x1e1817:0x6e7f99,transparent:true,opacity:VOLCANO?0.4:0.3,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3});
   const prints=new THREE.InstancedMesh(new THREE.CircleGeometry(0.11,8).rotateX(-Math.PI/2),printMat,PN),pd=new THREE.Object3D(),plife=new Float32Array(PN),pscale=new Float32Array(PN);
   prints.frustumCulled=false;prints.renderOrder=1;let pi=0;

@@ -251,6 +251,15 @@ async function main() {
   await page.click('#startBtn', { force: true });
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && !!window.mountainDrift), 'Runde auf dem Gebirge läuft, mit Schneetreiben');
+  check(await page.evaluate(() => {
+    const rt = SNOW.target(), R = rt.width, px = new Uint8Array(4), x0 = player.x, z0 = player.z;
+    for (let i = 0; i < 40; i++) { moveUnit(player, 1, 0, 0.05, 1); player.moving = true; updateMood(0.05); }
+    let mx = 0; for (let k = 0; k < 50; k++) { const x = x0 + k * 0.3, i = Math.floor((x / 112 + 0.5) * R), j = Math.floor((z0 / 112 + 0.5) * R); renderer.readRenderTargetPixels(rt, i, j, 1, 1, px); mx = Math.max(mx, px[0]); }
+    player.x = x0; player.z = z0;
+    const d = SNOW.drifts[0], u = spawnUnit(0, d.x, d.z, 'kaempfer'); const a = u.x; moveUnit(u, 1, 0, 0.1, 1); const slow = u.x - a; u.x = 30; u.z = 30; const b = u.x; moveUnit(u, 1, 0, 0.1, 1); const fast = u.x - b;
+    u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
+    return SNOW.on && mx > 60 && SNOW.domes.count > 50 && SNOW.drifts.length > 20 && Math.abs(slow / fast - SNOW.slow) < 0.01 && crates.every(c => c.snowCap);
+  }), 'Schnee: Fußspuren in der Spurenkarte, Verwehungen bremsen leicht, Schneehauben auf Kisten');
   check(await page.evaluate(() => mountainCut.on.value === 1 && mountainCut.p.value.distanceTo(new THREE.Vector3(player.x, mountainCut.p.value.y, player.z)) < 0.5), 'Gebirge: Durchblick-Loch folgt der Figur');
   await page.evaluate(() => pause(true));
   await page.goto(base + '?normal&karte=insel');
