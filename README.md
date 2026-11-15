@@ -31,6 +31,7 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
 | `js/mountain.js`, `js/volcano.js` | Karten Gebirge und Vulkan: Licht, Wetter, Krater und Ausbruch |
 | `js/gfx.js` | Grafik: Qualitätsschalter, Bildausgabe, Uferschaum, Lavaglut, runde Kanten, Schattierung, Zusammenfassen |
+| `js/water.js` | Wasser: Tiefenfarbe aus Küstenabstand, Uferschaum, Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzer |
 | `js/look.js` | Aussehen: Wind, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz, Lichtsaum, Spuren, Explosionen, Mündungsfeuer |
 | `js/daynight.js` | Tag, Nacht und Wetter |
 | `js/save.js` | Spielstand speichern und fortsetzen |
@@ -80,7 +81,7 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 
 ## Grafik
 
-`js/gfx.js` hängt sich an das Bestehende an und gilt auf allen Karten. Im Startmenü steht „Grafik: Schön / Schnell“ (gemerkt; zum Testen `?grafik=schoen` oder `?grafik=schnell`).
+`js/gfx.js` hängt sich an das Bestehende an und gilt auf allen Karten. Im Startmenü steht „Grafik: Hoch / Niedrig“ (bis November 2026 „Schön / Schnell“) (gemerkt; zum Testen `?grafik=schoen` oder `?grafik=schnell`).
 
 - **Bildausgabe:** Beide Stufen zeichnen direkt auf den Bildschirm, damit die Kantenglättung des Geräts greift. Helle Stellen fängt eine eigene Belichtungskurve weich ab (`CustomToneMapping` in `js/render.js`: unter 0,62 bleibt jede Farbe, darüber läuft sie weich gegen 0,95, nichts wird reinweiß). Eine frühere Fassung zeichnete „Schön“ über einen Zwischenspeicher mit Schein- und Farbdurchgängen; auf dem iPhone krisselten dort die Kanten und das Bild überstrahlte.
 - **Beide Stufen:** Uferschaum und helles Flachwasser, Glut an den Lavaufern, unregelmäßiger Boden, nasser Saum am Wasser (Höhenprofil als Textur `hgtTex`), abgerundete Kanten an Kisten, Blechlingen, Fahrzeugen und Hauptquartieren (`gfxRoundBox`), Schattierung in Senken, an Baumfüßen und unter Brücken (beim Laden in die Bodenfarben gerechnet), Gras blendet in der Ferne aus, Schatten rasten auf ganze Schattenpixel ein (kein Kriechen der Schattenkanten), Wind in Bäumen, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz (`js/look.js`).
@@ -90,6 +91,10 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 - **Weniger Zeichenvorgänge:** Bäume, Felsen, Sandsäcke, Schilf und Brücken (`STATIC_ROOTS` in `js/world.js`) werden beim Laden je Material und Kartenviertel zu wenigen großen Netzen zusammengefasst, die Inseln am Horizont (`FAR_ROOTS`) zu einem einzigen. Kleinteile der Blechlinge werfen keinen Schatten mehr. Auf der Insel sinken die Zeichenvorgänge pro Bild von etwa 1400 auf 400. Wer neue feste Deko baut, hängt sie an `STATIC_ROOTS` an; alles, was sich später bewegt oder ändert, darf dort nicht hinein.
 - **FPS-Anzeige:** Schalter im Startmenü (`?fps` zum Testen). Zeigt Bilder pro Sekunde, das längste Bild der letzten halben Sekunde, Zeichenvorgänge und Dreiecke.
 - Shader anderer Dateien bleiben erhalten: `gfxChain` hängt sich hinter vorhandene `onBeforeCompile`-Funktionen und gibt jeder Änderung ein Kennzeichen (`customProgramCacheKey`), damit three.js einen geänderten Shader nie einem Material ohne diese Änderung gibt (Wasser, Lava, Durchblick-Loch).
+
+## Wasser
+
+`js/water.js` hängt einen Shader an das Wassermaterial aus `js/world.js`. Beim Laden entsteht eine 256er-Textur über die Karte: Rot = Abstand zur Küste (Zweipass-Abstandsrechnung, bis 16 Einheiten), Grün = Wassertiefe. Daraus Tiefenfarbe (`uDeep`, `uShallow`, je Karte), Uferschaum und eine zweite, pulsierende Schaumlinie. Wellen aus zwei gegenläufigen Normalen-Texturen, Himmelsspiegelung über die Himmelsfarben aus `sky`, Glitzern über die Sonnenrichtung. `WATER.q` schaltet Glitzern und zweite Linie für „Niedrig“ ab. `gfxSplash(x, z, groß)` macht Schaumring, Tropfen und Gischt.
 
 ## Tag, Nacht und Wetter
 

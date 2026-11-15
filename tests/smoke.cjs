@@ -269,7 +269,7 @@ async function main() {
   console.log('Grafik');
   await page.goto(base + '?normal&karte=insel');
   await page.waitForSelector('#startBtn', { state: 'visible' });
-  check(await page.evaluate(() => GFX.mode === 'schoen' && document.querySelector('#gfxToggle').textContent === 'Grafik: Schön' && typeof gfxRender === 'function'), 'Grafik: Standard ist „Schön“');
+  check(await page.evaluate(() => GFX.mode === 'schoen' && document.querySelector('#gfxToggle').textContent === 'Grafik: Hoch' && typeof gfxRender === 'function'), 'Grafik: Standard ist „Schön“');
   await page.click('#startBtn', { force: true });
   await page.waitForTimeout(1500);
   const lit = () => page.evaluate(() => {
@@ -283,13 +283,19 @@ async function main() {
     const gl = renderer.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
     let hot = 0; for (let i = 0; i < w * h; i++) if (Math.max(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]) >= 250) hot++;
     DN.fixed = null; return hot / (w * h) < 0.02;
-  }), 'Grafik „Schön“ überstrahlt nicht: unter 2 % ganz helle Bildpunkte am Mittag');
+  }), 'Grafik „Hoch“ überstrahlt nicht: unter 2 % ganz helle Bildpunkte am Mittag');
   check(await page.evaluate(() => {
     const u = spawnUnit(0, 0, 30, 'kaempfer'); let n = 0; u.bot.g.traverse(o => { if (o.isMesh && o.visible) n++; });
     u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
     return n <= 17 && renderer.shadowMap.autoUpdate === false;
   }), 'Blechlinge sind je Gelenk zusammengefasst, der Schatten wird nur jedes zweite Bild neu gezeichnet');
   check(await page.evaluate(() => { const n = parts.length; boom(0, 20, 3); return parts.length >= n + 8; }), 'Explosion mit Druckwelle, Funken, Feuerball, Rauch und Glut');
+  check(await page.evaluate(() => {
+    const W = GFX.water, d = WATER.dist;
+    const shore = d.at(-18, 7.2), river = d.at(-30, 0), sea = d.at(0, 75);
+    const n = parts.length; gfxSplash(-30, 0, true);
+    return W && W.uniforms.uDeep && W.mat.userData.kkTags.includes('water') && shore < 1.5 && river > 1 && sea === 16 && parts.length >= n + 8 && WATER.q.value === 1;
+  }), 'Wasser: Küstenabstand berechnet, Tiefenfarbe und Schaum im Shader, Spritzer mit Tropfen und Schaumring');
   check(await page.evaluate(() => renderer.toneMapping === THREE.CustomToneMapping && !document.querySelector('#vignette').hidden && GFX.ao > 1000 && G.crate.userData.kkRound
     && LOOK.wind.value >= 1 && LOOK.rim.value > 0 && !!M.metal.envMap && GFX.fade.a.value > 30 && typeof gfxSplash === 'function'), 'Schön: Belichtungskurve, dunklere Ecken, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus');
   check(await page.evaluate(() => { const n = parts.length; const u = units.find(v => v.alive && v.team === 0 && v.kind === 'bot'); const pt = peaceT; peaceT = 0; u.cd = 0; u.carry = null;
@@ -301,8 +307,8 @@ async function main() {
   check(await page.evaluate(() => !document.querySelector('#fps').hidden && /FPS/.test(document.querySelector('#fps').textContent) && localStorage.getItem('kk-fps') === '1'), 'FPS-Anzeige lässt sich einschalten');
   await page.evaluate(() => localStorage.removeItem('kk-fps'));
   await page.click('#gfxToggle', { force: true });
-  check(await page.evaluate(() => GFX.mode === 'schnell' && localStorage.getItem('kk-gfx') === 'schnell' && document.querySelector('#gfxToggle').textContent === 'Grafik: Schnell' && !GFX.contact.visible && sun.shadow.mapSize.x === 1024) && await lit() > 200,
-    'Grafik „Schnell“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');
+  check(await page.evaluate(() => GFX.mode === 'schnell' && localStorage.getItem('kk-gfx') === 'schnell' && document.querySelector('#gfxToggle').textContent === 'Grafik: Niedrig' && !GFX.contact.visible && sun.shadow.mapSize.x === 1024) && await lit() > 200,
+    'Grafik „Niedrig“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');
   check(await page.evaluate(() => document.querySelector('#vignette').hidden && LOOK.rim.value === 0 || (updateMood(0.05), document.querySelector('#vignette').hidden && LOOK.rim.value === 0)), 'Schnell: ohne dunkle Ecken und Lichtsaum');
   await page.evaluate(() => localStorage.removeItem('kk-gfx'));
 

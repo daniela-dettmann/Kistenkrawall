@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 14. November 2026 · Live-Version auf `main`: `c065f44` (PR #23: Nachbesserung nach dem iPhone-Test); mit dem Merge von #24 kommt die neue Grafik dazu
+Stand: 15. November 2026 · Live-Version auf `main`: `c6f3031` (PR #24: Grafik neu); mit dem Merge von #25 kommt das neue Wasser dazu
 
 ## Links
 
@@ -38,6 +38,7 @@ Stand: 14. November 2026 · Live-Version auf `main`: `c065f44` (PR #23: Nachbess
 | #22 | Tag, Nacht und Wetter auf allen Karten: Tageslauf über 8 Minuten, Abendrot, Mondnacht mit Sternen, Laterne und Lichtkegeln, leuchtende Kisten; Regen und Gewitter, Schneesturm, Ascheregen; Schalter im Menü. Dazu: flüssiger (Zeichenvorgänge pro Bild auf unter ein Drittel), FPS-Anzeige, Helligkeit in „Schön“ gedämpft, Winterlicht in der Weihnachtsedition | gemergt |
 | #23 | Nach Danielas Test auf dem iPhone 15 Pro Max (33 FPS, Flimmern am Ufer, überhellte Stellen): Schatten nur jedes zweite Bild, Blechlinge und Hauptquartiere zusammengefasst, Weihnachtsdeko mit halb so vielen Dreiecken, Schaumkante am Ufer neu, Sonne wandert in Schritten, Schein nur noch um echte Lichter | gemergt |
 | #24 | Grafik neu: direkt auf den Bildschirm statt Nachbearbeitung (gegen Krisseln und Überstrahlen), Belichtungskurve; A: schärfere Texturen, Gras blendet aus, Schatten rasten ein, runde Kanten; B: Schattierung in Senken, Lichtsaum, Metallglanz, Wasserspiegelung; C: Wind, Wolkenschatten, Spuren, Spritzer, Mündungsfeuer, Explosionen, Morgennebel | gemergt |
+| #25 | Auftrag „Grafik-Upgrade Wasser, Schnee und Plastizität“, Schritt 1: Wasser mit Tiefenfarbe aus Küstenabstand, zwei Schaumlinien, gegenläufigen Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzern mit Tropfen; Wolken werfen keine harten Schatten mehr; Schalter heißt jetzt „Grafik: Hoch / Niedrig“ | gemergt |
 
 ## Was umgesetzt ist
 
@@ -119,6 +120,18 @@ Stand: 14. November 2026 · Live-Version auf `main`: `c065f44` (PR #23: Nachbess
 - Mehr Leben: Bäume, Büsche und Palmen wiegen sich im Wind, bei Sturm stärker. Wolkenschatten ziehen über die Karte. Morgens liegt Nebel in Senken und über dem Fluss. In Schnee und Asche bleiben Fußspuren und Fahrzeugspuren, die nach einigen Sekunden verblassen. Kisten, die ins Wasser fallen, spritzen. Beim Schießen blitzt das Mündungsfeuer, Explosionen haben Feuerball, Rauchsäule und Glut.
 - Gemessen im Testbrowser (gleiche Auflösung): Insel am Tag in „Schön“ Helligkeit 155, kein Bildpunkt über 245; Weihnachten 180 statt vorher 184 bis 220 bei „Schnell“ mit 57 % fast weißen Punkten. Auf dem iPhone selbst ist das nicht geprüft.
 
+### Wasser (Auftrag Grafik-Upgrade, Schritt 1)
+- Ein Shader auf dem vorhandenen Wassermaterial (`js/water.js`), kein zweites Bild für Spiegelungen.
+- Beim Laden wird einmal eine Karte berechnet: Abstand jedes Wasserpunkts zur Küste (bis 16 Einheiten) und Wassertiefe. Daraus: tief dunkelblau, flach türkis, am Ufer etwas durchsichtiger.
+- Uferschaum: weißer, wabernder Rand an der Küste, dazu eine zweite, schwächere Linie etwa 1,5 Einheiten draußen, die pulsiert.
+- Wellen: zwei gegeneinander laufende, gekachelte Normalen-Texturen.
+- Himmelsspiegelung bei flachem Blick und Sonnenglitzern; beides folgt Himmelsfarbe und Sonnenstand der Tageszeit, nachts ohne Glitzern.
+- Spritzer, wenn eine Kiste ins Wasser fällt: Schaumring, Tropfen, Gischt. Figuren können im Spiel nicht ins Wasser fallen, daher nur Kisten.
+- Wolken werfen keine harten Schatten mehr (sie lagen als dunkle Flecken auf dem Wasser und kosteten etwa 80 Zeichenvorgänge im Schattendurchgang); die weichen Wolkenschatten auf dem Boden bleiben.
+- Der Grafikschalter heißt jetzt „Grafik: Hoch / Niedrig“ (vorher „Schön / Schnell“). Auf „Niedrig“ ohne Glitzern und ohne zweite Schaumlinie.
+- Gebirge hat kein Wasser; Vulkan-Meer und Weihnachtsedition haben eigene Wasserfarben.
+- FPS vorher und nachher: noch nicht gemessen. Messbar nur auf dem iPhone, Daniela schickt die Werte.
+
 ### Tag, Nacht und Wetter (alle Karten)
 - Ein Tag dauert 8 Minuten. Die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten kommt das Abendrot, dann etwa drei Minuten Nacht, dann der Morgen. Die erste Welle fällt bei sechs Minuten Bauruhe in die Nacht.
 - Nachts: Mondlicht, Sterne, eine Laterne am eigenen Blechling, Lichtkegel vor allen Blechlingen und Fahrzeugen, leuchtende Kisten und Hauptquartiere. Die Lava leuchtet von selbst und erhellt die Vulkannacht.
@@ -162,6 +175,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Vulkan: Kartenwahl, Höhen von Lavastrom, Brücken, Insel und Krater, Wegfindung über die Insel und um den Krater (nie durch die Lava), Runde mit Kisten auf der Insel, Ausbruch (Sperre, Ausweichen, Schaden nur auf der Brücke), Weihnachtsedition auf dem Vulkan
 - Helligkeit: unter 2 % ganz helle Bildpunkte am Mittag in „Schön“; Blechlinge zusammengefasst, Schatten jedes zweite Bild
 - Geschwindigkeit: feste Deko ist zusammengefasst, unter 700 Zeichenvorgänge pro Bild; FPS-Anzeige einschaltbar
+- Wasser: Küstenabstand berechnet, Tiefenfarbe und Schaum im Shader, Spritzer mit Tropfen und Schaumring
 - Grafik neu: Belichtungskurve, dunklere Ecken nur in „Schön“, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus, Explosion mit Feuerball, Rauch und Glut, Mündungsfeuer
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
 - Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Schalter aus
@@ -182,6 +196,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 | `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
 | `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
 | `js/daynight.js` | Tag, Nacht und Wetter |
+| `js/water.js` | Wasser: Tiefenfarbe, Uferschaum, Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzer |
 | `js/look.js` | Aussehen: Wind, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz, Lichtsaum, Spuren, Explosionen, Mündungsfeuer |
 | `js/volcano.js` | Vulkan: Licht, Krater, Rauch, Ausbruch (Grundriss in `js/core.js`, Wegführung in `js/combat.js`) |
 | `js/update.js` | Update-Hinweis und Versionsanzeige |

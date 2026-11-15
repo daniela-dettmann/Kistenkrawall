@@ -8,7 +8,7 @@ Stand: 14. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 | --- | --- |
 | Live auf GitHub Pages | `c065f44` (PR #23: Nachbesserung nach dem iPhone-Test) |
 | `main` | `c065f44` |
-| Offener Pull Request | #24: Grafik neu (direkt auf den Bildschirm, Belichtungskurve, A/B/C) |
+| Offener Pull Request | #25: Wasser (Schritt 1 des Auftrags Grafik-Upgrade Wasser, Schnee und Plastizität) |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
