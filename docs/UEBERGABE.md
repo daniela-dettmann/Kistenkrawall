@@ -6,9 +6,9 @@ Stand: 15. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `3ef02f1` (PR #30, mit #29 Menü) |
-| `main` | `3ef02f1` |
-| Offener Pull Request | #31: Auftrag „Dynamisches Wetter“ (Drive: `Kistenkrawall-Auftrag-Wetter.md`) |
+| Live auf GitHub Pages | `eb69d3a` (PR #31: Wetter) |
+| `main` | `eb69d3a` |
+| Offener Pull Request | #32: Tests nur im Pull Request (vier Teile), Gewitter-Ton neu |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
@@ -33,6 +33,6 @@ Aus `docs/PROJEKTSTAND.md`, „Grenzen und offene Punkte“:
 ## Hinweise für die nächste Sitzung
 
 - Vor jedem Push `node tests/smoke.cjs`, mit Mehrspieler-Test (läuft nur lokal, braucht das Paket `peer` aus `npm install`). Besonders wichtig bei Änderungen an `js/net.js`, weil GitHub diesen Teil nicht mehr prüft.
-- Nur mergen, wenn der Browser-Test grün ist und Daniela zugestimmt hat.
+- Nur mergen, wenn der Browser-Test grün ist und Daniela zugestimmt hat. Seit #32 wird nach dem Merge nicht mehr getestet: alle vier Testteile im Pull Request müssen grün sein.
 - Nach dem Merge immer den Deploy-Lauf auf `main` prüfen, bevor man sagt, dass etwas live ist.
 - Mit Daniela auf Deutsch sprechen.

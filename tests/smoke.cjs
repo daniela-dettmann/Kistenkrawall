@@ -26,6 +26,11 @@ let failed = 0;
 const ok = msg => console.log('  ok   ' + msg);
 const bad = msg => { failed++; console.log('  FAIL ' + msg); };
 const check = (cond, msg) => (cond ? ok(msg) : bad(msg));
+// On GitHub the browser test runs in four parts at the same time (KK_PART=1..4, see .github/workflows/pages.yml).
+// Without KK_PART (locally) everything runs. Part 1: game, offline, save; 2: sound studio, Christmas, mountain;
+// 3: graphics, day/night and weather; 4: volcano, update notice. The multiplayer part only runs locally.
+const PART = +process.env.KK_PART || 0;
+const part = n => !PART || PART === n;
 
 function serve() {
   const server = http.createServer((req, res) => {
@@ -87,6 +92,7 @@ async function main() {
   const startRound = async p => { if (await p.isVisible('#playBtn')) await p.click('#playBtn', { force: true }); await p.click('#startBtn', { force: true }); };
   const openPlay = async p => { await p.waitForSelector('#playBtn', { state: 'visible' }); await p.click('#playBtn', { force: true }); };
   const clickHidden = (p, sel) => p.evaluate(sel => document.querySelector(sel).click(), sel);
+  if (part(1)) {   // Spiel
   console.log('Spiel');
   await page.goto(base);
   await page.waitForSelector('#playBtn', { state: 'visible' });
@@ -212,7 +218,9 @@ async function main() {
   check(await page.evaluate(() => localStorage.getItem('kk-save') === null), 'Spielstand nach Rundenende gelöscht');
   await page.click('#toMenuBtn', { force: true });
   check(await page.$eval('#continueBtn', b => b.hidden), 'danach kein „Weiterspielen“ mehr');
+  }
 
+  if (part(2)) {   // Tonstudio
   console.log('Tonstudio');
   await page.goto(base + 'tonstudio.html');
   const before = await page.evaluate(() => window.__osc);
@@ -231,7 +239,9 @@ async function main() {
   await page.click('#play-angriff', { force: true });
   await page.waitForTimeout(300);
   check(await page.evaluate(() => music.playing === null), 'Musik: Stopp funktioniert');
+  }
 
+  if (part(2)) {   // Weihnachtsedition
   console.log('Weihnachtsedition');
   await page.goto(base + '?weihnachten');
   await page.waitForSelector('#playBtn', { state: 'visible' });
@@ -258,7 +268,9 @@ async function main() {
   await page.goto(base + '?normal');
   await page.waitForSelector('#playBtn', { state: 'visible' });
   check(await page.evaluate(() => !XMAS && !document.documentElement.classList.contains('xmas') && units.every(u => !u.bot.costume)) && !(await page.isVisible('.xribbon')), 'mit ?normal die normale Version');
+  }
 
+  if (part(2)) {   // Gebirge
   console.log('Gebirge');
   await page.goto(base + '?normal');
   await page.waitForSelector('#playBtn', { state: 'visible' });
@@ -309,7 +321,9 @@ async function main() {
   await page.waitForTimeout(1200);
   check(await page.evaluate(() => XMAS && MOUNTAIN && units.filter(u => u.kind === 'bot').every(u => u.bot.costume) && crates.every(c => c.bow) && !!window.xmasSleigh), 'Weihnachtsedition auf dem Gebirge');
   await page.evaluate(() => { endGame(true, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
+  }
 
+  if (part(3)) {   // Grafik
   console.log('Grafik');
   await page.goto(base + '?normal&karte=insel');
   await page.waitForSelector('#playBtn', { state: 'visible' });
@@ -355,7 +369,9 @@ async function main() {
     'Grafik „Niedrig“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');
   check(await page.evaluate(() => { updateMood(0.05); return document.querySelector('#vignette').hidden && LOOK.rim.value > 0 && LOOK.rim.value < 0.3; }), 'Niedrig: ohne dunkle Ecken, Randlicht schwächer');
   await page.evaluate(() => localStorage.removeItem('kk-gfx'));
+  }
 
+  if (part(3)) {   // Tag, Nacht und Wetter
   console.log('Tag, Nacht und Wetter');
   await page.goto(base + '?normal&karte=insel');
   await page.waitForSelector('#playBtn', { state: 'visible' });
@@ -400,8 +416,8 @@ async function main() {
     document.querySelector('#wxSeg [data-w=zufall]').click(); state = 'play'; const R = WX.plan;
     peaceT = 300; waveT = 0; R.had = false; R.wave = false; R.inWave = false; R.light = 60; R.lightEnd = 0; DN.setWeather('klar', false);
     let shower = false; for (let i = 0; i < 70; i++) { DN.roll(1, true); if (DN.wx.want !== 'klar') shower = true; }
-    DN.setWeather('klar', false); R.lightEnd = 0; R.light = 999;
-    peaceT = 0; waveT = 60; DN.roll(0.05, true); const storm = DN.wx.want !== 'klar' && DN.wx.storm && R.wave;
+    DN.setWeather('klar', false); R.lightEnd = 0; R.light = 999; R.had = false;   // no storm yet this round: the first wave brings one for sure
+    peaceT = 0; waveT = 60; DN.roll(0.05, true); const storm = DN.wx.want !== 'klar' && DN.wx.lvl === 1 && R.wave;   // full strength: a thunderstorm (75 %) or heavy rain
     peaceT = 300; waveT = 0; DN.roll(0.05, true); const clear = DN.wx.want === 'klar';
     state = 'menu'; return shower && storm && clear;
   }), 'Zufall: Schauer in der Bauruhe, Unwetter mit der ersten Welle, danach klart es auf');
@@ -414,7 +430,9 @@ async function main() {
     removeCrate(c); DN.setWeather('klar', false); DN.wx.s = 0; return ok;
   }), 'Wind: Fallschirmkisten schwanken und landen etwas versetzt, nie im Wasser');
   await page.evaluate(() => { localStorage.removeItem('kk-wx'); localStorage.removeItem('kk-tod'); DN.wsel = 'zufall'; DN.tod = 'auto'; });
+  }
 
+  if (part(4)) {   // Vulkan
   console.log('Vulkan');
   await page.goto(base + '?normal');
   await page.waitForSelector('#playBtn', { state: 'visible' });
@@ -465,6 +483,7 @@ async function main() {
   await page.waitForTimeout(1200);
   check(await page.evaluate(() => XMAS && VOLCANO && state === 'play' && units.filter(u => u.kind === 'bot').every(u => u.bot.costume) && crates.every(c => c.bow)), 'Weihnachtsedition auf dem Vulkan');
   await page.evaluate(() => { endGame(true, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
+  }
 
   // The multiplayer test starts its own PeerServer and three browser pages. It is slow and flaky on
   // CI machines without a GPU, so it only runs locally (CI sets CI=true); KK_MP_TEST=1 forces it.
@@ -539,6 +558,7 @@ async function main() {
     await mpBrowser.close();
   }
 
+  if (part(4)) {   // Update-Hinweis
   console.log('Update-Hinweis');
   await page.goto(base);
   await page.waitForSelector('#playBtn', { state: 'visible' });
@@ -561,6 +581,7 @@ async function main() {
   check((await page.textContent('#verLine')).endsWith('bbb222'), 'nach dem Aktualisieren läuft die neue Version');
   await page.waitForTimeout(3500);
   check(!(await page.isVisible('#updBar')), 'danach kein Hinweis mehr');
+  }
 
   const errs = errors.filter(e => !/net::ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(e));
   check(errs.length === 0, 'keine JavaScript-Fehler' + (errs.length ? ': ' + errs.join(' | ') : ''));

@@ -102,8 +102,8 @@ const DN={
     W.flash=Math.max(0,W.flash-dt*3.2);
     // lightning: a bright flash over the whole scene, sometimes a second flicker; thunder a little later
     if(W.storm&&kind==='regen'&&s>0.55&&playing){W.boltT-=dt;if(W.boltT<=0){W.boltT=rand(4,10);W.flash=1;if(Math.random()<0.5)setTimeout(()=>{W.flash=Math.max(W.flash,0.7);},rand(120,220));
-      const strike=DN.onBolt?DN.onBolt():false;setTimeout(()=>sound('donner',strike?1:0.85),strike?rand(80,200):rand(400,1400));}}
-    if(kind==='regen'&&s>0.3&&playing){rainT-=dt;if(rainT<=0){rainT=1.05;sound('regen',0.5*s);}}
+      const strike=DN.onBolt?DN.onBolt():false;setTimeout(()=>sound(strike?'donner':'donnerFern',strike?1:0.8),strike?rand(80,200):rand(1500,3500));}}
+    // the rain itself is a steady sound bed in weather.js (single bursts every second sounded like „tsch, tsch“)
 
     /* sun or moon: direction, colour, strength */
     // The light moves in small steps (every 2.5 s of game time), not every frame: a light that turns
