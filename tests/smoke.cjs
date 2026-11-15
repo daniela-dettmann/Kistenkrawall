@@ -306,7 +306,7 @@ async function main() {
     return W && W.uniforms.uDeep && W.mat.userData.kkTags.includes('water') && shore < 1.5 && river > 1 && sea > 10 && parts.length >= n + 8 && WATER.q.value === 1;
   }), 'Wasser: Küstenabstand berechnet, Tiefenfarbe und Schaum im Shader, Spritzer mit Tropfen und Schaumring');
   check(await page.evaluate(() => renderer.toneMapping === THREE.CustomToneMapping && !document.querySelector('#vignette').hidden && GFX.ao > 1000 && G.crate.userData.kkRound
-    && LOOK.wind.value >= 1 && LOOK.rim.value > 0 && !!M.metal.envMap && GFX.fade.a.value > 30 && typeof gfxSplash === 'function'), 'Schön: Belichtungskurve, dunklere Ecken, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus');
+    && LOOK.wind.value >= 1 && LOOK.rim.value > 0 && LOOK.rimC.value.r > LOOK.rimC.value.b && !!M.blob.map && LOOK.crateBlobs.count > 0 && !!M.metal.envMap && GFX.fade.a.value > 30 && typeof gfxSplash === 'function'), 'Schön: Belichtungskurve, dunklere Ecken, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus');
   check(await page.evaluate(() => { const n = parts.length; const u = units.find(v => v.alive && v.team === 0 && v.kind === 'bot'); const pt = peaceT; peaceT = 0; u.cd = 0; u.carry = null;
     const ok = fire(u, u.h); peaceT = pt; return ok && parts.length > n; }), 'Mündungsfeuer beim Schießen');
   check(await page.evaluate(() => { gfxRender(); return GFX.merged.roots > 200 && GFX.merged.meshes < 160 && renderer.info.render.calls < 700 && obstacles.length > 80; }), 'Bäume, Felsen und Brücken sind zusammengefasst: unter 700 Zeichenvorgänge pro Bild');
@@ -318,7 +318,7 @@ async function main() {
   await page.click('#gfxToggle', { force: true });
   check(await page.evaluate(() => GFX.mode === 'schnell' && localStorage.getItem('kk-gfx') === 'schnell' && document.querySelector('#gfxToggle').textContent === 'Grafik: Niedrig' && !GFX.contact.visible && sun.shadow.mapSize.x === 1024) && await lit() > 200,
     'Grafik „Niedrig“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');
-  check(await page.evaluate(() => document.querySelector('#vignette').hidden && LOOK.rim.value === 0 || (updateMood(0.05), document.querySelector('#vignette').hidden && LOOK.rim.value === 0)), 'Schnell: ohne dunkle Ecken und Lichtsaum');
+  check(await page.evaluate(() => { updateMood(0.05); return document.querySelector('#vignette').hidden && LOOK.rim.value > 0 && LOOK.rim.value < 0.3; }), 'Niedrig: ohne dunkle Ecken, Randlicht schwächer');
   await page.evaluate(() => localStorage.removeItem('kk-gfx'));
 
   console.log('Tag, Nacht und Wetter');

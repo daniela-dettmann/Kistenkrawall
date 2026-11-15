@@ -15,7 +15,10 @@ const GFX={
   mode:(function(){
     const q=/[?&#]grafik=(schoen|schnell|hoch|niedrig)/i.exec(location.search+location.hash);if(q)return /schoen|hoch/i.test(q[1])?'schoen':'schnell';
     try{const m=localStorage.getItem('kk-gfx');if(m==='schoen'||m==='schnell')return m;}catch(e){}
-    return 'schoen';
+    // first start: phones and tablets with little memory or few cores begin on „Niedrig“, everything else on „Hoch“;
+    // after that the frame rate decides (see the slow-device check at the end of this file)
+    const touch=matchMedia('(pointer: coarse)').matches,mem=navigator.deviceMemory||8,cores=navigator.hardwareConcurrency||8;
+    return touch&&(mem<=3||cores<=4)?'schnell':'schoen';
   })(),
   chosen:(function(){try{return !!localStorage.getItem('kk-gfx');}catch(e){return false;}})()||/[?&#]grafik=/i.test(location.search+location.hash),
   ok:true

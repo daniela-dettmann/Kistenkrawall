@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 15. November 2026 · Live-Version auf `main`: `8567aae` (PR #25: Wasser); mit dem Merge von #26 kommt der Schnee dazu
+Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee); mit dem Merge von #27 kommen Kontaktschatten und Randlicht dazu
 
 ## Links
 
@@ -40,6 +40,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `8567aae` (PR #25: Wasser);
 | #24 | Grafik neu: direkt auf den Bildschirm statt Nachbearbeitung (gegen Krisseln und Überstrahlen), Belichtungskurve; A: schärfere Texturen, Gras blendet aus, Schatten rasten ein, runde Kanten; B: Schattierung in Senken, Lichtsaum, Metallglanz, Wasserspiegelung; C: Wind, Wolkenschatten, Spuren, Spritzer, Mündungsfeuer, Explosionen, Morgennebel | gemergt |
 | #25 | Auftrag „Grafik-Upgrade Wasser, Schnee und Plastizität“, Schritt 1: Wasser mit Tiefenfarbe aus Küstenabstand, zwei Schaumlinien, gegenläufigen Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzern mit Tropfen; Wolken werfen keine harten Schatten mehr; Schalter heißt jetzt „Grafik: Hoch / Niedrig“ | gemergt |
 | #26 | Auftrag Grafik-Upgrade, Schritt 2: Schnee mit Spurenkarte (Fußabdrücke, Reifenrillen, schneien nach gut 12 s zu), Verwehungen an Bäumen, Felsen, Sandsäcken, Hauptquartieren und in Senken (bremsen auf 82 %, es staubt), Schneehauben auf Kisten, Felsen, Sandsäcken, Schneestaub an den Füßen | gemergt |
+| #27 | Auftrag Grafik-Upgrade, Schritt 3: weiche Kontaktschatten unter Figuren, Fahrzeugen und Kisten, warmes Randlicht auf Figuren und Fahrzeugen (auch auf „Niedrig“, dort schwächer), Grafikstufe beim ersten Start nach Gerät | gemergt |
 
 ## Was umgesetzt ist
 
@@ -142,6 +143,13 @@ Stand: 15. November 2026 · Live-Version auf `main`: `8567aae` (PR #25: Wasser);
 - Die frühere Spur aus aufgelegten Flecken bleibt nur noch für die Asche am Vulkan.
 - FPS vorher und nachher: nur auf dem iPhone messbar.
 
+### Kontaktschatten und Randlicht (Auftrag Grafik-Upgrade, Schritt 3; alle Karten)
+- Kontaktschatten: Der flache schwarze Kreis unter Figuren und Fahrzeugen hat jetzt einen weichen Rand, ist etwas größer und in der Mitte dunkler. Kisten bekommen denselben Schatten; beim Herunterfallen wird er kleiner, je höher die Kiste ist. Gestapelte und getragene Kisten haben keinen eigenen.
+- Randlicht: warmes Licht an den Kanten von Figuren und Fahrzeugen (Fresnel im Material), nachts etwas kühler. Auf „Niedrig“ schwächer statt aus.
+- Grafikstufe beim ersten Start: Touch-Geräte mit wenig Speicher oder höchstens vier Kernen beginnen auf „Niedrig“, alles andere auf „Hoch“. Danach entscheidet wie bisher die Bildrate (zweimal hintereinander unter 24 Bildern pro Sekunde, und man hat nichts fest gewählt: „Niedrig“). Ein iPhone 15 Pro Max beginnt auf „Hoch“.
+- SSAO (im Auftrag optional, nur Desktop) nicht gebaut: Die Schattierung in Senken und die Kontaktschatten decken das ab, und ein zusätzlicher Bilddurchgang würde wieder genau den Weg gehen, der auf dem iPhone gekrisselt hat.
+- FPS vorher und nachher für alle drei Schritte: nur auf dem iPhone messbar, Werte stehen noch aus.
+
 ### Tag, Nacht und Wetter (alle Karten)
 - Ein Tag dauert 8 Minuten. Die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten kommt das Abendrot, dann etwa drei Minuten Nacht, dann der Morgen. Die erste Welle fällt bei sechs Minuten Bauruhe in die Nacht.
 - Nachts: Mondlicht, Sterne, eine Laterne am eigenen Blechling, Lichtkegel vor allen Blechlingen und Fahrzeugen, leuchtende Kisten und Hauptquartiere. Die Lava leuchtet von selbst und erhellt die Vulkannacht.
@@ -185,6 +193,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Vulkan: Kartenwahl, Höhen von Lavastrom, Brücken, Insel und Krater, Wegfindung über die Insel und um den Krater (nie durch die Lava), Runde mit Kisten auf der Insel, Ausbruch (Sperre, Ausweichen, Schaden nur auf der Brücke), Weihnachtsedition auf dem Vulkan
 - Helligkeit: unter 2 % ganz helle Bildpunkte am Mittag in „Schön“; Blechlinge zusammengefasst, Schatten jedes zweite Bild
 - Geschwindigkeit: feste Deko ist zusammengefasst, unter 700 Zeichenvorgänge pro Bild; FPS-Anzeige einschaltbar
+- Kontaktschatten und warmes Randlicht vorhanden, Randlicht auf „Niedrig“ schwächer
 - Schnee: Fußspuren in der Spurenkarte, Verwehungen bremsen leicht, Schneehauben auf Kisten
 - Wasser: Küstenabstand berechnet, Tiefenfarbe und Schaum im Shader, Spritzer mit Tropfen und Schaumring
 - Grafik neu: Belichtungskurve, dunklere Ecken nur in „Schön“, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus, Explosion mit Feuerball, Rauch und Glut, Mündungsfeuer
