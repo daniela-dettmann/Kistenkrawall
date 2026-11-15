@@ -78,6 +78,16 @@ const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:
     const m=new THREE.MeshBasicMaterial({map:noiseTex,color:0xffffff,transparent:true,opacity:0,depthWrite:false,fog:true});
     noiseTex.repeat.set(1,1);
     mist=new THREE.Mesh(new THREE.PlaneGeometry(172,172,1,1).rotateX(-Math.PI/2),m);mist.position.y=MOUNTAIN?0.45:-1.0;mist.renderOrder=3;mist.visible=false;scene.add(mist);
+    // The mist is a flat sheet. Where a slope cuts through it, it used to end in a hard straight edge (seen on the
+    // iPhone as a speckled patch). It now thins out over the last 0.8 units above the ground, so it only lies in the
+    // low places, with soft edges.
+    const mY=mist.position.y;
+    gfxChain(m,sh=>{
+      sh.uniforms.uHgt={value:hgtTex};
+      sh.vertexShader='varying vec2 vKkM;\n'+sh.vertexShader.replace('#include <project_vertex>','vKkM=(modelMatrix*vec4(transformed,1.0)).xz;\n#include <project_vertex>');
+      sh.fragmentShader='uniform sampler2D uHgt;varying vec2 vKkM;\n'+HGT_GLSL+sh.fragmentShader.replace('#include <fog_fragment>',
+        'gl_FragColor.a*=smoothstep(0.0,0.8,'+mY.toFixed(2)+'-kkHgt(vKkM));\n#include <fog_fragment>');
+    },'mistEdge');
   }
 
   /* ---------- Footprints in snow and ash, tracks behind vehicles ---------- */
@@ -99,7 +109,9 @@ const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:
     stepT-=dt;if(stepT>0)return;stepT=0.16;
     const cx=camera.position.x,cz=camera.position.z;
     for(const u of units){
-      if(!u.alive||!u.moving||u.kind==='turm'||Math.hypot(u.x-cx,u.z-cz)>45)continue;
+      if(!u.alive||u.kind==='turm')continue;
+      const mv=u._lpx!==undefined&&Math.hypot(u.x-u._lpx,u.z-u._lpz)>0.02;u._lpx=u.x;u._lpz=u.z;   // u.moving is reset every frame
+      if(!mv||Math.hypot(u.x-cx,u.z-cz)>45)continue;
       u._pT=(u._pT||0)-0.16;if(u._pT>0)continue;
       const a=isVeh(u)?(u.hull||0):u.h,rx=Math.cos(a),rz=-Math.sin(a);
       if(isVeh(u)){u._pT=0.2;const w=(u.r||1)*0.75;for(const s of [-1,1])stamp(u.x+rx*w*s,u.z+rz*w*s,a,2.4,3.2);}

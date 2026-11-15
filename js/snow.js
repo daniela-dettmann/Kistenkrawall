@@ -1,10 +1,11 @@
 /* Kistenkrawall: Schnee (Gebirge und Weihnachtsedition auf Insel). Auftrag Grafik-Upgrade, Schritt 2.
    - Spurenkarte: eine 512er-Textur über das Spielfeld (256 auf „Niedrig“). Blechlinge stempeln bei jedem Schritt einen
-     Fußabdruck hinein, Fahrzeuge zwei durchgehende Rillen. Alle 0,1 Sekunden wird die Karte ein wenig aufgehellt,
-     nach gut 12 Sekunden ist eine Spur wieder zugeschneit.
+     Fußabdruck hinein, Fahrzeuge zwei durchgehende Rillen. Alle 0,2 Sekunden wird die Karte ein wenig aufgehellt,
+     nach gut 25 Sekunden ist eine Spur wieder zugeschneit.
    - Der Boden liest die Karte: Abdrücke sind dunkler und bläulich, haben einen hellen Rand und kippen das Licht wie
      eine Mulde (über die Normalen; das Gelände ist für echtes Absenken zu grob).
-   - Schneeverwehungen an Bäumen, Felsen, Sandsäcken, am Hauptquartier und in Senken. Wer hindurchläuft oder fährt,
+   - Schneeverwehungen an Bäumen, Felsen, Sandsäcken, am Hauptquartier, in Senken und auf tiefen Schneefeldern
+     (snowCover in xmas.js: mal liegt viel Schnee, mal nur eine dünne Schicht, durch die das Gras schaut). Wer hindurchläuft oder fährt,
      wird leicht gebremst (auf 82 %), und es staubt.
    - Schneehauben auf Kisten, Felsen und Sandsäcken. Leichter Schneestaub an den Füßen beim Laufen. */
 'use strict';
@@ -48,7 +49,7 @@ if(SNOW.on)(function(){
   let fadeT=0;
   function drawTrail(dt){
     const prev=renderer.getRenderTarget(),ac=renderer.autoClear;renderer.autoClear=false;renderer.setRenderTarget(rt);
-    fadeT+=dt;if(fadeT>=0.1){fadeT=0;renderer.render(fadeScene,trailCam);}
+    fadeT+=dt;if(fadeT>=0.2){fadeT=0;renderer.render(fadeScene,trailCam);}
     if(sn){stampMesh.count=sn;stampMesh.instanceMatrix.needsUpdate=true;renderer.render(trailScene,trailCam);sn=0;}
     renderer.setRenderTarget(prev);renderer.autoClear=ac;
   }
@@ -64,17 +65,19 @@ if(SNOW.on)(function(){
           float kkT=texture2D(uTrail,kkTU).r;
           float kkTb=(texture2D(uTrail,kkTU+vec2(uTrailPx*2.5,0.0)).r+texture2D(uTrail,kkTU-vec2(uTrailPx*2.5,0.0)).r
                      +texture2D(uTrail,kkTU+vec2(0.0,uTrailPx*2.5)).r+texture2D(uTrail,kkTU-vec2(0.0,uTrailPx*2.5)).r)*0.25;
-          diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.5,0.6,0.8),clamp(kkT*1.4,0.0,1.0)*0.85);
-          diffuseColor.rgb+=vec3(0.1,0.1,0.11)*clamp((kkTb-kkT)*1.6,0.0,1.0);`)
+          diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.42,0.52,0.72),clamp(kkT*1.6,0.0,1.0)*0.9);
+          diffuseColor.rgb+=vec3(0.14,0.14,0.15)*clamp((kkTb-kkT)*2.0,0.0,1.0);`)
         .replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
           {float kkX=texture2D(uTrail,kkTU+vec2(uTrailPx,0.0)).r-texture2D(uTrail,kkTU-vec2(uTrailPx,0.0)).r;
            float kkZ=texture2D(uTrail,kkTU+vec2(0.0,uTrailPx)).r-texture2D(uTrail,kkTU-vec2(0.0,uTrailPx)).r;
-           normal=normalize(normal+(viewMatrix*vec4(kkX*2.4,0.0,kkZ*2.4,0.0)).xyz);}`);
+           normal=normalize(normal+(viewMatrix*vec4(kkX*4.0,0.0,kkZ*4.0,0.0)).xyz);}`);
     },'trail');
   });
 
   /* ---------- Drifts and caps: one instanced mesh of snow domes ---------- */
-  const domeG=new THREE.SphereGeometry(1,16,7,0,TAU,0,Math.PI/2);
+  // a soft hump instead of a half sphere: it meets the ground flat, so there is no hard white rim that reads as a disc
+  const domeG=new THREE.LatheGeometry([...Array(9)].map((_,i)=>{const r=1-i/8;return new THREE.Vector2(Math.max(r,0.0001),(1-r*r)*(1-r*r));}),18);
+  domeG.computeVertexNormals();
   const snowMat2=new THREE.MeshPhongMaterial({color:snowCol,map:TX.ground,specular:0x111111,shininess:8});
   const domes=[],add=(x,y,z,sx,sy,sz,ry,drift)=>{domes.push({x,y,z,sx,sy,sz,ry});if(drift)SNOW.drifts.push({x,z,r:Math.max(sx,sz)*0.85});};
   const ok=(x,z)=>Math.abs(x)<LIM&&Math.abs(z)<LIM&&hgtRaw(x,z)>-0.6&&!onBridge(x,z)&&!onPlatform(x,z)&&pathDist(x,z)>1.6&&!pads.some(p=>Math.hypot(p.x-x,p.z-z)<2.6);
@@ -90,6 +93,14 @@ if(SNOW.on)(function(){
     }
   }
   for(const q of hqs)for(const [dx,dz] of [[2.6,2.2],[-2.6,2.2],[2.6,-2.2],[-2.6,-2.2]]){const x=q.x+dx,z=q.z+dz;add(x,hgt(x,z)-0.05,z,1.5,0.42,1.2,0,true);}
+  // deep snow fields (snowCover, xmas.js): soft wind-blown humps, so the snow is visibly thicker there
+  let deepN=0;
+  for(let x=-50;x<=50&&deepN<46;x+=4.5)for(let z=-50;z<=50&&deepN<46;z+=4.5){
+    const jx=x+((x*13+z*7)%5+5)%5*0.4-1,jz=z+((x*5+z*11)%5+5)%5*0.4-1;
+    if(snowCover(jx,jz)<0.72||!ok(jx,jz)||BASES.some(B=>Math.hypot(B.x-jx,B.z-jz)<9)||obstacles.some(o=>Math.hypot(o.x-jx,o.z-jz)<o.r+1.2))continue;
+    const r=1.3+snowCover(jx,jz)*1.2;add(jx,hgt(jx,jz)-0.07,jz,r,0.22+0.12*snowCover(jx,jz),r*0.75,(jx*0.7+jz)*0.5,true);deepN++;
+  }
+  SNOW.deep=deepN;
   // hollows: where the ground around lies higher
   let hollow=0;
   for(let x=-48;x<=48&&hollow<24;x+=3)for(let z=-48;z<=48&&hollow<24;z+=3){
@@ -121,17 +132,19 @@ if(SNOW.on)(function(){
     if(state!=='play')return;
     const fine=gfxFine(),cx=camera.position.x,cz=camera.position.z;
     for(const u of units){
-      if(!u.alive||u.kind==='turm'||!u.moving)continue;
+      if(!u.alive||u.kind==='turm')continue;
+      // moving or not is read from the position: the game's own flag is already reset when the frame gets here
+      const mv=u._spx!==undefined&&Math.hypot(u.x-u._spx,u.z-u._spz)>0.002;u._spx=u.x;u._spz=u.z;if(!mv)continue;
       const veh=isVeh(u),a=veh?(u.hull||0):u.h,rx=Math.cos(a),rz=-Math.sin(a),near=Math.hypot(u.x-cx,u.z-cz)<40;
       if(veh){
         // two continuous ruts: stretch each stamp from the last wheel position to the current one
         const w=(u.r||1)*0.72,px=u._rx,pz=u._rz;u._rx=u.x;u._rz=u.z;
         if(px!==undefined){const dx=u.x-px,dz=u.z-pz,l=Math.hypot(dx,dz);if(l>0.01&&l<3){const ang=Math.atan2(dx,dz);
-          for(const s of [-1,1])stamp((u.x+px)/2+rx*w*s,(u.z+pz)/2+rz*w*s,ang,0.5,l+0.45);}}
+          for(const s of [-1,1])stamp((u.x+px)/2+rx*w*s,(u.z+pz)/2+rz*w*s,ang,0.7,l+0.5);}}
       }else{
         // a step every 0.6 units walked, left and right in turn
         if(u._sx===undefined||Math.hypot(u.x-u._sx,u.z-u._sz)>3){u._sx=u.x;u._sz=u.z;}
-        if(Math.hypot(u.x-u._sx,u.z-u._sz)>=0.6){u._sx=u.x;u._sz=u.z;u._foot=-(u._foot||1);const fx=u.x+rx*0.17*u._foot,fz=u.z+rz*0.17*u._foot;stamp(fx,fz,a,0.42,0.62);
+        if(Math.hypot(u.x-u._sx,u.z-u._sz)>=0.6){u._sx=u.x;u._sz=u.z;u._foot=-(u._foot||1);const fx=u.x+rx*0.2*u._foot,fz=u.z+rz*0.2*u._foot;stamp(fx,fz,a,0.62,0.9);
           if(fine&&near&&parts.length<220)puffs(fx,hgt(fx,fz)+0.08,fz,1,dustCol,{size:u._inDrift?0.5:0.3,up:0.4,life:0.45,spread:0.5,op:0.55});}
       }
       if(veh&&fine&&near&&u._inDrift&&parts.length<220&&Math.random()<dt*8)puffs(u.x-Math.sin(a)*1.2,hgt(u.x,u.z)+0.2,u.z-Math.cos(a)*1.2,1,dustCol,{size:0.8,up:0.6,life:0.7,spread:0.8,op:0.6});

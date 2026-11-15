@@ -153,7 +153,8 @@ const gfxDust=MOUNTAIN?0xf4f7fb:VOLCANO?0x6f665f:0xcdb78c;
 setInterval(()=>{
   if(!gfxFine()||state!=='play'||document.hidden||parts.length>200)return;
   for(const u of units){
-    if(!u.alive||!isVeh(u)||!u.moving||u.kind==='turm')continue;
+    if(!u.alive||!isVeh(u)||u.kind==='turm')continue;
+    const mv=u._dpx!==undefined&&Math.hypot(u.x-u._dpx,u.z-u._dpz)>0.05;u._dpx=u.x;u._dpz=u.z;if(!mv)continue;   // u.moving is reset every frame
     const a=u.hull||0;puffs(u.x-Math.sin(a)*1.3+rand(-0.4,0.4),hgt(u.x,u.z)+0.2,u.z-Math.cos(a)*1.3+rand(-0.4,0.4),1,gfxDust,{size:0.75,up:0.35,life:0.9,spread:0.6,op:0.42});
   }
 },140);

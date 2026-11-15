@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee); mit dem Merge von #27 kommen Kontaktschatten und Randlicht dazu
+Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee). #27 (Kontaktschatten und Randlicht) ist gemergt, sein Deploy scheiterte aber an einem wackligen Musiktest; mit dem Merge von #28 geht beides live
 
 ## Links
 
@@ -41,6 +41,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee);
 | #25 | Auftrag „Grafik-Upgrade Wasser, Schnee und Plastizität“, Schritt 1: Wasser mit Tiefenfarbe aus Küstenabstand, zwei Schaumlinien, gegenläufigen Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzern mit Tropfen; Wolken werfen keine harten Schatten mehr; Schalter heißt jetzt „Grafik: Hoch / Niedrig“ | gemergt |
 | #26 | Auftrag Grafik-Upgrade, Schritt 2: Schnee mit Spurenkarte (Fußabdrücke, Reifenrillen, schneien nach gut 12 s zu), Verwehungen an Bäumen, Felsen, Sandsäcken, Hauptquartieren und in Senken (bremsen auf 82 %, es staubt), Schneehauben auf Kisten, Felsen, Sandsäcken, Schneestaub an den Füßen | gemergt |
 | #27 | Auftrag Grafik-Upgrade, Schritt 3: weiche Kontaktschatten unter Figuren, Fahrzeugen und Kisten, warmes Randlicht auf Figuren und Fahrzeugen (auch auf „Niedrig“, dort schwächer), Grafikstufe beim ersten Start nach Gerät | gemergt |
+| #28 | Schnee nachgebessert nach Danielas iPhone-Test: Fußspuren erschienen im echten Spiel nie (der Merker „läuft“ war schon zurückgesetzt, als der Schnee ihn las; gleicher Fehler bei Fahrzeugstaub und Aschespuren), jetzt größer, deutlicher und gut 25 s sichtbar; Schnee liegt ungleich (dünne Stellen mit Gras, tiefe Schneefelder mit Verwehungen); Verwehungen als weiche Hügel statt Halbkugeln; Morgennebel mit weichen Rändern (war die grünlich gesprenkelte Fläche mit gerader Kante); Deploy-Fehler von #27 (Sieg-Jingle) behoben | gemergt |
 
 ## Was umgesetzt ist
 
@@ -135,9 +136,10 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee);
 - FPS vorher und nachher: noch nicht gemessen. Messbar nur auf dem iPhone, Daniela schickt die Werte.
 
 ### Schnee (Auftrag Grafik-Upgrade, Schritt 2; Gebirge und Weihnachtsedition auf der Insel)
-- Spurenkarte (`js/snow.js`): eine 512er-Textur über das Spielfeld (256 auf „Niedrig“). Blechlinge drücken alle 0,6 Einheiten einen Fußabdruck hinein, abwechselnd links und rechts; Fahrzeuge ziehen zwei durchgehende Rillen. Alle 0,1 Sekunden wird die Karte etwas aufgehellt, nach gut 12 Sekunden ist eine Spur wieder zugeschneit.
+- Spurenkarte (`js/snow.js`): eine 512er-Textur über das Spielfeld (256 auf „Niedrig“). Blechlinge drücken alle 0,6 Einheiten einen Fußabdruck hinein, abwechselnd links und rechts; Fahrzeuge ziehen zwei durchgehende Rillen. Alle 0,2 Sekunden wird die Karte etwas aufgehellt, nach gut 25 Sekunden ist eine Spur wieder zugeschneit. Ob eine Figur läuft, liest der Schnee an ihrer Position ab (bis #27 las er einen Merker, der zu diesem Zeitpunkt schon zurückgesetzt war, deshalb gab es im Spiel keine Spuren).
 - Der Boden liest die Karte: Abdrücke sind dunkler und bläulich, haben einen hellen Rand und fangen das Licht wie eine Mulde. Echtes Absenken des Geländes geht nicht, das Gitter ist mit etwa einer Einheit zu grob für Fußabdrücke; deshalb nur über die Lichtrichtung (wie im Auftrag als Ausweichweg vorgesehen).
-- Schneeverwehungen als kleine Hügel: an der windabgewandten Seite von Bäumen und Felsen, an jedem zweiten Sandsack, an den vier Ecken der Hauptquartiere und in bis zu 24 Senken. Wer hindurchläuft oder fährt, ist auf 82 % gebremst; Fahrzeuge wirbeln dabei Schnee auf. Gilt für alle Einheiten gleich, auch für die KI und im Mehrspieler (der Host rechnet).
+- Schnee liegt ungleich (Weihnachtsedition): eine weiche Rauschkarte (`snowCover` in `js/xmas.js`) bestimmt, wo eine dünne Schicht liegt (Gras schaut grünlich durch, Halme stehen höher) und wo tiefer Schnee (reinweiß, Halme halb eingeschneit, zusätzliche Verwehungen).
+- Schneeverwehungen als weiche Hügel ohne harte Kante: an der windabgewandten Seite von Bäumen und Felsen, an jedem zweiten Sandsack, an den vier Ecken der Hauptquartiere, in bis zu 24 Senken und bis zu 46 auf tiefen Schneefeldern. Wer hindurchläuft oder fährt, ist auf 82 % gebremst; Fahrzeuge wirbeln dabei Schnee auf. Gilt für alle Einheiten gleich, auch für die KI und im Mehrspieler (der Host rechnet).
 - Schneehauben auf Kisten (nur auf der obersten Lage eines Stapels), Felsen und Sandsäcken.
 - Beim Laufen leichter Schneestaub an den Füßen, in Verwehungen mehr (nur „Hoch“).
 - Die frühere Spur aus aufgelegten Flecken bleibt nur noch für die Asche am Vulkan.
@@ -194,7 +196,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Helligkeit: unter 2 % ganz helle Bildpunkte am Mittag in „Schön“; Blechlinge zusammengefasst, Schatten jedes zweite Bild
 - Geschwindigkeit: feste Deko ist zusammengefasst, unter 700 Zeichenvorgänge pro Bild; FPS-Anzeige einschaltbar
 - Kontaktschatten und warmes Randlicht vorhanden, Randlicht auf „Niedrig“ schwächer
-- Schnee: Fußspuren in der Spurenkarte, Verwehungen bremsen leicht, Schneehauben auf Kisten
+- Schnee: Blechlinge hinterlassen im laufenden Spiel Fußspuren (ohne Nachhilfe im Test), Fußspuren in der Spurenkarte, Verwehungen bremsen leicht, Schneehauben auf Kisten; Weihnachtsedition: Schnee liegt ungleich
 - Wasser: Küstenabstand berechnet, Tiefenfarbe und Schaum im Shader, Spritzer mit Tropfen und Schaumring
 - Grafik neu: Belichtungskurve, dunklere Ecken nur in „Schön“, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus, Explosion mit Feuerball, Rauch und Glut, Mündungsfeuer
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
@@ -240,6 +242,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 - Tag, Nacht und Wetter: nur im Browser ohne Grafikkarte geprüft. Ob die Nacht auf einem Handy-Bildschirm im Hellen noch gut lesbar ist, ist offen. Der Regen besteht aus Punkten statt Strichen. Im Mehrspieler-Test wird die Wettermeldung an den Gast nicht eigens geprüft.
 - Vulkan: Auf echten Handys nicht gemessen. Das Gleichgewicht (Brücken näher beieinander, Ausbrüche) ist nur in simulierten Runden geprüft, nicht von Menschen gespielt.
 - Ein eigenes Bauruhe-Stück fürs Gebirge (im Auftrag optional) gibt es noch nicht.
+- Bildfehler aus Danielas Screenshots vom 15. November: Die grünlich gesprenkelte Fläche mit gerader Kante war der Morgennebel (eine flache Ebene, die Hänge hart anschnitt und auf dem iPhone flimmerte); er dünnt jetzt über dem Boden aus. Im Testbrowser trat die Kante nicht auf, ob sie auf dem iPhone weg ist, zeigt erst Danielas Test. Der helle Halbkreis am Stapelplatz ist noch ungeklärt.
 - Die Musik konnte ich nicht anhören, nur messen: keine Übersteuerung, keine Lücken, gleiche Lautstärke.
 - iPhone: iOS kann Daten von Web-Apps löschen, die etwa eine Woche nicht geöffnet wurden. Das betrifft auch den Spielstand.
 - Änderungen am ursprünglichen Claude-Artifact „Kistenkrawall“ kommen nicht automatisch ins Repo. Die Hauptversion ist das Repository.

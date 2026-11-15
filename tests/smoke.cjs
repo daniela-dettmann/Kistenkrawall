@@ -119,8 +119,7 @@ async function main() {
   await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
   await page.click('#resumeBtn', { force: true });
   await page.evaluate(() => endGame(true, 'Test.'));
-  await page.waitForTimeout(400);
-  check(await page.evaluate(() => /^sieg(_x)?$/.test(music.playing || '')), 'Musik: Sieg-Jingle am Rundenende');
+  check(await page.waitForFunction(() => /^sieg(_x)?$/.test(music.playing || ''), null, { timeout: 3000 }).then(() => true, () => false), 'Musik: Sieg-Jingle am Rundenende');
 
   console.log('App / offline');
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -215,6 +214,8 @@ async function main() {
   await page.waitForTimeout(1200);
   check(await page.evaluate(() => { const b = units.filter(u => u.kind === 'bot'); return b.length > 0 && b.every(u => ['santa', 'elf', 'snowman'].includes(u.bot.costume)) && new Set(b.map(u => u.bot.costume)).size >= 2; }), 'Blechlinge als Weihnachtsmänner, Elfen und Schneemänner');
   check(await page.evaluate(() => crates.length > 0 && crates.every(c => c.bow)), 'Kisten mit Geschenkschleife');
+  check(await page.evaluate(() => { const v = []; for (let x = -40; x <= 40; x += 4) for (let z = -40; z <= 40; z += 4) v.push(snowCover(x, z)); return SNOW.deep > 8 && v.some(a => a < 0.2) && v.some(a => a > 0.8); }),
+    'Schnee liegt ungleich: dünne Stellen und tiefe Schneefelder mit Verwehungen');
   await page.evaluate(() => { const t = spawnUnit(0, player.x + 3, player.z, 'fahrzeug', 'tank'); pause(true); });
   await page.click('#attackNowBtn', { force: true });
   await page.waitForTimeout(400);
@@ -251,9 +252,11 @@ async function main() {
   await page.click('#startBtn', { force: true });
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && !!window.mountainDrift), 'Runde auf dem Gebirge läuft, mit Schneetreiben');
+  { const s0 = await page.evaluate(() => SNOW.stamps); await page.waitForTimeout(2500);
+    check(await page.evaluate(s0 => SNOW.stamps > s0, s0), 'Schnee: Blechlinge hinterlassen im laufenden Spiel Fußspuren (ohne Nachhilfe im Test)'); }
   check(await page.evaluate(() => {
     const rt = SNOW.target(), R = rt.width, px = new Uint8Array(4), x0 = player.x, z0 = player.z;
-    for (let i = 0; i < 40; i++) { moveUnit(player, 1, 0, 0.05, 1); player.moving = true; updateMood(0.05); }
+    for (let i = 0; i < 40; i++) { moveUnit(player, 1, 0, 0.05, 1); updateMood(0.05); }
     let mx = 0; for (let k = 0; k < 50; k++) { const x = x0 + k * 0.3, i = Math.floor((x / 112 + 0.5) * R), j = Math.floor((z0 / 112 + 0.5) * R); renderer.readRenderTargetPixels(rt, i, j, 1, 1, px); mx = Math.max(mx, px[0]); }
     player.x = x0; player.z = z0;
     const d = SNOW.drifts[0], u = spawnUnit(0, d.x, d.z, 'kaempfer'); const a = u.x; moveUnit(u, 1, 0, 0.1, 1); const slow = u.x - a; u.x = 30; u.z = 30; const b = u.x; moveUnit(u, 1, 0, 0.1, 1); const fast = u.x - b;

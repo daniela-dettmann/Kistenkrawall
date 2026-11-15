@@ -101,7 +101,7 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 
 ## Schnee
 
-`js/snow.js`, nur auf dem Gebirge und in der Weihnachtsedition auf der Insel (`SNOW.on`). Eine eigene kleine Szene mit Kamera von oben zeichnet in eine Textur (`SNOW.target()`, 512 bzw. 256): Fußabdrücke und Reifenrillen mit Maximum-Mischung, alle 0,1 s eine Subtraktion von 2/255 zum Zuschneien. Der Bodenshader liest sie (Kennzeichen `trail`). Verwehungen und Hauben sind ein einziges Instanzen-Netz; `SNOW.drifts` und `SNOW.inDrift(x, z)` liefern die Bremszonen, `moveUnit` ist umhüllt (`SNOW.slow` = 0,82).
+`js/snow.js`, nur auf dem Gebirge und in der Weihnachtsedition auf der Insel (`SNOW.on`). Eine eigene kleine Szene mit Kamera von oben zeichnet in eine Textur (`SNOW.target()`, 512 bzw. 256): Fußabdrücke und Reifenrillen mit Maximum-Mischung, alle 0,2 s eine Subtraktion von 2/255 zum Zuschneien. Ob eine Einheit läuft, liest der Schnee an der Positionsänderung ab, nicht an `u.moving` (das setzt `update` vor `updateMood` schon zurück). `snowCover(x, z)` in `js/xmas.js` (0 dünn bis 1 tief) steuert in der Weihnachtsedition Bodenfarbe, Gras und zusätzliche Verwehungen (`SNOW.deep`). Der Bodenshader liest sie (Kennzeichen `trail`). Verwehungen und Hauben sind ein einziges Instanzen-Netz; `SNOW.drifts` und `SNOW.inDrift(x, z)` liefern die Bremszonen, `moveUnit` ist umhüllt (`SNOW.slow` = 0,82).
 
 ## Tag, Nacht und Wetter
 
