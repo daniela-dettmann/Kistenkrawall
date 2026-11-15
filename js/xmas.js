@@ -31,10 +31,12 @@ function snowCover(x,z){
 (function(){
   const btn=$('#xmasToggle');if(!btn)return;
   if(!xmasSeason()&&!XMAS_FORCED)return;
-  btn.hidden=false;btn.textContent='Weihnachtsedition: '+(XMAS?'an':'aus');btn.setAttribute('aria-pressed',XMAS?'true':'false');
+  const row=$('#xmasRow');if(row)row.hidden=false;btn.setAttribute('aria-checked',XMAS?'true':'false');
   btn.addEventListener('click',()=>{
+    if(typeof MP!=='undefined'&&MP){toast('Im Mehrspieler nicht umschaltbar',1.8);return;}
     try{localStorage.setItem('kk-xmas',XMAS?'off':'on');}catch(e){}
-    if(state==='play')writeSave();
+    // the page reloads; a running round is saved and continues paused afterwards
+    if(state==='play'||state==='pause'){writeSave();try{sessionStorage.setItem('kk-autoresume','1');}catch(e){}}
     const u=new URL(location.href);u.search='';u.hash='';location.replace(u.href);
   });
 })();

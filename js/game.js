@@ -50,7 +50,7 @@ function startRest(){
   sfx('repair');
 }
 function startGame(){
-  clearSave();
+  clearSave();D=DIFFS[diffKey];
   initAudio();if(AC&&AC.state==='suspended')AC.resume();
   tryLandscape();
   newGame(false);state='play';
@@ -70,7 +70,8 @@ function toMenu(){
 }
 $('#startBtn').addEventListener('click',startGame);
 function syncSoundUI(){
-  for(const b of document.querySelectorAll('.sndBtn')){b.setAttribute('aria-pressed',soundOn?'true':'false');b.textContent=soundOn?'Ton an':'Ton aus';}
+  for(const b of document.querySelectorAll('.sndBtn'))b.setAttribute('aria-checked',soundOn?'true':'false');
+  {const a=$('#sndNum'),b=$('#musNum');if(a)a.textContent=Math.round(soundVol*100);if(b)b.textContent=Math.round(musicVol*100);}
   for(const r of document.querySelectorAll('.sndVol input')){r.value=soundVol;r.disabled=!soundOn;}
   for(const r of document.querySelectorAll('.musVol input')){r.value=musicVol;r.disabled=!soundOn;}
 }
@@ -86,8 +87,8 @@ for(const r of document.querySelectorAll('.sndVol input')){
   r.addEventListener('change',()=>{if(AC&&soundOn)playSound(AC,noiseBuf,'hit',1,master);});
 }
 syncSoundUI();
-$('#helpBtn').addEventListener('click',()=>{$('#panelStart').hidden=true;$('#panelHelp').hidden=false;$('#menu').scrollTop=0;});
-$('#helpBack').addEventListener('click',()=>{$('#panelHelp').hidden=true;$('#panelStart').hidden=false;});
+$('#helpBtn').addEventListener('click',()=>{$('#panelSettings').hidden=true;$('#panelHelp').hidden=false;$('#menu').scrollTop=0;});
+$('#helpBack').addEventListener('click',()=>{$('#panelHelp').hidden=true;$('#panelSettings').hidden=false;});
 $('#againBtn').addEventListener('click',startGame);
 $('#toMenuBtn').addEventListener('click',()=>toMenu());
 $('#resumeBtn').addEventListener('click',()=>pause(false));
@@ -100,11 +101,13 @@ for(const b of document.querySelectorAll('#peaceSeg button')){
   b.addEventListener('click',()=>{peaceMin=+b.dataset.p;try{localStorage.setItem('kk-rest',String(peaceMin));}catch(e){}
     for(const o of document.querySelectorAll('#peaceSeg button'))o.setAttribute('aria-pressed',o===b?'true':'false');});
 }
-for(const b of document.querySelectorAll('#diffSeg button')){
-  b.setAttribute('aria-pressed',b.dataset.d===diffKey?'true':'false');
-  b.addEventListener('click',()=>{diffKey=b.dataset.d;D=DIFFS[diffKey];try{localStorage.setItem('kk-diff',diffKey);}catch(e){}
-    for(const o of document.querySelectorAll('#diffSeg button'))o.setAttribute('aria-pressed',o===b?'true':'false');});
+// difficulty sits on the start screen and in the settings; both show the same choice. During a round it only
+// changes what the next round uses (the running one keeps its values, see restore/newGame).
+function syncDiffUI(){for(const o of document.querySelectorAll('.diffSeg button'))o.setAttribute('aria-pressed',o.dataset.d===diffKey?'true':'false');}
+for(const b of document.querySelectorAll('.diffSeg button')){
+  b.addEventListener('click',()=>{diffKey=b.dataset.d;if(state==='menu')D=DIFFS[diffKey];try{localStorage.setItem('kk-diff',diffKey);}catch(e){}syncDiffUI();});
 }
+syncDiffUI();
 
 /* ---------- Update ---------- */
 const v3=new THREE.Vector3();
@@ -151,7 +154,7 @@ function update(dt){
       camYaw=TAC_YAW;
     }else{
       // shoulder view: right stick fine-tunes, otherwise the view swings into the walking direction
-      let turn=aimStick.id!==null?aimStick.x:0;
+      let turn=aimStick.id!==null?aimStick.x*lookInv:0;
       if(Math.abs(turn)<0.15)turn=0;
       if(keys['arrowleft'])turn-=1;if(keys['arrowright'])turn+=1;
       if(turn!==0){camYaw-=Math.sign(turn)*Math.pow(Math.abs(turn),1.5)*1.7*dt;camManualT=1.2;}

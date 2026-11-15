@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee). #27 (Kontaktschatten und Randlicht) ist gemergt, sein Deploy scheiterte aber an einem wackligen Musiktest; mit dem Merge von #28 geht beides live
+Stand: 15. November 2026 · Live-Version auf `main`: `4e6bf9d` (PR #28: Schnee nachgebessert; damit sind auch #27 Kontaktschatten und Randlicht live)
 
 ## Links
 
@@ -42,6 +42,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee).
 | #26 | Auftrag Grafik-Upgrade, Schritt 2: Schnee mit Spurenkarte (Fußabdrücke, Reifenrillen, schneien nach gut 12 s zu), Verwehungen an Bäumen, Felsen, Sandsäcken, Hauptquartieren und in Senken (bremsen auf 82 %, es staubt), Schneehauben auf Kisten, Felsen, Sandsäcken, Schneestaub an den Füßen | gemergt |
 | #27 | Auftrag Grafik-Upgrade, Schritt 3: weiche Kontaktschatten unter Figuren, Fahrzeugen und Kisten, warmes Randlicht auf Figuren und Fahrzeugen (auch auf „Niedrig“, dort schwächer), Grafikstufe beim ersten Start nach Gerät | gemergt |
 | #28 | Schnee nachgebessert nach Danielas iPhone-Test: Fußspuren erschienen im echten Spiel nie (der Merker „läuft“ war schon zurückgesetzt, als der Schnee ihn las; gleicher Fehler bei Fahrzeugstaub und Aschespuren), jetzt größer, deutlicher und gut 25 s sichtbar; Schnee liegt ungleich (dünne Stellen mit Gras, tiefe Schneefelder mit Verwehungen); Verwehungen als weiche Hügel statt Halbkugeln; Morgennebel mit weichen Rändern (war die grünlich gesprenkelte Fläche mit gerader Kante); Deploy-Fehler von #27 (Sieg-Jingle) behoben | gemergt |
+| #29 | Auftrag „Menü aufräumen und Einstellungen im Spiel“: Hauptmenü mit drei Knöpfen und „Zuletzt: …“, Spielstart mit Kartenbildern und Schwierigkeit, Einstellungen in vier Bereichen (Spiel, Grafik, Ton, Steuerung) mit neuen Schaltern (Tageszeit, Wetter, Tipps, weiche Schatten, Spuren im Schnee, Kamera umkehren, Vibration), aus Hauptmenü und Pause erreichbar; Pausenmenü neu, Pause-Knopf oben rechts; Mehrspieler-Pause nur als Ebene | gemergt |
 
 ## Was umgesetzt ist
 
@@ -54,12 +55,25 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee).
 ### Updates
 - Jeder Deploy bekommt automatisch eine eigene Version, ein Hochzählen von Hand ist nicht nötig.
 - Die App prüft beim Start, bei Rückkehr aus dem Hintergrund und alle 30 Minuten auf neue Versionen. Erst wenn eine neue Version komplett geladen ist, kommt der Hinweis: im Menü als Banner „Neue Version verfügbar“, während einer Runde nur als Abzeichen plus Knopf im Pausenmenü, am Rundenende als Knopf.
-- Unten im Startmenü steht die laufende Version mit Datum und Kennung.
+- Unten im Hauptmenü steht die laufende Version mit Datum und Kennung.
+
+### Menü und Einstellungen (Auftrag „Menü aufräumen“, `js/menu.js`)
+- Hauptmenü mit nur drei Knöpfen: **Spielen** (groß), **Mehrspieler**, **Einstellungen**. Darunter „Zuletzt: Insel, normal“, bei einem Spielstand ergänzt um „gespeicherte Runde wartet“.
+- Spielstart: Karten als Bildkarten (Insel, Gebirge, Vulkan, die gewählte orange umrandet), Schwierigkeit Leicht / Normal / Schwer, „Los geht's“, oben „Zurück“. Gibt es einen Spielstand, steht dort oben „Weiterspielen“. Karte und Schwierigkeit werden gemerkt: von „Spielen“ bis zum Start sind es zwei Tipps. Eine andere Karte lädt die Seite neu (die Welt wird beim Laden gebaut), danach ist der Spielstart wieder offen.
+- Einstellungen in vier Bereichen als Kacheln (im Hochformat 2×2, auf dem Handy quer in einer Reihe), je höchstens fünf Zeilen, alles wird sofort gespeichert:
+  - Spiel: Schwierigkeit, Bauruhe zwischen den Wellen, Tageszeit Auto / Tag / Nacht, Wetter, Tipps anzeigen (Tastenzeile, Wischhinweis, Beschriftung der Sticks); dazu „Wie wird gespielt?“
+  - Grafik: Qualität Niedrig / Hoch, weiche Schatten, Spuren im Schnee (auch Aschespuren), FPS-Anzeige, Weihnachtsedition (nur in der Saison; lädt neu, eine laufende Runde geht pausiert weiter)
+  - Ton: Ton an/aus, Musik und Effekte als Regler mit Zahl
+  - Steuerung: Kamera umkehren (Wischen, Ziehen und rechter Stick drehen andersherum), Vibration bei Treffern. Safari auf dem iPhone kann Webseiten nicht vibrieren lassen; der Schalter ist dort ausgegraut und sagt das.
+- Dieselben Einstellungen öffnen sich aus der Pause, der Zurück-Knopf heißt dort „Zurück zur Pause“. Alles wirkt sofort; Schwierigkeit („Gilt ab der nächsten Runde“) und Bauruhe („Gilt ab der nächsten Bauruhe“) sagen, dass sie später greifen. Die laufende Runde behält ihre Schwierigkeit, auch im Spielstand.
+- Pause: Knopf oben rechts (46 px), am Rechner auch Escape oder P. Pausenmenü: **Weiter** (groß), Einstellungen, Neu starten, Hauptmenü, dazu wie bisher „Nächste Welle jetzt starten“ in der Bauruhe. Escape in den Einstellungen führt einen Schritt zurück.
+- Mehrspieler: Die Pause ist nur eine Ebene über dem Spiel, das Spiel läuft bei beiden weiter, Eingaben gehen solange nicht ans Spiel. Ohne „Neu starten“ und ohne „Nächste Welle“. Nur ein Verbindungsabbruch hält beide Geräte an.
+- Alle Knöpfe im Menü sind mindestens 44 px hoch.
 
 ### Ton und Musik
 - Alle Töne werden live im Browser erzeugt, es gibt keine Audiodateien.
 - Ton kommt nach Bildschirmsperre, App-Wechsel oder Anruf zurück. Auf dem iPhone ist er auch bei eingeschaltetem Stummschalter hörbar (Safari 16.4+).
-- Getrennte Regler für Effekte und Musik im Start- und Pausenmenü, dazu „Ton aus“. Standard: Effekte 70 %, Musik 10 %.
+- Getrennte Regler für Effekte und Musik in den Einstellungen (Bereich Ton, auch aus der Pause), dazu „Ton aus“. Standard: Effekte 70 %, Musik 10 %.
 - Eigene Hintergrundmusik im Stil funkiger Konsolenspiele der späten 90er, mit Slap-Bass, Orgel, Clavinet, Bläsern, Vibraphon und Schlagzeug:
   - Titelthema im Menü (Funk in E, 104 BPM)
   - Bauruhe (Groove in D, 90 BPM)
@@ -78,11 +92,11 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee).
 ### Spielstand
 - Ein Spielstand wird automatisch gespeichert: beim Pausieren (auch beim Wegwischen der App), beim Schließen und alle 30 Sekunden.
 - Gespeichert werden Welle und Bauruhe, Schwierigkeit, Hauptquartiere, alle Blechlinge, Fahrzeuge und Türme mit Position, Leben, Waffe, Munition, Schild und Gold-Status, Kisten am Boden, auf den Stapeln und in den Armen, Wellenplanung, wartende Luftschläge, Statistik und Kamera. Ein Spielstand ist etwa 5 KB groß.
-- Im Startmenü steht oben „Weiterspielen“ mit Stand und Zeitpunkt. Fortgesetzt wird im Pausenmenü.
+- Im Spielstart steht oben „Weiterspielen“ mit Stand und Zeitpunkt, das Hauptmenü weist darauf hin. Fortgesetzt wird im Pausenmenü.
 - Sieg, Niederlage oder „Neues Spiel“ löschen den Spielstand. Unpassende oder kaputte Spielstände werden mit Hinweis verworfen.
 
 ### Karten: Insel und Gebirge
-- Im Startmenü steht vor der Schwierigkeit die Kartenwahl „Insel“ oder „Gebirge“. Die Wahl wird gemerkt, die Insel bleibt unverändert.
+- Im Spielstart steht vor der Schwierigkeit die Kartenwahl als Bildkarten. Die Wahl wird gemerkt, die Insel bleibt unverändert.
 - Gebirge: Die Hauptquartiere liegen in Tälern auf gegenüberliegenden Seiten, ringsum verschneite Gipfel und Berge am Horizont. In der Mitte trennt eine tiefe Schlucht die beiden Hälften, mit Wolken unterhalb der Kanten.
 - Zwei Wege führen über die Schlucht: links eine breite Holzbrücke, rechts ein enger Pass zwischen hohen Felswänden. Beide sind breit genug für Panzer und Fahrzeuge.
 - Die Kisten landen auf offenen Plateaus in der Mitte beider Wege, gleich weit von beiden Basen entfernt (blau bei der Brücke, gelb am Pass).
@@ -104,7 +118,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee).
 - Geprüft im Test und in einer simulierten Runde über acht Minuten: Beide Teams sammeln Kisten, die Welle kommt über die Insel, niemand läuft durch die Lava.
 
 ### Grafik (alle Karten)
-- Schalter „Grafik: Schön / Schnell“ im Startmenü, wird gemerkt. Ruckelt das Spiel, stellt es von selbst auf „Schnell“, solange nichts fest gewählt ist.
+- Qualität „Niedrig / Hoch“ in den Einstellungen (Bereich Grafik), wird gemerkt. Ruckelt das Spiel, stellt es von selbst auf „Schnell“, solange nichts fest gewählt ist.
 - Schön: weicher Schein um Explosionen, Lava, Goldkisten und Sonne, etwas kräftigere Farben und Kontraste, warme Lichter und kühle Schatten, dunklere Bildecken. Explosionen mit Druckwelle und Funken, Fahrzeuge ziehen Staub, Bäume und Felsen haben einen Schattenfleck am Boden.
 - In beiden Stufen: Schaum und helles Flachwasser am Ufer, Glut dort, wo Lava auf Land trifft, unregelmäßigerer Boden, nasser Saum am Wasser.
 - Schnell: ohne Nachbearbeitung, kleinere Schatten, geringere Auflösung.
@@ -114,7 +128,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee).
 - Flimmern am Ufer behoben: Die Höhenkarte für Schaum und Lavaglut hat jetzt genau einen Punkt pro Geländepunkt. Vorher war sie gröber und versetzt, die Schaumkante war gezackt und flackerte. Der Schaum ist weicher und langsamer.
 - Die Sonne wandert in kleinen Schritten alle 2,5 Sekunden statt in jedem Bild, damit Schattenkanten nicht ständig kriechen.
 - Überhellte Stellen: Der Schein greift nur noch bei echten Lichtern (Schwelle 0,96), nicht mehr bei Sand, Himmel und Schnee. Helle Flächen werden stärker abgefangen. Die Laterne ist auf Schnee halb so stark. Gemessen in sieben Szenen: kein Bildpunkt über 250 von 255.
-- FPS-Anzeige im Startmenü einschaltbar: Bilder pro Sekunde, längstes Bild, Zeichenvorgänge, Dreiecke.
+- FPS-Anzeige in den Einstellungen (Bereich Grafik) einschaltbar: Bilder pro Sekunde, längstes Bild, Zeichenvorgänge, Dreiecke.
 - Helle Flächen fressen in „Schön“ nicht mehr aus (weiche Obergrenze für Lichter, Boden wird nicht mehr aufgehellt). Die Weihnachtsedition hat ein kühles Winterlicht mit bläulichen Schatten, damit der Schnee wie Schnee aussieht.
 
 - Neu aufgebaut nach Danielas zweitem iPhone-Test („Schön“ krisselte an Kanten und überstrahlte stellenweise): Beide Stufen zeichnen jetzt direkt auf den Bildschirm, die Kantenglättung des iPhones greift also in beiden. Helle Stellen fängt eine Belichtungskurve in jedem Material weich ab, nichts wird mehr reinweiß. Schein gibt es nur noch an echten Lichtern (Explosionen, Mündungsfeuer, Lava, Goldkisten). Die dunkleren Ecken sind eine einfache Überlagerung.
@@ -158,16 +172,16 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee).
 - Wetter kommt und geht von selbst: auf der Insel Regen, manchmal mit Gewitter (Blitz und Donner), im Gebirge Schneesturm mit Nebel, am Vulkan Ascheregen. In der Weihnachtsedition auf der Insel gibt es statt Regen nur Dunst, dort schneit es ja schon.
 - Nur Optik und Ton: Sichtweite, Zielen und KI bleiben gleich.
 - Im Mehrspieler sehen beide dieselbe Tageszeit und dasselbe Wetter.
-- Schalter „Tag, Nacht & Wetter: an/aus“ im Startmenü, wird gemerkt. Aus heißt: immer Tag, kein Wetter.
+- Einstellungen › Spiel: Tageszeit Auto / Tag / Nacht und Wetter an/aus, beides gemerkt (bis #28 ein gemeinsamer Schalter „Tag, Nacht & Wetter“; wer ihn aus hatte, bekommt „Tag“).
 - Neue Töne im Tonstudio: Regen, Donner.
 
 ### Mehrspieler (1 gegen 1)
-- Startmenü: „Gegen Freund spielen“ mit „Raum erstellen“ (Code anzeigen, kopieren, teilen) und „Raum beitreten“ (Code eingeben). Karte und Bauruhe wählt der Host vorher im Startmenü.
+- Hauptmenü: „Mehrspieler“ mit „Raum erstellen“ (Code anzeigen, kopieren, teilen) und „Raum beitreten“ (Code eingeben). Karte (im Spielstart) und Bauruhe (Einstellungen) wählt der Host vorher.
 - Direkte, verschlüsselte WebRTC-Verbindung, Vermittlung über den öffentlichen PeerJS-Server. Im gleichen WLAN läuft sie lokal. Noch kein TURN-Server, der Platz dafür ist vorbereitet (`NET_CFG.turn` in `js/net.js`).
 - Der Host spielt Orange und rechnet das Spiel, der Gast spielt Petrol, schickt nur Eingaben und bekommt etwa zehnmal pro Sekunde den Stand. Seine eigene Figur bewegt sich sofort und wird sanft korrigiert.
 - Faire Regeln: beide Teams mit gleich starken KI-Mitstreitern, keine automatischen Wellen.
 - Sicherheit: Raumcode aus kryptografischem Zufall (8 Zeichen ohne 0/O/1/I/L), Ablauf nach 10 Minuten, nur ein Gast, Versionsvergleich mit Hinweis „bitte aktualisieren“, jede Nachricht geprüft (Format, Werte, Größe, Häufigkeit), Texte nur als Text angezeigt, kein Chat, keine persönlichen Daten.
-- Pause und App im Hintergrund pausieren beide. Bei Abbruch „Verbindung verloren“, 60 Sekunden automatisches Wiederverbinden. Verlässt der Host das Spiel, endet es für beide, auch wenn seine Abschiedsnachricht verloren geht (der Gast merkt beim Wiederverbinden, dass der Raum weg ist). Der Einzelspieler-Spielstand wird nie überschrieben.
+- Die Pause ist im Mehrspieler nur eine Ebene, das Spiel läuft weiter (seit #29; vorher pausierte sie beide). Bei Abbruch „Verbindung verloren“, 60 Sekunden automatisches Wiederverbinden. Verlässt der Host das Spiel, endet es für beide, auch wenn seine Abschiedsnachricht verloren geht (der Gast merkt beim Wiederverbinden, dass der Raum weg ist). Der Einzelspieler-Spielstand wird nie überschrieben.
 - Der Gast sieht Explosionen, Töne, Schüsse und seine Meldungen. Flieger beim Luftschlag sieht er nicht, nur die Einschläge.
 
 ### Weihnachtsedition (jedes Jahr 1. November bis 10. Januar)
@@ -185,6 +199,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee).
 
 Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unter anderem:
 - Dateien: alles verlinkt, offline gespeichert, nichts von fremden Servern
+- Menü: Hauptmenü nur mit drei Knöpfen und „Zuletzt: …“, Tippflächen ab 44 px, Pausenmenü mit Weiter, Einstellungen, Neu starten, Hauptmenü, Einstellungen aus der Pause („Zurück zur Pause“, Hinweis „Gilt ab der nächsten Runde“), Schalter wirken sofort und werden gespeichert (Schwierigkeit erst nächste Runde, weiche Schatten, Spuren, Tipps, Kamera umkehren, Musik-Regler), Escape führt zurück, nach Kartenwechsel ist der Spielstart offen, Hinweis auf gespeicherte Runde
 - Spiel: Start, 3D-Grafik, Pause, Wellen, Ton, Ton nach Unterbrechung, automatische Pause
 - App: Service Worker, Spiel startet offline
 - Spielstand: Runde speichern, neu laden, fortsetzen, alles identisch, Löschen am Rundenende
@@ -200,7 +215,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Wasser: Küstenabstand berechnet, Tiefenfarbe und Schaum im Shader, Spritzer mit Tropfen und Schaumring
 - Grafik neu: Belichtungskurve, dunklere Ecken nur in „Schön“, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus, Explosion mit Feuerball, Rauch und Glut, Mündungsfeuer
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
-- Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Schalter aus
+- Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Tageszeit „Tag“ und „Nacht“, Wetter aus
 - Tonstudio und Update-Hinweis
 
 Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikkarte, drei Browserseiten gleichzeitig). Er läuft deshalb nur lokal vor dem Push; mit `KK_MP_TEST=1` lässt er sich auch auf GitHub erzwingen.
@@ -218,6 +233,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 | `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
 | `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
 | `js/daynight.js` | Tag, Nacht und Wetter |
+| `js/menu.js` | Menü: Hauptmenü, Spielstart, Einstellungen mit vier Bereichen, Pause, Mehrspieler-Pause als Ebene, Schalter für Tipps, Spuren, Kamera umkehren, Vibration |
 | `js/snow.js` | Schnee: Spurenkarte, Verwehungen mit Bremsen, Schneehauben, Schneestaub |
 | `js/water.js` | Wasser: Tiefenfarbe, Uferschaum, Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzer |
 | `js/look.js` | Aussehen: Wind, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz, Lichtsaum, Spuren, Explosionen, Mündungsfeuer |

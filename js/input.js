@@ -26,7 +26,7 @@ bindStick($('#stickL'),joy);bindStick($('#stickR'),aimStick);
 /* Desktop: drag with the mouse to turn the view */
 let drag=null;
 canvas.addEventListener('pointerdown',e=>{initAudio();if(e.pointerType==='mouse')drag={id:e.pointerId,x:e.clientX,y:e.clientY};});
-window.addEventListener('pointermove',e=>{if(drag&&e.pointerId===drag.id&&camMode==='schulter'){camYaw-=(e.clientX-drag.x)*0.0065;camManualT=1.5;drag.x=e.clientX;drag.y=e.clientY;}});
+window.addEventListener('pointermove',e=>{if(drag&&e.pointerId===drag.id&&camMode==='schulter'){camYaw-=(e.clientX-drag.x)*0.0065*lookInv;camManualT=1.5;drag.x=e.clientX;drag.y=e.clientY;}});
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2(),gplane=new THREE.Plane(new THREE.Vector3(0,1,0),0),hitP=new THREE.Vector3();
 canvas.addEventListener('pointermove',e=>{
   if(e.pointerType!=='mouse'||camMode!=='taktik'||!player)return;
@@ -54,12 +54,14 @@ function setCollect(c,quiet){if(MP==='guest'){netSendAct('collect');return;}team
 $('#bCollect').addEventListener('pointerdown',e=>{e.preventDefault();flashBtn(e.currentTarget);setCollect(teams[0].collect==='gelb'?'blau':'gelb');});
 /* Swipe anywhere on the right half to turn the view (shoulder) or the aim (tactical) */
 let look={id:null,x:0},swipeAim=null,swipeT=-1e9;
+// settings › Steuerung › „Kamera umkehren“: wiping, dragging and the right stick turn the other way (-1)
+let lookInv=(function(){try{return localStorage.getItem('kk-inv')==='1'?-1:1;}catch(e){return 1;}})();
 const lz=$('#lookZone');
 lz.addEventListener('pointerdown',e=>{e.preventDefault();initAudio();look.id=e.pointerId;look.x=e.clientX;try{lz.setPointerCapture(e.pointerId);}catch(_){}});
 lz.addEventListener('pointermove',e=>{
   if(e.pointerId!==look.id)return;const dx=e.clientX-look.x;look.x=e.clientX;
-  if(camMode==='taktik'){if(player){if(performance.now()-swipeT>1500)swipeAim=player.h;swipeAim-=dx*0.012;swipeT=performance.now();}}
-  else{camYaw-=dx*0.0085;camManualT=1.2;}
+  if(camMode==='taktik'){if(player){if(performance.now()-swipeT>1500)swipeAim=player.h;swipeAim-=dx*0.012*lookInv;swipeT=performance.now();}}
+  else{camYaw-=dx*0.0085*lookInv;camManualT=1.2;}
 });
 const lookEnd=e=>{if(e.pointerId===look.id)look.id=null;};
 lz.addEventListener('pointerup',lookEnd);lz.addEventListener('pointercancel',lookEnd);

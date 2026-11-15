@@ -105,7 +105,7 @@ const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:
   }
   let stepT=0;
   function printStep(dt){
-    if(!snowy||!gfxFine()||state!=='play')return;
+    if(!snowy||!gfxFine()||state!=='play'||SNOW.trails===false)return;
     stepT-=dt;if(stepT>0)return;stepT=0.16;
     const cx=camera.position.x,cz=camera.position.z;
     for(const u of units){

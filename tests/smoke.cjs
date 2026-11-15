@@ -83,15 +83,22 @@ async function main() {
   page.on('response', r => { if (r.status() >= 400) errors.push(r.status() + ' ' + r.url()); });
   page.on('request', r => { if (!r.url().startsWith(base) && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) foreign.push(r.url()); });
 
+  // the new menu: „Spielen“ opens the start screen, „Los geht's“ starts the round
+  const startRound = async p => { if (await p.isVisible('#playBtn')) await p.click('#playBtn', { force: true }); await p.click('#startBtn', { force: true }); };
+  const openPlay = async p => { await p.waitForSelector('#playBtn', { state: 'visible' }); await p.click('#playBtn', { force: true }); };
+  const clickHidden = (p, sel) => p.evaluate(sel => document.querySelector(sel).click(), sel);
   console.log('Spiel');
   await page.goto(base);
-  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
   check(await page.evaluate(() => typeof THREE === 'object' && THREE.REVISION === '128'), 'three.js r128 geladen');
+  check(await page.evaluate(() => [...document.querySelectorAll('#panelStart button')].filter(b => b.offsetParent).map(b => b.id).join() === 'playBtn,netBtn,settingsBtn'), 'Hauptmenü: nur Spielen, Mehrspieler, Einstellungen');
+  check(/^Zuletzt: Insel, normal/.test(await page.textContent('#lastLine')), 'Hauptmenü zeigt die letzte Wahl');
+  check(await page.evaluate(() => [...document.querySelectorAll('#menu button')].filter(b => b.offsetParent).every(b => b.getBoundingClientRect().height >= 44)), 'Tippflächen im Menü mindestens 44 px hoch');
   check(await page.evaluate(() => /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content)), 'Seite lässt sich nicht versehentlich zoomen');
   check(await page.evaluate(() => document.fonts.check("20px 'Bowlby One SC'")), 'Schrift Bowlby One SC geladen');
   // software rendering makes the start slow, so record whether the hint ever appeared instead of looking at one moment
   await page.evaluate(() => { const el = document.querySelector('#joyHint'); new MutationObserver(() => { if (!el.hidden) window.__jhShown = true; }).observe(el, { attributes: true }); });
-  await page.click('#startBtn', { force: true });
+  await startRound(page);
   await page.waitForSelector('#hud', { state: 'visible' });
   check(await page.evaluate(() => window.__jhShown === true), 'Starthinweis erscheint bei neuem Spiel');
   await page.waitForTimeout(1500);
@@ -101,6 +108,22 @@ async function main() {
   check(await page.evaluate(() => soundVol === 0.7 && musicVol === 0.1), 'Standardlautstärke: Effekte 70 %, Musik 10 %');
   await page.click('#pauseBtn', { force: true });
   check(await page.evaluate(() => state === 'pause'), 'Pause funktioniert');
+  check(await page.evaluate(() => ['resumeBtn', 'pauseSetBtn', 'restartBtn', 'quitBtn'].every(id => document.getElementById(id).offsetParent) && document.querySelector('#quitBtn').textContent === 'Hauptmenü'), 'Pausenmenü: Weiter, Einstellungen, Neu starten, Hauptmenü');
+  await page.click('#pauseSetBtn', { force: true });
+  check(await page.evaluate(() => document.querySelector('#setBack').textContent === 'Zurück zur Pause' && document.querySelector('.later').offsetParent !== null), 'Einstellungen aus der Pause: „Zurück zur Pause“ und Hinweis „Gilt ab der nächsten Runde“');
+  check(await page.evaluate(() => {
+    const c = sel => document.querySelector(sel).click(), r = [];
+    c('#diffSegS [data-d=schwer]'); r.push(diffKey === 'schwer' && D === DIFFS.normal && localStorage.getItem('kk-diff') === 'schwer'); c('#diffSegS [data-d=normal]');
+    c('.tile[data-s=grafik]'); c('#shadowToggle'); r.push(renderer.shadowMap.type === THREE.PCFShadowMap && localStorage.getItem('kk-soft') === '0'); c('#shadowToggle'); r.push(renderer.shadowMap.type === THREE.PCFSoftShadowMap);
+    c('#trailToggle'); r.push(!SNOW.trails && localStorage.getItem('kk-trails') === '0'); c('#trailToggle');
+    c('.tile[data-s=spiel]'); c('#tipsToggle'); r.push(document.documentElement.classList.contains('notips') && localStorage.getItem('kk-tips') === '0'); c('#tipsToggle');
+    c('.tile[data-s=steuerung]'); c('#invertToggle'); r.push(lookInv === -1 && localStorage.getItem('kk-inv') === '1'); c('#invertToggle');
+    c('.tile[data-s=ton]'); const m = document.querySelector('.musVol input'); m.value = 0.3; m.dispatchEvent(new Event('input')); r.push(musicVol === 0.3 && document.querySelector('#musNum').textContent === '30'); m.value = 0.1; m.dispatchEvent(new Event('input'));
+    c('.tile[data-s=spiel]');
+    return r.join();
+  }) === 'true,true,true,true,true,true,true', 'Einstellungen wirken sofort und werden gespeichert (Schwierigkeit erst nächste Runde)');
+  await page.keyboard.press('Escape');
+  check(await page.evaluate(() => state === 'pause' && !document.querySelector('#panelPause').hidden && document.querySelector('#panelSettings').hidden), 'Escape in den Einstellungen führt zurück zur Pause');
   await page.click('#attackNowBtn', { force: true });
   await page.waitForTimeout(800);
   check(await page.evaluate(() => window.__osc > 0 && AC && AC.state === 'running'), 'Ton: Angriffssignal wird abgespielt');
@@ -128,8 +151,8 @@ async function main() {
   check(cached >= 25, 'Service Worker hat ' + cached + ' Dateien gespeichert');
   await ctx.setOffline(true);
   await page.reload();
-  await page.waitForSelector('#startBtn', { state: 'visible' });
-  await page.click('#startBtn', { force: true });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  await startRound(page);
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50), 'Spiel startet offline');
   await ctx.setOffline(false);
@@ -163,6 +186,9 @@ async function main() {
   const size = await page.evaluate(() => (localStorage.getItem('kk-save') || '').length);
   check(size > 1000 && size < 400000, 'Spielstand gespeichert (' + Math.round(size / 1024) + ' KB)');
   await page.reload();
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  check(/gespeicherte Runde/.test(await page.textContent('#lastLine')), 'Hauptmenü weist auf die gespeicherte Runde hin');
+  await openPlay(page);
   await page.waitForSelector('#continueBtn', { state: 'visible' });
   const info = await page.textContent('#continueInfo');
   check(/Welle 1 läuft · Normal · gespeichert (gerade eben|vor 1 Min\.)/.test(info), 'Menü zeigt „Weiterspielen“: ' + info);
@@ -205,12 +231,12 @@ async function main() {
 
   console.log('Weihnachtsedition');
   await page.goto(base + '?weihnachten');
-  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
   check(await page.evaluate(() => XMAS && document.documentElement.classList.contains('xmas')), 'mit ?weihnachten aktiv');
   check(await page.evaluate(() => [new Date(2026, 9, 31), new Date(2026, 10, 1), new Date(2026, 11, 31), new Date(2027, 0, 10), new Date(2027, 0, 11)].map(d => xmasSeason(d)).join() === 'false,true,true,true,false'),
     'Saison: 1. November bis 10. Januar');
-  check(await page.isVisible('.xribbon') && await page.isVisible('#xmasToggle'), 'Banderole „Weihnachtsedition“ und Schalter im Menü');
-  await page.click('#startBtn', { force: true });
+  check(await page.isVisible('.xribbon') && await page.$eval('#xmasRow', e => !e.hidden), 'Banderole „Weihnachtsedition“ und Schalter in den Einstellungen');
+  await startRound(page);
   await page.waitForTimeout(1200);
   check(await page.evaluate(() => { const b = units.filter(u => u.kind === 'bot'); return b.length > 0 && b.every(u => ['santa', 'elf', 'snowman'].includes(u.bot.costume)) && new Set(b.map(u => u.bot.costume)).size >= 2; }), 'Blechlinge als Weihnachtsmänner, Elfen und Schneemänner');
   check(await page.evaluate(() => crates.length > 0 && crates.every(c => c.bow)), 'Kisten mit Geschenkschleife');
@@ -227,16 +253,18 @@ async function main() {
   await page.waitForTimeout(2000);
   check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50), 'Weihnachtsrunde läuft');
   await page.goto(base + '?normal');
-  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
   check(await page.evaluate(() => !XMAS && !document.documentElement.classList.contains('xmas') && units.every(u => !u.bot.costume)) && !(await page.isVisible('.xribbon')), 'mit ?normal die normale Version');
 
   console.log('Gebirge');
   await page.goto(base + '?normal');
-  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
   check(await page.evaluate(() => MAP === 'insel' && document.querySelector('#mapSeg [data-m="insel"]').getAttribute('aria-pressed') === 'true'), 'Standardkarte ist die Insel');
+  await openPlay(page);
   await Promise.all([page.waitForNavigation(), page.click('#mapSeg [data-m="gebirge"]', { force: true })]);
   await page.waitForSelector('#startBtn', { state: 'visible' });
   check(await page.evaluate(() => MAP === 'gebirge' && localStorage.getItem('kk-map') === 'gebirge' && document.querySelector('#mapSeg [data-m="gebirge"]').getAttribute('aria-pressed') === 'true'), 'Kartenwahl: Gebirge gewählt und gemerkt');
+  check(await page.isVisible('#startBtn') && !await page.isVisible('#playBtn'), 'nach dem Kartenwechsel ist der Spielstart wieder offen');
   check(await page.evaluate(() => hgtRaw(0, 0) < -8 && Math.abs(hgt(-18, 5) - 0.38) < 0.05 && Math.abs(hgt(18, 4.5) - 0.4) < 0.1 && hgtRaw(21.5, 4.5) > 4 && hgt(0, 44) < 1.5),
     'Gebirge: tiefe Schlucht, Brücke und Pass auf Laufhöhe, Felswände am Pass, Basis im Tal');
   check(await page.evaluate(() => {
@@ -249,7 +277,7 @@ async function main() {
     }
     return out.every(Boolean);
   }), 'Wegfindung: Blechling und Panzer beider Teams kommen über Brücke und Pass');
-  await page.click('#startBtn', { force: true });
+  await startRound(page);
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && !!window.mountainDrift), 'Runde auf dem Gebirge läuft, mit Schneetreiben');
   { const s0 = await page.evaluate(() => SNOW.stamps); await page.waitForTimeout(2500);
@@ -266,23 +294,24 @@ async function main() {
   check(await page.evaluate(() => mountainCut.on.value === 1 && mountainCut.p.value.distanceTo(new THREE.Vector3(player.x, mountainCut.p.value.y, player.z)) < 0.5), 'Gebirge: Durchblick-Loch folgt der Figur');
   await page.evaluate(() => pause(true));
   await page.goto(base + '?normal&karte=insel');
+  await openPlay(page);
   await page.waitForSelector('#continueBtn', { state: 'visible' });
   check((await page.textContent('#continueInfo')).startsWith('Gebirge · '), 'Spielstand merkt die Karte: ' + await page.textContent('#continueInfo'));
   await Promise.all([page.waitForNavigation(), page.click('#continueBtn', { force: true })]);
   await page.waitForFunction(() => typeof state !== 'undefined' && state === 'pause', null, { timeout: 60000 }).catch(() => {});
   check(await page.evaluate(() => MAP === 'gebirge' && state === 'pause'), 'Weiterspielen lädt das Gebirge und setzt fort');
   await page.goto(base + '?weihnachten&karte=gebirge');
-  await page.waitForSelector('#startBtn', { state: 'visible' });
-  await page.click('#startBtn', { force: true });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  await startRound(page);
   await page.waitForTimeout(1200);
   check(await page.evaluate(() => XMAS && MOUNTAIN && units.filter(u => u.kind === 'bot').every(u => u.bot.costume) && crates.every(c => c.bow) && !!window.xmasSleigh), 'Weihnachtsedition auf dem Gebirge');
   await page.evaluate(() => { endGame(true, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
 
   console.log('Grafik');
   await page.goto(base + '?normal&karte=insel');
-  await page.waitForSelector('#startBtn', { state: 'visible' });
-  check(await page.evaluate(() => GFX.mode === 'schoen' && document.querySelector('#gfxToggle').textContent === 'Grafik: Hoch' && typeof gfxRender === 'function'), 'Grafik: Standard ist „Schön“');
-  await page.click('#startBtn', { force: true });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  check(await page.evaluate(() => GFX.mode === 'schoen' && document.querySelector('#gfxSeg [data-g=schoen]').getAttribute('aria-pressed') === 'true' && typeof gfxRender === 'function'), 'Grafik: Standard ist „Schön“');
+  await startRound(page);
   await page.waitForTimeout(1500);
   const lit = () => page.evaluate(() => {
     gfxRender(); const gl = renderer.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(4); let sum = 0;
@@ -314,21 +343,21 @@ async function main() {
     const ok = fire(u, u.h); peaceT = pt; return ok && parts.length > n; }), 'Mündungsfeuer beim Schießen');
   check(await page.evaluate(() => { gfxRender(); return GFX.merged.roots > 200 && GFX.merged.meshes < 160 && renderer.info.render.calls < 700 && obstacles.length > 80; }), 'Bäume, Felsen und Brücken sind zusammengefasst: unter 700 Zeichenvorgänge pro Bild');
   await page.evaluate(() => { pause(true); toMenu(); });
-  await page.click('#fpsToggle', { force: true });
+  await clickHidden(page, '#fpsToggle');
   await page.waitForTimeout(1300);
   check(await page.evaluate(() => !document.querySelector('#fps').hidden && /FPS/.test(document.querySelector('#fps').textContent) && localStorage.getItem('kk-fps') === '1'), 'FPS-Anzeige lässt sich einschalten');
   await page.evaluate(() => localStorage.removeItem('kk-fps'));
-  await page.click('#gfxToggle', { force: true });
-  check(await page.evaluate(() => GFX.mode === 'schnell' && localStorage.getItem('kk-gfx') === 'schnell' && document.querySelector('#gfxToggle').textContent === 'Grafik: Niedrig' && !GFX.contact.visible && sun.shadow.mapSize.x === 1024) && await lit() > 200,
+  await clickHidden(page, '#gfxSeg [data-g=schnell]');
+  check(await page.evaluate(() => GFX.mode === 'schnell' && localStorage.getItem('kk-gfx') === 'schnell' && document.querySelector('#gfxSeg [data-g=schnell]').getAttribute('aria-pressed') === 'true' && !GFX.contact.visible && sun.shadow.mapSize.x === 1024) && await lit() > 200,
     'Grafik „Niedrig“: umschaltbar, gemerkt, zeichnet ohne Bildeffekte');
   check(await page.evaluate(() => { updateMood(0.05); return document.querySelector('#vignette').hidden && LOOK.rim.value > 0 && LOOK.rim.value < 0.3; }), 'Niedrig: ohne dunkle Ecken, Randlicht schwächer');
   await page.evaluate(() => localStorage.removeItem('kk-gfx'));
 
   console.log('Tag, Nacht und Wetter');
   await page.goto(base + '?normal&karte=insel');
-  await page.waitForSelector('#startBtn', { state: 'visible' });
-  check(await page.evaluate(() => DN.on && document.querySelector('#dnToggle').textContent === 'Tag, Nacht & Wetter: an' && DN.kind === 'regen'), 'Tag und Nacht: Standard ist an');
-  await page.click('#startBtn', { force: true });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  check(await page.evaluate(() => DN.on && DN.tod === 'auto' && document.querySelector('#dnToggle').getAttribute('aria-checked') === 'true' && document.querySelector('#todSeg [data-t=auto]').getAttribute('aria-pressed') === 'true' && DN.kind === 'regen'), 'Tag und Nacht: Standard ist Tageszeit „Auto“, Wetter an');
+  await startRound(page);
   await page.waitForTimeout(1200);
   const mood = n => page.evaluate(n => { for (let i = 0; i < n; i++) updateMood(0.05); }, n);
   await mood(60);
@@ -345,14 +374,21 @@ async function main() {
   await mood(700);
   check(await page.evaluate(() => DN.wx.s === 0 && !DN.lights.wPts.visible && Math.abs(scene.fog.far - 170) < 1), 'Wetter klart wieder auf');
   await page.evaluate(() => { DN.fixed = null; pause(true); toMenu(); });
-  await page.click('#dnToggle', { force: true });
-  check(await page.evaluate(() => { state = 'play'; gameT = 290; for (let i = 0; i < 200; i++) updateMood(0.05); const ok = !DN.on && localStorage.getItem('kk-dn') === '0' && DN.night === 0 && !DN.lights.stars.visible; state = 'menu'; return ok; }),
-    'Schalter aus: es bleibt Tag, wird gemerkt');
-  await page.evaluate(() => localStorage.removeItem('kk-dn'));
+  await clickHidden(page, '#todSeg [data-t=tag]');
+  check(await page.evaluate(() => { state = 'play'; gameT = 290; for (let i = 0; i < 200; i++) updateMood(0.05); const ok = DN.tod === 'tag' && localStorage.getItem('kk-tod') === 'tag' && DN.night === 0 && !DN.lights.stars.visible; state = 'menu'; return ok; }),
+    'Tageszeit „Tag“: es bleibt Tag, wird gemerkt');
+  await clickHidden(page, '#todSeg [data-t=nacht]');
+  check(await page.evaluate(() => { state = 'play'; gameT = 10; for (let i = 0; i < 200; i++) updateMood(0.05); const ok = DN.tod === 'nacht' && DN.night > 0.9 && DN.lights.stars.visible; state = 'menu'; return ok; }),
+    'Tageszeit „Nacht“: sofort Nacht');
+  await clickHidden(page, '#dnToggle');
+  check(await page.evaluate(() => { state = 'play'; DN.setWeather('regen', false); for (let i = 0; i < 200; i++) updateMood(0.05); const ok = !DN.on && localStorage.getItem('kk-dn') === '0' && DN.wx.s === 0; state = 'menu'; return ok; }),
+    'Wetter aus: kein Regen, wird gemerkt');
+  await page.evaluate(() => { localStorage.removeItem('kk-dn'); localStorage.removeItem('kk-tod'); });
 
   console.log('Vulkan');
   await page.goto(base + '?normal');
-  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  await openPlay(page);
   await Promise.all([page.waitForNavigation(), page.click('#mapSeg [data-m="vulkan"]', { force: true })]);
   await page.waitForSelector('#startBtn', { state: 'visible' });
   check(await page.evaluate(() => MAP === 'vulkan' && localStorage.getItem('kk-map') === 'vulkan' && document.querySelector('#mapSeg [data-m="vulkan"]').getAttribute('aria-pressed') === 'true'), 'Kartenwahl: Vulkan gewählt und gemerkt');
@@ -379,7 +415,7 @@ async function main() {
     }
     return out.every(Boolean);
   }), 'Wegfindung: Blechling und Panzer kommen über die Insel, um den Krater herum und nie durch die Lava');
-  await page.click('#startBtn', { force: true });
+  await startRound(page);
   await page.waitForTimeout(1500);
   check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && !!window.volcano && crates.length >= 6
     && crates.every(c => onPlatform(c.x, c.z) && Math.hypot(c.x, c.z) > CRATER.r + 0.5)), 'Runde auf dem Vulkan läuft, Kisten liegen auf der Insel neben dem Krater');
@@ -394,8 +430,8 @@ async function main() {
   }), 'Ausbruch: Brücke wird gesperrt und umgangen, Lavabrocken treffen nur dort, danach ist sie wieder frei');
   await page.evaluate(() => pause(true));
   await page.goto(base + '?weihnachten&karte=vulkan');
-  await page.waitForSelector('#startBtn', { state: 'visible' });
-  await page.click('#startBtn', { force: true });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  await startRound(page);
   await page.waitForTimeout(1200);
   check(await page.evaluate(() => XMAS && VOLCANO && state === 'play' && units.filter(u => u.kind === 'bot').every(u => u.bot.costume) && crates.every(c => c.bow)), 'Weihnachtsedition auf dem Vulkan');
   await page.evaluate(() => { endGame(true, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
@@ -418,7 +454,7 @@ async function main() {
     // Loading is slow here: the pages already open keep rendering in software and share one graphics process with
     // the page being loaded. Measured: 6 s for the first page, 31 s for the second, 126 s for the third.
     const mkPage = async name => { const c = await mpBrowser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
-      p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 300000 }); await p.waitForSelector('#startBtn', { state: 'visible', timeout: 300000 }); return p; };
+      p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 300000 }); await p.waitForSelector('#playBtn', { state: 'visible', timeout: 300000 }); return p; };
     const host = await mkPage('Host'), guest = await mkPage('Gast');
     await host.evaluate(() => localStorage.setItem('kk-save', '{"format":1,"marker":"einzelspieler"}'));
     await host.click('#netBtn', { force: true }); await host.click('#netHostBtn', { force: true });
@@ -450,10 +486,15 @@ async function main() {
     await guest.evaluate(() => { netDebug.send({ t: 'in', mx: 9, mz: 0, a: null, f: true }); netDebug.send({ t: 'act', a: 'eval(1)' }); netDebug.send({ t: 'x', html: '<img src=x onerror=alert(1)>' }); netDebug.send('<b>hi</b>'); });
     await host.waitForTimeout(800);
     check(await host.evaluate(() => NET.stats.invalid >= 4 && MP === 'host'), 'ungültige Nachrichten werden verworfen');
+    const t0 = await host.evaluate(() => gameT);
     await host.click('#pauseBtn', { force: true }); await guest.waitForTimeout(1000);
-    check(await guest.evaluate(() => state === 'pause'), 'Pause gilt für beide');
-    await host.click('#resumeBtn', { force: true }); await guest.waitForTimeout(1000);
-    check(await guest.evaluate(() => state === 'play'), 'Weiter gilt für beide');
+    check(await host.evaluate(t => MENU.overlay && state === 'play' && !document.querySelector('#panelPause').hidden && document.querySelector('#restartBtn').hidden && gameT > t, t0)
+      && await guest.evaluate(() => state === 'play'), 'Pause im Mehrspieler ist nur eine Ebene: das Spiel läuft bei beiden weiter');
+    await host.click('#pauseSetBtn', { force: true });
+    check(await host.evaluate(() => !document.querySelector('#panelSettings').hidden && document.querySelector('#setBack').textContent === 'Zurück zur Pause'), 'Einstellungen aus der Mehrspieler-Pause');
+    await host.click('#setBack', { force: true });
+    await host.click('#resumeBtn', { force: true }); await guest.waitForTimeout(500);
+    check(await host.evaluate(() => !MENU.overlay && document.querySelector('#menu').hidden && state === 'play'), 'Weiter schließt die Ebene');
     await guest.evaluate(() => netDebug.drop());
     await host.waitForFunction(() => !document.querySelector('#netOverlay').hidden, null, { timeout: 15000 }).catch(() => {});
     check(await host.evaluate(() => !document.querySelector('#netOverlay').hidden && state === 'pause'), 'Abbruch: pausiert und zeigt „Verbindung verloren“');
@@ -470,7 +511,7 @@ async function main() {
 
   console.log('Update-Hinweis');
   await page.goto(base);
-  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
   check((await page.textContent('#verLine')) === 'Version vom 02.01.2026 · aaa111', 'Versionsanzeige im Startmenü');
   await page.mouse.click(8, 300);
   await page.waitForTimeout(1200);
@@ -479,14 +520,14 @@ async function main() {
   await page.evaluate(() => window.kkCheckUpdate());
   await page.waitForSelector('#updBar', { state: 'visible', timeout: 60000 }).catch(() => {});
   check(await page.isVisible('#updBar'), 'Hinweis „Neue Version verfügbar“ erscheint im Menü');
-  await page.click('#startBtn', { force: true });
+  await startRound(page);
   await page.waitForTimeout(1000);
   check(!(await page.isVisible('#updBar')) && await page.isVisible('#updPill'), 'während der Runde nur das Abzeichen');
   await page.click('#pauseBtn', { force: true });
   await page.waitForTimeout(600);
   check(await page.isVisible('#updPauseBtn'), 'Aktualisieren-Knopf im Pausenmenü');
   await Promise.all([page.waitForNavigation(), page.click('#updPauseBtn', { force: true })]);
-  await page.waitForSelector('#startBtn', { state: 'visible' });
+  await page.waitForSelector('#playBtn', { state: 'visible' });
   check((await page.textContent('#verLine')).endsWith('bbb222'), 'nach dem Aktualisieren läuft die neue Version');
   await page.waitForTimeout(3500);
   check(!(await page.isVisible('#updBar')), 'danach kein Hinweis mehr');

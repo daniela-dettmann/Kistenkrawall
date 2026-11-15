@@ -68,12 +68,12 @@
       <div class="bar"><i id="hq0"></i></div>
       <div class="sub" id="sub0"></div>
     </div>
-    <button id="pauseBtn" aria-label="Pause">II</button>
     <div class="card r" id="card1">
       <div class="row"><span class="tname">Petrol</span><span class="pips" id="pips1"></span></div>
       <div class="bar"><i id="hq1"></i></div>
       <div class="sub" id="sub1"></div>
     </div>
+    <button id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg></button>
   </div>
   <div id="status"><span class="pill peace" id="peacePill" hidden>Bauruhe 6:00</span><span class="pill" id="wpn">Knipser · ∞</span><span class="pill crate" id="carryPill" hidden>Trägt Kiste</span><span class="pill upd" id="updPill" hidden>Update bereit</span></div>
   <canvas id="mm" width="184" height="184"></canvas>
@@ -111,41 +111,65 @@
   <div class="panel" id="panelStart">
     <div class="xribbon" aria-hidden="true"><span>Weihnachtsedition</span></div>
     <h1 class="logo">Kisten<span>krawall</span></h1>
+    <p class="last" id="lastLine">Zuletzt: Insel, Normal</p>
+    <button class="go big" id="playBtn">Spielen</button>
+    <button class="go2 menuBtn" id="netBtn">Mehrspieler</button>
+    <button class="go2 menuBtn" id="settingsBtn">Einstellungen</button>
+    <p class="ver" id="verLine"></p>
+  </div>
+  <div class="panel" id="panelPlay" hidden>
+    <div class="phead"><button class="back" id="playBack">Zurück</button><h2>Spielen</h2></div>
     <button class="go resume" id="continueBtn" hidden>Weiterspielen<small id="continueInfo"></small></button>
-    <p class="lead">Deine Blechbande Orange gegen die Blechbande Petrol. Schnapp dir die Kisten, die vom Himmel fallen, stapel sie auf deiner Plattform und pack sie aus. Wer das gegnerische Hauptquartier sprengt oder alle Gegner verschrottet, gewinnt.</p>
     <div>
       <p class="lbl">Karte</p>
-      <div class="seg" id="mapSeg">
-        <button data-m="insel" aria-pressed="true">Insel</button>
-        <button data-m="gebirge" aria-pressed="false">Gebirge</button>
-        <button data-m="vulkan" aria-pressed="false">Vulkan</button>
+      <div class="maps" id="mapSeg">
+        <button class="mapCard" data-m="insel" aria-pressed="true"><svg viewBox="0 0 120 64" aria-hidden="true"><rect width="120" height="64" fill="#5fb7d6"/><path d="M14 46c10-14 30-20 46-18s34 6 46 16c-14 8-74 10-92 2z" fill="#e8d39a"/><path d="M22 44c10-11 28-15 40-14s26 5 36 13c-12 5-62 7-76 1z" fill="#79b552"/><path d="M8 30h104" stroke="#9fe0ef" stroke-width="5" opacity=".7"/><circle cx="40" cy="34" r="6" fill="#3f8a3a"/><circle cx="74" cy="33" r="7" fill="#3f8a3a"/><rect x="56" y="27" width="9" height="4" fill="#a86b3a"/></svg><b>Insel</b></button>
+        <button class="mapCard" data-m="gebirge" aria-pressed="false"><svg viewBox="0 0 120 64" aria-hidden="true"><rect width="120" height="64" fill="#a9c8de"/><path d="M0 52l26-34 18 20 22-30 26 34 28-14v36H0z" fill="#7d8794"/><path d="M26 18l8 10-8-3-7 5zM66 8l9 12-9-4-8 6zM92 42l6 6-6-2-5 3z" fill="#f4f7fb"/><path d="M0 56h120v8H0z" fill="#eef3f8"/><path d="M44 44h22v5H44z" fill="#a86b3a"/><path d="M14 54l4-8 4 8zM100 55l4-8 4 8z" fill="#2f6b4a"/></svg><b>Gebirge</b></button>
+        <button class="mapCard" data-m="vulkan" aria-pressed="false"><svg viewBox="0 0 120 64" aria-hidden="true"><rect width="120" height="64" fill="#3b4d63"/><path d="M0 50h120v14H0z" fill="#2c5f7a"/><path d="M30 52L54 16h12l24 36z" fill="#5a4c46"/><path d="M54 16h12l-3 6h-6z" fill="#ff7a2a"/><path d="M58 22l-6 26M63 22l5 22" stroke="#ff8a3a" stroke-width="2.5"/><circle cx="62" cy="9" r="5" fill="#8b8b92" opacity=".7"/><circle cx="68" cy="4" r="4" fill="#8b8b92" opacity=".5"/><path d="M8 52c8-5 16-5 24 0zM90 52c8-5 16-5 24 0z" fill="#7a6a58"/></svg><b>Vulkan</b></button>
       </div>
     </div>
     <div>
       <p class="lbl">Schwierigkeit</p>
-      <div class="seg" id="diffSeg">
+      <div class="seg diffSeg" id="diffSeg">
         <button data-d="leicht" aria-pressed="false">Leicht</button>
         <button data-d="normal" aria-pressed="true">Normal</button>
         <button data-d="schwer" aria-pressed="false">Schwer</button>
       </div>
     </div>
-    <div>
-      <p class="lbl">Bauruhe zwischen den Wellen</p>
-      <div class="seg" id="peaceSeg">
-        <button data-p="5" aria-pressed="false">5 Min</button>
-        <button data-p="6" aria-pressed="true">6 Min</button>
-        <button data-p="7" aria-pressed="false">7 Min</button>
-      </div>
+    <button class="go big" id="startBtn">Los geht's</button>
+  </div>
+  <div class="panel" id="panelSettings" hidden>
+    <div class="phead"><button class="back" id="setBack">Zurück</button><h2>Einstellungen</h2></div>
+    <div class="tiles" role="tablist" aria-label="Bereiche">
+      <button class="tile" role="tab" data-s="spiel" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16v10H4zM2 9l10-6 10 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 13h6" stroke="currentColor" stroke-width="2"/></svg>Spiel</button>
+      <button class="tile" role="tab" data-s="grafik" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18l6-8 4 5 3-3 5 6z" fill="currentColor"/><circle cx="16" cy="7" r="2.5" fill="currentColor"/></svg>Grafik</button>
+      <button class="tile" role="tab" data-s="ton" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8c2 2 2 6 0 8M19 5c4 4 4 10 0 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Ton</button>
+      <button class="tile" role="tab" data-s="steuerung" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 10v5M4.5 12.5h5" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="11" r="1.4" fill="currentColor"/><circle cx="18.5" cy="14" r="1.4" fill="currentColor"/></svg>Steuerung</button>
     </div>
-<div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><div class="sndSliders"><label class="sndVol">Effekte <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Effekte"></label><label class="musVol">Musik <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Musik"></label></div></div>
-    <button class="go2" id="gfxToggle" aria-pressed="true">Grafik: Hoch</button>
-    <button class="go2" id="fpsToggle" aria-pressed="false">FPS-Anzeige: aus</button>
-    <button class="go2" id="dnToggle" aria-pressed="true">Tag, Nacht &amp; Wetter: an</button>
-    <button class="go2" id="xmasToggle" aria-pressed="true" hidden>Weihnachtsedition: an</button>
-    <button class="go2" id="netBtn">Gegen Freund spielen</button>
-    <button class="go2" id="helpBtn">Wie wird gespielt?</button>
-    <button class="go" id="startBtn">Los geht's</button>
-    <p class="ver" id="verLine"></p>
+    <div class="pane" data-s="spiel" role="tabpanel">
+      <div class="srow col"><span class="slbl">Schwierigkeit<small class="later">Gilt ab der nächsten Runde</small></span><div class="seg diffSeg" id="diffSegS"><button data-d="leicht" aria-pressed="false">Leicht</button><button data-d="normal" aria-pressed="true">Normal</button><button data-d="schwer" aria-pressed="false">Schwer</button></div></div>
+      <div class="srow col"><span class="slbl">Bauruhe zwischen den Wellen<small class="later">Gilt ab der nächsten Bauruhe</small></span><div class="seg" id="peaceSeg"><button data-p="5" aria-pressed="false">5 Min</button><button data-p="6" aria-pressed="true">6 Min</button><button data-p="7" aria-pressed="false">7 Min</button></div></div>
+      <div class="srow col"><span class="slbl">Tageszeit</span><div class="seg" id="todSeg"><button data-t="auto" aria-pressed="true">Auto</button><button data-t="tag" aria-pressed="false">Tag</button><button data-t="nacht" aria-pressed="false">Nacht</button></div></div>
+      <div class="srow"><span class="slbl">Wetter</span><button class="sw" id="dnToggle" role="switch" aria-checked="false" aria-label="Wetter"><i></i></button></div>
+      <div class="srow"><span class="slbl">Tipps anzeigen</span><button class="sw" id="tipsToggle" role="switch" aria-checked="false" aria-label="Tipps anzeigen"><i></i></button></div>
+      <button class="go2" id="helpBtn">Wie wird gespielt?</button>
+    </div>
+    <div class="pane" data-s="grafik" role="tabpanel" hidden>
+      <div class="srow col"><span class="slbl">Qualität</span><div class="seg seg2" id="gfxSeg"><button data-g="schnell" aria-pressed="false">Niedrig</button><button data-g="schoen" aria-pressed="true">Hoch</button></div></div>
+      <div class="srow"><span class="slbl">Weiche Schatten</span><button class="sw" id="shadowToggle" role="switch" aria-checked="false" aria-label="Weiche Schatten"><i></i></button></div>
+      <div class="srow"><span class="slbl">Spuren im Schnee</span><button class="sw" id="trailToggle" role="switch" aria-checked="false" aria-label="Spuren im Schnee"><i></i></button></div>
+      <div class="srow"><span class="slbl">FPS-Anzeige</span><button class="sw" id="fpsToggle" role="switch" aria-checked="false" aria-label="FPS-Anzeige"><i></i></button></div>
+      <div class="srow" id="xmasRow" hidden><span class="slbl">Weihnachtsedition<small>Lädt das Spiel neu</small></span><button class="sw" id="xmasToggle" role="switch" aria-checked="true" aria-label="Weihnachtsedition"><i></i></button></div>
+    </div>
+    <div class="pane" data-s="ton" role="tabpanel" hidden>
+      <div class="srow"><span class="slbl">Ton</span><button class="sw sndBtn" id="sndToggle" role="switch" aria-checked="true" aria-label="Ton"><i></i></button></div>
+      <div class="srow col"><span class="slbl">Musik <output class="num" id="musNum">10</output></span><label class="musVol"><input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Musik"></label></div>
+      <div class="srow col"><span class="slbl">Effekte <output class="num" id="sndNum">70</output></span><label class="sndVol"><input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Effekte"></label></div>
+    </div>
+    <div class="pane" data-s="steuerung" role="tabpanel" hidden>
+      <div class="srow"><span class="slbl">Kamera umkehren<small>Blick dreht beim Wischen andersherum</small></span><button class="sw" id="invertToggle" role="switch" aria-checked="false" aria-label="Kamera umkehren"><i></i></button></div>
+      <div class="srow"><span class="slbl">Vibration<small id="vibNote">Kurzes Rütteln bei Treffern</small></span><button class="sw" id="vibToggle" role="switch" aria-checked="true" aria-label="Vibration"><i></i></button></div>
+    </div>
   </div>
   <div class="panel help" id="panelHelp" hidden>
     <p class="result">Wie wird gespielt?</p>
@@ -245,11 +269,12 @@
   </div>
   <div class="panel" id="panelPause" hidden>
     <p class="result">Pause</p>
-    <button class="go" id="resumeBtn">Weiter</button>
+    <p class="last" id="mpPauseNote" hidden>Im Mehrspieler läuft das Spiel weiter.</p>
+    <button class="go big" id="resumeBtn">Weiter</button>
     <button class="go2" id="attackNowBtn" hidden>Nächste Welle jetzt starten</button>
-<div class="sndRow"><button class="go2 sndBtn" aria-pressed="true">Ton an</button><div class="sndSliders"><label class="sndVol">Effekte <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Effekte"></label><label class="musVol">Musik <input type="range" min="0" max="1" step="0.05" aria-label="Lautstärke Musik"></label></div></div>
+    <button class="go2" id="pauseSetBtn">Einstellungen</button>
     <button class="go2" id="restartBtn">Neu starten</button>
-    <button class="go2" id="quitBtn">Zum Menü</button>
+    <button class="go2" id="quitBtn">Hauptmenü</button>
     <button class="go2 upd" id="updPauseBtn" hidden>Aktualisieren (beendet die Runde)</button>
   </div>
 </div>
@@ -279,6 +304,7 @@
 <script src="js/snow.js"></script>
 <script src="vendor/peerjs-1.5.4.min.js"></script>
 <script src="js/net.js"></script>
+<script src="js/menu.js"></script>
 <script src="js/update.js"></script>
 
 <script>
