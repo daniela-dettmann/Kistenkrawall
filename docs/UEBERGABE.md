@@ -6,15 +6,15 @@ Stand: 14. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `c065f44` (PR #23: Nachbesserung nach dem iPhone-Test) |
-| `main` | `c065f44` |
+| Live auf GitHub Pages | `c6f3031` (PR #24: Grafik neu) |
+| `main` | `c6f3031` |
 | Offener Pull Request | #25: Wasser (Schritt 1 des Auftrags Grafik-Upgrade Wasser, Schnee und Plastizität) |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
 ## Was noch zu tun ist
 
-1. **PR #24 (Grafik neu):** Browser-Test auf GitHub muss grün sein, dann entscheidet Daniela über den Merge. Danach den Deploy auf `main` prüfen und den Projektstand in Google Drive erneuern.
+1. **Auftrag „Grafik-Upgrade Wasser, Schnee und Plastizität“** (Drive: `Kistenkrawall-Auftrag-Grafik-Wasser-Schnee.md`), je Schritt ein Pull Request: #25 Wasser (offen), danach Schnee (Spurenkarte, Verwehungen mit leichtem Bremsen, Schneehauben, Schneestaub), danach Kontaktschatten unter Figuren, Fahrzeugen, Kisten und Randlicht. FPS vorher/nachher nur auf dem iPhone messbar, Daniela schickt Werte.
 2. **Erste Messung vom iPhone 15 Pro Max (vor #23):** 33 FPS, längstes Bild 34 ms, 815 Zeichenvorgänge, 685.000 Dreiecke, „Schön“, Weihnachtsedition, Nacht, 18 Blechlinge. Dazu Flimmern an Kanten und am Ufer, einige Stellen überhellt. Nach #23 neu messen lassen. Zweiter Test nach #23: „Schön“ krisselte weiter und überstrahlte; im Testbrowser war es umgekehrt, der Test bildet das iPhone also nicht ab. Deshalb #24 ohne Nachbearbeitung. Nach #24 erbeten: zwei Screenshots derselben Stelle in „Schnell“ und „Schön“ plus FPS-Zeile. Wenn 60 FPS nicht erreicht werden: Materialien der Blechlinge vereinheitlichen (jeder hat 5 bis 10), einfachere Schattenfilter, geringere Auflösung.
 3. **Frühere Notiz:** FPS-Anzeige im Menü einschalten und die Werte nennen lassen (FPS, Zeichenvorgänge), normal und in der Weihnachtsedition, „Schön“ und „Schnell“. Ziel 60 FPS. Weitere Stellschrauben, falls nötig: Schatten nur jedes zweite Bild, Einheiten zusammenfassen, Kugeln der Weihnachtsdeko gröber, Auflösung.
 3. **Bereits bekannt:** Daniela prüft Grafik-Paket sowie Tag, Nacht und Wetter auf dem iPhone (flüssig? Schein und Farben zu stark? Nacht gut lesbar?). Aus dem Grafik-Paket noch offen: feinere Bodenübergänge, mehr Leben in der Welt (Wind, Tiere), Fußspuren.

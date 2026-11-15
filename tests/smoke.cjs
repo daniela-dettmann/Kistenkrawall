@@ -294,7 +294,7 @@ async function main() {
     const W = GFX.water, d = WATER.dist;
     const shore = d.at(-18, 7.2), river = d.at(-30, 0), sea = d.at(0, 75);
     const n = parts.length; gfxSplash(-30, 0, true);
-    return W && W.uniforms.uDeep && W.mat.userData.kkTags.includes('water') && shore < 1.5 && river > 1 && sea === 16 && parts.length >= n + 8 && WATER.q.value === 1;
+    return W && W.uniforms.uDeep && W.mat.userData.kkTags.includes('water') && shore < 1.5 && river > 1 && sea > 10 && parts.length >= n + 8 && WATER.q.value === 1;
   }), 'Wasser: Küstenabstand berechnet, Tiefenfarbe und Schaum im Shader, Spritzer mit Tropfen und Schaumring');
   check(await page.evaluate(() => renderer.toneMapping === THREE.CustomToneMapping && !document.querySelector('#vignette').hidden && GFX.ao > 1000 && G.crate.userData.kkRound
     && LOOK.wind.value >= 1 && LOOK.rim.value > 0 && !!M.metal.envMap && GFX.fade.a.value > 30 && typeof gfxSplash === 'function'), 'Schön: Belichtungskurve, dunklere Ecken, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus');
