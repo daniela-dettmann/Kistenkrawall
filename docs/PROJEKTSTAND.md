@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 15. November 2026 · Live-Version auf `main`: `eb69d3a` (PR #31: dynamisches Wetter)
+Stand: 15. November 2026 · Live-Version auf `main`: `8a06327` (PR #32: Tests nur im Pull Request, Gewitter-Ton neu)
 
 ## Links
 
@@ -46,6 +46,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `eb69d3a` (PR #31: dynamisc
 | #30 | Test „Sieg-Jingle am Rundenende“ robust: Der Jingle dauert nur 3,6 s; auf ausgelasteten Testmaschinen schaute der Test erst nach dessen Ende nach (Deploys von #27 und #29 scheiterten daran). Jetzt hält er fest, welches Stück das Rundenende startet | gemergt |
 | #31 | Auftrag „Dynamisches Wetter“: Wetterwahl Zufall/Klar/Regen/Gewitter/Schneesturm, Unwetter zu Beginn der Angriffswellen, Schauer in der Bauruhe, Weihnachtsedition mit Schneefall statt Dunst; Regenstreifen, Tropfenringe, nasser Glanz, Pfützen mit Spritzern; Gewitter mit dunklem Himmel, Blitzstrahlen und Einschlägen in Bäume (Feuer, angekohlt); Schneesturm waagerecht mit dichtem Nebel und schnell zuschneienden Spuren; Wind lässt Fallschirmkisten schwanken | gemergt |
 | #32 | Browser-Test nur noch im Pull Request, in vier Teilen gleichzeitig, Testbrowser im Cache; Deploy ohne erneuten Test. Gewitter-Ton neu: Regenrauschen statt „tsch, tsch“, Donner nach Blitzkanal-Modell, leises Grummeln, Wind im Schneesturm; Vulkan-Grollen wieder eigenständig | gemergt |
+| #33 | CLAUDE.md: Umfang des lokalen Tests (voll vor dem ersten Push, bei Korrekturen nur betroffene Teile, außer bei Spielcode für mehrere Teile); erst mergen, wenn alle vier Testteile grün sind | gemergt |
 
 ## Was umgesetzt ist
 

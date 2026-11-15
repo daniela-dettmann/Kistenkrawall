@@ -6,9 +6,9 @@ Stand: 15. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `eb69d3a` (PR #31: Wetter) |
-| `main` | `eb69d3a` |
-| Offener Pull Request | #32: Tests nur im Pull Request (vier Teile), Gewitter-Ton neu |
+| Live auf GitHub Pages | `8a06327` (PR #32) |
+| `main` | `8a06327` |
+| Offener Pull Request | #33: Testregel in CLAUDE.md. Offen bei Daniela: GitHub-Einstellung „Require status checks“ für `main` |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 

@@ -19,4 +19,6 @@ Kein Artifact für den Projektstand anlegen; Daniela möchte ihn nur in Google D
 
 - Änderungen als Pull Request; Daniela entscheidet, ob gemergt wird. Gemergt wird erst, wenn der Browser-Test auf GitHub grün ist.
 - Vor dem Pushen `node tests/smoke.cjs` laufen lassen (siehe README). Der Mehrspieler-Test läuft nur lokal, GitHub überspringt ihn; deshalb lokal immer mit Mehrspieler-Test (Paket `peer`) prüfen.
+- Umfang des lokalen Tests: Vor dem ersten Push eines Pull Requests der volle Test. Bei späteren Korrekturen im selben Pull Request nur die betroffenen Teile (`KK_PART=1` bis `4`, siehe README); der Mehrspieler-Teil läuft lokal dabei immer mit. Ausnahme: Wurde Spielcode geändert, der mehrere Teile betrifft (zum Beispiel `game.js`, `menu.js`, `net.js`, Grafik), wieder der volle Test.
+- Auf GitHub läuft der Browser-Test nur im Pull Request (vier Teile gleichzeitig), nach dem Merge wird ohne Test veröffentlicht. Deshalb erst mergen, wenn alle vier Testteile grün sind.
 - Kommunikation mit Daniela auf Deutsch.
