@@ -141,8 +141,11 @@ async function main() {
   check(await page.evaluate(() => state === 'pause'), 'pausiert automatisch, wenn die App in den Hintergrund geht');
   await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
   await page.click('#resumeBtn', { force: true });
-  await page.evaluate(() => endGame(true, 'Test.'));
-  check(await page.waitForFunction(() => /^sieg(_x)?$/.test(music.playing || ''), null, { timeout: 3000 }).then(() => true, () => false), 'Musik: Sieg-Jingle am Rundenende');
+  // the jingle lasts only about 3.6 s; on a busy test machine a later look can come after it has ended,
+  // so record which piece the round end starts instead of sampling what is playing afterwards
+  check(await page.evaluate(() => { const played = [], p = music.play; music.play = function (n, o) { played.push(n); return p.call(this, n, o); };
+    try { endGame(true, 'Test.'); } finally { music.play = p; }
+    return played.length > 0 && played.every(n => /^sieg(_x)?$/.test(n)) && /^sieg(_x)?$/.test(music.playing || ''); }), 'Musik: Sieg-Jingle am Rundenende');
 
   console.log('App / offline');
   await page.evaluate(() => navigator.serviceWorker.ready);

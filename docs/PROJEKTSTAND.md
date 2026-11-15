@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 15. November 2026 · Live-Version auf `main`: `4e6bf9d` (PR #28: Schnee nachgebessert; damit sind auch #27 Kontaktschatten und Randlicht live)
+Stand: 15. November 2026 · Live-Version auf `main`: `4e6bf9d` (PR #28). #29 (Menü) ist gemergt, sein Deploy scheiterte am Sieg-Jingle-Test; mit dem Merge von #30 geht das Menü live
 
 ## Links
 
@@ -43,6 +43,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `4e6bf9d` (PR #28: Schnee n
 | #27 | Auftrag Grafik-Upgrade, Schritt 3: weiche Kontaktschatten unter Figuren, Fahrzeugen und Kisten, warmes Randlicht auf Figuren und Fahrzeugen (auch auf „Niedrig“, dort schwächer), Grafikstufe beim ersten Start nach Gerät | gemergt |
 | #28 | Schnee nachgebessert nach Danielas iPhone-Test: Fußspuren erschienen im echten Spiel nie (der Merker „läuft“ war schon zurückgesetzt, als der Schnee ihn las; gleicher Fehler bei Fahrzeugstaub und Aschespuren), jetzt größer, deutlicher und gut 25 s sichtbar; Schnee liegt ungleich (dünne Stellen mit Gras, tiefe Schneefelder mit Verwehungen); Verwehungen als weiche Hügel statt Halbkugeln; Morgennebel mit weichen Rändern (war die grünlich gesprenkelte Fläche mit gerader Kante); Deploy-Fehler von #27 (Sieg-Jingle) behoben | gemergt |
 | #29 | Auftrag „Menü aufräumen und Einstellungen im Spiel“: Hauptmenü mit drei Knöpfen und „Zuletzt: …“, Spielstart mit Kartenbildern und Schwierigkeit, Einstellungen in vier Bereichen (Spiel, Grafik, Ton, Steuerung) mit neuen Schaltern (Tageszeit, Wetter, Tipps, weiche Schatten, Spuren im Schnee, Kamera umkehren, Vibration), aus Hauptmenü und Pause erreichbar; Pausenmenü neu, Pause-Knopf oben rechts; Mehrspieler-Pause nur als Ebene | gemergt |
+| #30 | Test „Sieg-Jingle am Rundenende“ robust: Der Jingle dauert nur 3,6 s; auf ausgelasteten Testmaschinen schaute der Test erst nach dessen Ende nach (Deploys von #27 und #29 scheiterten daran). Jetzt hält er fest, welches Stück das Rundenende startet | gemergt |
 
 ## Was umgesetzt ist
 
