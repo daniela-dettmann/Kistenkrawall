@@ -36,6 +36,7 @@ const PRECACHE = [
   './js/daynight.js',
   './js/look.js',
   './js/water.js',
+  './js/snow.js',
   './js/net.js',
   './vendor/peerjs-1.5.4.min.js',
   './js/update.js',

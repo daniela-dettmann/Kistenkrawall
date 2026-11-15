@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 15. November 2026 · Live-Version auf `main`: `c6f3031` (PR #24: Grafik neu); mit dem Merge von #25 kommt das neue Wasser dazu
+Stand: 15. November 2026 · Live-Version auf `main`: `8567aae` (PR #25: Wasser); mit dem Merge von #26 kommt der Schnee dazu
 
 ## Links
 
@@ -39,6 +39,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `c6f3031` (PR #24: Grafik n
 | #23 | Nach Danielas Test auf dem iPhone 15 Pro Max (33 FPS, Flimmern am Ufer, überhellte Stellen): Schatten nur jedes zweite Bild, Blechlinge und Hauptquartiere zusammengefasst, Weihnachtsdeko mit halb so vielen Dreiecken, Schaumkante am Ufer neu, Sonne wandert in Schritten, Schein nur noch um echte Lichter | gemergt |
 | #24 | Grafik neu: direkt auf den Bildschirm statt Nachbearbeitung (gegen Krisseln und Überstrahlen), Belichtungskurve; A: schärfere Texturen, Gras blendet aus, Schatten rasten ein, runde Kanten; B: Schattierung in Senken, Lichtsaum, Metallglanz, Wasserspiegelung; C: Wind, Wolkenschatten, Spuren, Spritzer, Mündungsfeuer, Explosionen, Morgennebel | gemergt |
 | #25 | Auftrag „Grafik-Upgrade Wasser, Schnee und Plastizität“, Schritt 1: Wasser mit Tiefenfarbe aus Küstenabstand, zwei Schaumlinien, gegenläufigen Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzern mit Tropfen; Wolken werfen keine harten Schatten mehr; Schalter heißt jetzt „Grafik: Hoch / Niedrig“ | gemergt |
+| #26 | Auftrag Grafik-Upgrade, Schritt 2: Schnee mit Spurenkarte (Fußabdrücke, Reifenrillen, schneien nach gut 12 s zu), Verwehungen an Bäumen, Felsen, Sandsäcken, Hauptquartieren und in Senken (bremsen auf 82 %, es staubt), Schneehauben auf Kisten, Felsen, Sandsäcken, Schneestaub an den Füßen | gemergt |
 
 ## Was umgesetzt ist
 
@@ -132,6 +133,15 @@ Stand: 15. November 2026 · Live-Version auf `main`: `c6f3031` (PR #24: Grafik n
 - Gebirge hat kein Wasser; Vulkan-Meer und Weihnachtsedition haben eigene Wasserfarben.
 - FPS vorher und nachher: noch nicht gemessen. Messbar nur auf dem iPhone, Daniela schickt die Werte.
 
+### Schnee (Auftrag Grafik-Upgrade, Schritt 2; Gebirge und Weihnachtsedition auf der Insel)
+- Spurenkarte (`js/snow.js`): eine 512er-Textur über das Spielfeld (256 auf „Niedrig“). Blechlinge drücken alle 0,6 Einheiten einen Fußabdruck hinein, abwechselnd links und rechts; Fahrzeuge ziehen zwei durchgehende Rillen. Alle 0,1 Sekunden wird die Karte etwas aufgehellt, nach gut 12 Sekunden ist eine Spur wieder zugeschneit.
+- Der Boden liest die Karte: Abdrücke sind dunkler und bläulich, haben einen hellen Rand und fangen das Licht wie eine Mulde. Echtes Absenken des Geländes geht nicht, das Gitter ist mit etwa einer Einheit zu grob für Fußabdrücke; deshalb nur über die Lichtrichtung (wie im Auftrag als Ausweichweg vorgesehen).
+- Schneeverwehungen als kleine Hügel: an der windabgewandten Seite von Bäumen und Felsen, an jedem zweiten Sandsack, an den vier Ecken der Hauptquartiere und in bis zu 24 Senken. Wer hindurchläuft oder fährt, ist auf 82 % gebremst; Fahrzeuge wirbeln dabei Schnee auf. Gilt für alle Einheiten gleich, auch für die KI und im Mehrspieler (der Host rechnet).
+- Schneehauben auf Kisten (nur auf der obersten Lage eines Stapels), Felsen und Sandsäcken.
+- Beim Laufen leichter Schneestaub an den Füßen, in Verwehungen mehr (nur „Hoch“).
+- Die frühere Spur aus aufgelegten Flecken bleibt nur noch für die Asche am Vulkan.
+- FPS vorher und nachher: nur auf dem iPhone messbar.
+
 ### Tag, Nacht und Wetter (alle Karten)
 - Ein Tag dauert 8 Minuten. Die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten kommt das Abendrot, dann etwa drei Minuten Nacht, dann der Morgen. Die erste Welle fällt bei sechs Minuten Bauruhe in die Nacht.
 - Nachts: Mondlicht, Sterne, eine Laterne am eigenen Blechling, Lichtkegel vor allen Blechlingen und Fahrzeugen, leuchtende Kisten und Hauptquartiere. Die Lava leuchtet von selbst und erhellt die Vulkannacht.
@@ -175,6 +185,7 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Vulkan: Kartenwahl, Höhen von Lavastrom, Brücken, Insel und Krater, Wegfindung über die Insel und um den Krater (nie durch die Lava), Runde mit Kisten auf der Insel, Ausbruch (Sperre, Ausweichen, Schaden nur auf der Brücke), Weihnachtsedition auf dem Vulkan
 - Helligkeit: unter 2 % ganz helle Bildpunkte am Mittag in „Schön“; Blechlinge zusammengefasst, Schatten jedes zweite Bild
 - Geschwindigkeit: feste Deko ist zusammengefasst, unter 700 Zeichenvorgänge pro Bild; FPS-Anzeige einschaltbar
+- Schnee: Fußspuren in der Spurenkarte, Verwehungen bremsen leicht, Schneehauben auf Kisten
 - Wasser: Küstenabstand berechnet, Tiefenfarbe und Schaum im Shader, Spritzer mit Tropfen und Schaumring
 - Grafik neu: Belichtungskurve, dunklere Ecken nur in „Schön“, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus, Explosion mit Feuerball, Rauch und Glut, Mündungsfeuer
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
@@ -196,6 +207,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 | `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
 | `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
 | `js/daynight.js` | Tag, Nacht und Wetter |
+| `js/snow.js` | Schnee: Spurenkarte, Verwehungen mit Bremsen, Schneehauben, Schneestaub |
 | `js/water.js` | Wasser: Tiefenfarbe, Uferschaum, Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzer |
 | `js/look.js` | Aussehen: Wind, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz, Lichtsaum, Spuren, Explosionen, Mündungsfeuer |
 | `js/volcano.js` | Vulkan: Licht, Krater, Rauch, Ausbruch (Grundriss in `js/core.js`, Wegführung in `js/combat.js`) |
