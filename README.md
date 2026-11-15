@@ -52,7 +52,7 @@ Die `js/`-Dateien sind normale Skripte, die in der Reihenfolge aus `index.html` 
 
 ## Veröffentlichen
 
-Jeder Push auf `main` startet `.github/workflows/pages.yml`: Die Seite wird zusammengestellt, im Browser getestet (Spiel starten, Ton, Pause, offline, Tonstudio) und nur bei Erfolg auf GitHub Pages veröffentlicht. Pull Requests werden ebenfalls getestet, aber nicht veröffentlicht. Den Mehrspieler-Test (lokaler PeerServer, drei Browserseiten) überspringt GitHub; er läuft nur lokal, mit `KK_MP_TEST=1` auch auf GitHub. Die Offline-Version in `sw.js` setzt der Workflow automatisch auf den Commit, installierte Apps bekommen Updates also ohne Handarbeit.
+`.github/workflows/pages.yml`: Bei Pull Requests läuft der Browser-Test, aufgeteilt in vier Teile, die gleichzeitig laufen (`KK_PART=1..4`: 1 Spiel, offline, Spielstand; 2 Tonstudio, Weihnachten, Gebirge; 3 Grafik, Tag/Nacht/Wetter; 4 Vulkan, Update-Hinweis). Ein Push auf `main` (der Merge) stellt die Seite nur zusammen und veröffentlicht sie, ohne erneut zu testen; gemergt wird deshalb erst bei grünem Test. Den Mehrspieler-Test (lokaler PeerServer, drei Browserseiten) überspringt GitHub; er läuft nur lokal, mit `KK_MP_TEST=1` auch auf GitHub. Die Offline-Version in `sw.js` setzt der Workflow automatisch auf den Commit, installierte Apps bekommen Updates also ohne Handarbeit.
 
 Lokal testen:
 

@@ -153,7 +153,6 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
     const bolt=drawBolt(t.x,t.z,36,hgt(t.x,t.z)+3.4,0.13);
     fires.push({t,bolt,life:0.32,fire:6.5,charAt:1.8,puffT:0});
     W.flash=1.15;
-    if(typeof sfx==='function')sfx('boom',t.x,t.z);
   }
   WX.strike=strike;
   function charTree(t){
@@ -249,5 +248,26 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
       if(f.fire<=0&&!f.bolt)fires.splice(i,1);
     }
   }
-  const _mood=updateMood;updateMood=function(dt){_mood(dt);try{step(dt);}catch(e){console.warn(e);}};
+  /* ---------- Sound: a steady rain bed, gusty wind in a blizzard, now and then distant thunder ---------- */
+  let bed=null,bedT=0,rumbleT=rand(8,16);
+  function mkBed(){
+    const len=AC.sampleRate*3,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+    const mk=(type,f,q)=>{const src=AC.createBufferSource();src.buffer=buf;src.loop=true;const fl=AC.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;
+      const g=AC.createGain();g.gain.value=0;src.connect(fl);fl.connect(g);g.connect(master);src.start(AC.currentTime,Math.random()*2.5);return g;};
+    return {hiss:mk('bandpass',2400,0.3),patter:mk('lowpass',800,0.4),wind:mk('lowpass',380,0.9)};
+  }
+  function sounds(dt){
+    if(typeof AC==='undefined'||!AC||!master||AC.state!=='running')return;
+    if(!bed)bed=mkBed();
+    bedT-=dt;if(bedT>0)return;bedT=0.25;
+    const on=(state==='play'||state==='pause')&&soundOn,k=state==='pause'?0.4:1,s=W.s,t=AC.currentTime;
+    const rain=on&&W.kind==='regen'?s*k:0,blow=on&&(W.kind==='schnee'||W.storm)?s*k*(W.kind==='schnee'?(W.storm?1:0.4):0.5):0;
+    const gust=0.7+0.3*Math.sin(gameT*0.9)*Math.sin(gameT*0.37+1);
+    bed.hiss.gain.setTargetAtTime(rain*0.05,t,0.6);bed.patter.gain.setTargetAtTime(rain*0.07,t,0.6);bed.wind.gain.setTargetAtTime(blow*0.13*gust,t,0.8);
+    // a thunderstorm grumbles in the distance now and then, not all the time
+    if(state==='play'&&soundOn&&W.storm&&W.kind==='regen'&&s>0.5){rumbleT-=0.25;
+      if(rumbleT<=0){rumbleT=rand(12,30);try{playSound(AC,noiseBuf,'grummeln',rand(0.35,0.6),master);}catch(e){}WX.rumbles=(WX.rumbles||0)+1;}}
+  }
+  const _mood=updateMood;updateMood=function(dt){_mood(dt);try{step(dt);sounds(dt);}catch(e){console.warn(e);}};
 })();

@@ -9,14 +9,46 @@ const SND=(function(){
     g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+(att||0.005));g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
     o.connect(g);g.connect(c.out);o.start(t);o.stop(t+dur+0.02);return o;
   }
-  function noise(c,t0,dur,peak,ftype,f0,f1,q){
+  function noise(c,t0,dur,peak,ftype,f0,f1,q,att){
     const s=c.AC.createBufferSource(),f=c.AC.createBiquadFilter(),g=c.AC.createGain(),t=c.t+t0;
     s.buffer=c.noise;f.type=ftype||'bandpass';f.frequency.setValueAtTime(f0,t);if(f1)f.frequency.exponentialRampToValueAtTime(f1,t+dur);f.Q.value=q||1;
-    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+0.006);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+(att||0.006));g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
     s.connect(f);f.connect(g);g.connect(c.out);s.start(t,Math.random()*0.2,dur+0.05);
   }
   function wobble(o,c,t0,rate,depth,dur){
     const l=c.AC.createOscillator(),lg=c.AC.createGain(),t=c.t+t0;l.frequency.value=rate;lg.gain.value=depth;l.connect(lg);lg.connect(o.frequency);l.start(t);l.stop(t+dur+0.05);
+  }
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  function thunder(c,dist,dur,vol){
+    const AC=c.AC,sr=AC.sampleRate,n=Math.floor(sr*dur),d=new Float32Array(n);
+    // 1. when it is loud: the channel from the ground up to the cloud, in 20 to 40 m zigzag pieces; each piece's
+    //    pressure pulse arrives after its distance / speed of sound, strongest where the channel runs across the view
+    const segs=[];let x=dist,y=0,z=rnd(-300,300);
+    while(y<3500){const nx=x+rnd(-28,28),ny=y+rnd(12,34),nz=z+rnd(-28,28);segs.push([x,y,z,nx,ny,nz]);x=nx;y=ny;z=nz;
+      if(Math.random()<0.03){let bx=x,by=y,bz=z;for(let k=0;k<12;k++){const ax=bx+rnd(-30,30),ay=by-rnd(5,25),az=bz+rnd(-30,30);segs.push([bx,by,bz,ax,ay,az]);bx=ax;by=ay;bz=az;}}}
+    const ER=200,E=new Float32Array(Math.ceil(dur*ER)+1);let rmin=1e9;
+    const P=segs.map(([x0,y0,z0,x1,y1,z1])=>{const mx=(x0+x1)/2,my=(y0+y1)/2-1.5,mz=(z0+z1)/2,r=Math.hypot(mx,my,mz),sx=x1-x0,sy=y1-y0,sz=z1-z0,l=Math.hypot(sx,sy,sz);
+      const cos=Math.abs((sx*mx+sy*my+sz*mz)/(l*r));if(r<rmin)rmin=r;return [r,l*(0.12+Math.pow(1-cos*cos,1.5))/Math.sqrt(r)];});
+    for(const [r,A] of P){const k=Math.floor(((r-rmin)/343+0.03)*ER);if(k<E.length)E[k]+=A;}
+    // smooth it: a near flash rolls in quicker swells than a far one
+    const w=Math.max(2,Math.round(ER*(0.035+dist/40000))),S=new Float32Array(E.length);
+    for(let i=0;i<E.length;i++){let a=0,m=0;for(let k=-w;k<=w;k++){const q=i+k;if(q<0||q>=E.length)continue;const wt=1-Math.abs(k)/(w+1);a+=E[q]*wt;m+=wt;}S[i]=a/m;}
+    let smax=0;for(const v of S)smax=Math.max(smax,v);
+    // 2. the sound itself: soft, deep noise (no hard edges), shaped by that envelope
+    const near=Math.exp(-dist/1200),fc=110+1400*near,al=1-Math.exp(-2*Math.PI*fc/sr);
+    let b=0,l1=0,l2=0;
+    for(let i=0;i<n;i++){
+      const wn=Math.random()*2-1;b=(b+wn*0.06)*0.996;l1+=al*(wn-l1);l2+=al*(l1-l2);
+      const p=i/sr*ER,k0=Math.floor(p),f=p-k0,e=k0+1<S.length?(S[k0]*(1-f)+S[k0+1]*f)/smax:0;
+      d[i]=(b*1.6+l2*1.2)*e;
+    }
+    // 3. a near flash starts with a crack: a short burst of brighter noise that dies away fast
+    if(near>0.3){const cn=Math.floor(sr*0.25);let h=0;for(let i=0;i<cn;i++){const wn=Math.random()*2-1;h+=0.35*(wn-h);d[i]+=h*near*1.1*Math.exp(-i/(sr*0.045));}}
+    // 4. echoes from the landscape, soft start and end, then a fixed peak well below the limit
+    const src=d.slice();for(const [dt,g] of [[0.37,0.3],[0.81,0.22],[1.33,0.15],[2.05,0.1]]){const o=Math.floor(dt*sr);for(let i=0;i+o<n;i++)d[i+o]+=src[i]*g;}
+    let pk=0;for(let i=0;i<n;i++){if(i<sr*0.01)d[i]*=i/(sr*0.01);if(i>n-sr*0.8)d[i]*=(n-i)/(sr*0.8);pk=Math.max(pk,Math.abs(d[i]));}
+    const buf=AC.createBuffer(1,n,sr),ch=buf.getChannelData(0);for(let i=0;i<n;i++)ch[i]=d[i]/(pk||1);
+    const s=AC.createBufferSource(),g=AC.createGain();s.buffer=buf;g.gain.value=vol;s.connect(g);g.connect(c.out);s.start(c.t);
   }
   const N={C5:523.25,D5:587.33,E5:659.25,G5:783.99,A5:880,C6:1046.5,E6:1318.5,G6:1568};
   return {
@@ -33,7 +65,14 @@ const SND=(function(){
       osc(c,'triangle',640,330,0.08,0.09,0.03);osc(c,'triangle',540,280,0.15,0.09,0.025);
     },
     grollen(c){const o=osc(c,'sine',62,38,0,1.9,0.22,0.25);wobble(o,c,0,9,7,1.9);noise(c,0,2.0,0.16,'lowpass',320,70,0.7);osc(c,'triangle',96,50,0.5,1.2,0.07,0.2);},
-    donner(c){noise(c,0,0.25,0.3,'lowpass',2400,300,0.5);noise(c,0.08,2.4,0.24,'lowpass',420,60,0.6);osc(c,'sine',70,34,0.05,2.2,0.2,0.12);},
+    // Thunder, built the way it comes about: a lightning channel kilometres long and zigzagging; every piece sends
+    // out a short pressure pulse (an N-wave: a jump up, a fall below zero, back), and the pieces lie at different
+    // distances, so the pulses arrive one after the other and roll. Where the channel runs across the line of sight,
+    // many arrive at once: the loud claps in the roll. The air swallows the high part with distance (near: a sharp
+    // crack, far: only a deep rumble), and the landscape adds a few echoes. Every thunder is a new channel.
+    donner(c){thunder(c,rnd(350,800),7,0.5);},
+    donnerFern(c){thunder(c,rnd(1800,3200),7.5,0.42);},
+    grummeln(c){thunder(c,rnd(6000,9000),8,0.35);},
     regen(c){noise(c,0,1.25,0.05,'bandpass',5200,4200,0.5);noise(c,0,1.25,0.03,'highpass',2600,2600,0.4);},
     pick(c){const o=osc(c,'triangle',330,760,0,0.14,0.11);wobble(o,c,0,28,18,0.14);},
     stack(c){osc(c,'sine',560,520,0,0.07,0.14);osc(c,'sine',410,380,0.075,0.09,0.12);noise(c,0,0.04,0.05,'bandpass',2200,1800,2);},
@@ -79,13 +118,13 @@ const SOUND_LIST=[
   ['Kisten',[['pick','Kiste aufnehmen'],['stack','Kiste stapeln'],['open','Stapel öffnen'],['gold','Sonderkiste'],['recruit','Neuer Blechling']]],
   ['Werkstatt (gelbe Kisten)',[['ammo','Munition'],['repair','Reparatur'],['tempo','Tempo-Schub'],['shield','Schutzschild'],['build','Turm bauen']]],
   ['Signale & Luftschlag',[['drum','Angriffssignal'],['plane','Flieger im Anflug'],['whistle','Bombe fällt'],['grollen','Vulkan grollt']]],
-  ['Wetter',[['regen','Regen'],['donner','Donner']]],
+  ['Wetter',[['regen','Regen'],['donner','Donner'],['donnerFern','Donner (fern)'],['grummeln','Gewitter grummelt in der Ferne']]],
   ['Weihnachten',[['xhit','Treffer (Glöckchen)'],['sleigh','Schlittenglocken']]]
 ];
 function playSound(AC,noiseBuf,kind,vol,dest){
   const f=SND[kind];if(!f||!AC)return;
   const out=AC.createGain();out.gain.value=vol==null?1:vol;out.connect(dest||AC.destination);
   f({AC,t:AC.currentTime+0.01,out,noise:noiseBuf});
-  setTimeout(()=>{try{out.disconnect();}catch(e){}},4000);
+  setTimeout(()=>{try{out.disconnect();}catch(e){}},9000);   // thunder rolls for up to eight seconds
 }
 /* SOUND-END */

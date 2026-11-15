@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 15. November 2026 · Live-Version auf `main`: `3ef02f1` (PR #30; damit ist auch #29, das neue Menü, live)
+Stand: 15. November 2026 · Live-Version auf `main`: `eb69d3a` (PR #31: dynamisches Wetter)
 
 ## Links
 
@@ -45,11 +45,12 @@ Stand: 15. November 2026 · Live-Version auf `main`: `3ef02f1` (PR #30; damit is
 | #29 | Auftrag „Menü aufräumen und Einstellungen im Spiel“: Hauptmenü mit drei Knöpfen und „Zuletzt: …“, Spielstart mit Kartenbildern und Schwierigkeit, Einstellungen in vier Bereichen (Spiel, Grafik, Ton, Steuerung) mit neuen Schaltern (Tageszeit, Wetter, Tipps, weiche Schatten, Spuren im Schnee, Kamera umkehren, Vibration), aus Hauptmenü und Pause erreichbar; Pausenmenü neu, Pause-Knopf oben rechts; Mehrspieler-Pause nur als Ebene | gemergt |
 | #30 | Test „Sieg-Jingle am Rundenende“ robust: Der Jingle dauert nur 3,6 s; auf ausgelasteten Testmaschinen schaute der Test erst nach dessen Ende nach (Deploys von #27 und #29 scheiterten daran). Jetzt hält er fest, welches Stück das Rundenende startet | gemergt |
 | #31 | Auftrag „Dynamisches Wetter“: Wetterwahl Zufall/Klar/Regen/Gewitter/Schneesturm, Unwetter zu Beginn der Angriffswellen, Schauer in der Bauruhe, Weihnachtsedition mit Schneefall statt Dunst; Regenstreifen, Tropfenringe, nasser Glanz, Pfützen mit Spritzern; Gewitter mit dunklem Himmel, Blitzstrahlen und Einschlägen in Bäume (Feuer, angekohlt); Schneesturm waagerecht mit dichtem Nebel und schnell zuschneienden Spuren; Wind lässt Fallschirmkisten schwanken | gemergt |
+| #32 | Browser-Test nur noch im Pull Request, in vier Teilen gleichzeitig, Testbrowser im Cache; Deploy ohne erneuten Test. Gewitter-Ton neu: Regenrauschen statt „tsch, tsch“, Donner nach Blitzkanal-Modell, leises Grummeln, Wind im Schneesturm; Vulkan-Grollen wieder eigenständig | gemergt |
 
 ## Was umgesetzt ist
 
 ### Bereitstellung und App
-- Das Spiel läuft auf GitHub Pages. Jeder Push auf `main` wird zusammengestellt, im Browser getestet und nur bei Erfolg veröffentlicht. Pull Requests werden ebenfalls getestet.
+- Das Spiel läuft auf GitHub Pages. Der Browser-Test läuft nur im Pull Request, in vier Teilen gleichzeitig (je etwa 2 bis 5 Minuten statt gut 16 Minuten am Stück). Nach dem Merge wird die Seite ohne erneuten Test zusammengestellt und veröffentlicht. Deshalb erst mergen, wenn alle vier Testteile grün sind (empfohlen: in GitHub unter Settings › Branches für `main` „Require status checks to pass“ mit „test (Teil 1)“ bis „test (Teil 4)“).
 - Eigenes App-Icon: orangefarbener Blechling springt aus einer aufgesprengten Kiste, vor einer Explosion auf Petrol. Als SVG und in allen PNG-Größen, inklusive Android-Variante mit Rand zum Zuschneiden, iPhone-Icon und Favicons.
 - Progressive Web App: auf Handy und Rechner installierbar, startet im Vollbild und Querformat und läuft nach dem ersten Start komplett offline.
 - three.js r128 und die Schriften liegen im Repo, das Spiel lädt nichts von fremden Servern.
@@ -180,7 +181,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `3ef02f1` (PR #30; damit is
 - Schneesturm: waagerecht treibende Schneestreifen in Windrichtung, Schneefall treibt seitlich, dichter Nebel, Spuren schneien drei- bis viermal schneller zu. Inseln und Berge am Horizont (ohne eigenen Nebel) werden bei dichtem Wetter ausgeblendet, damit sie nicht in der Luft schweben.
 - Wind: Fallschirmkisten schwanken und landen bis gut eine Einheit versetzt, nie Richtung Wasser oder Lava. Sonst keine Wirkung aufs Spiel: Sichtweite, Zielen und KI bleiben gleich.
 - Im Mehrspieler entscheidet der Host das Wetter, der Gast sieht dasselbe; Blitzeinschläge in Bäume sind nur Optik und können auf beiden Geräten verschieden sein.
-- Neue Töne im Tonstudio: Regen, Donner.
+- Töne: Regen als gleichmäßiges Rauschen, das mit der Stärke mitgeht (vorher ein Rauschstoß jede Sekunde: „tsch, tsch“), böiger Wind im Schneesturm. Donner nur nach einem Blitz: Für jeden Donner wird ein zufälliger, zickzackförmiger Blitzkanal berechnet; aus den Laufzeiten seiner Stücke ergibt sich, wann es lauter und leiser rollt, der Klang selbst ist weiches, tiefes Rauschen, bei nahem Einschlag mit kurzem Krachen, dazu Landschafts-Echos. Ferner Donner ist tiefer und weicher. Während eines Gewitters grummelt es alle 12 bis 30 Sekunden leise in der Ferne. Im Tonstudio: Regen, Donner, Donner (fern), Gewitter grummelt in der Ferne. Ein erster Versuch mit reinen Druckstößen klang übersteuert und wurde verworfen.
 
 ### Mehrspieler (1 gegen 1)
 - Hauptmenü: „Mehrspieler“ mit „Raum erstellen“ (Code anzeigen, kopieren, teilen) und „Raum beitreten“ (Code eingeben). Karte (im Spielstart) und Bauruhe (Einstellungen) wählt der Host vorher.
@@ -204,7 +205,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `3ef02f1` (PR #30; damit is
 
 ## Automatischer Test
 
-Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unter anderem:
+Bei jedem Pull Request startet GitHub das Spiel in einem echten Browser (vier Teile gleichzeitig, `KK_PART=1..4`; lokal läuft alles am Stück) und prüft unter anderem:
 - Dateien: alles verlinkt, offline gespeichert, nichts von fremden Servern
 - Menü: Hauptmenü nur mit drei Knöpfen und „Zuletzt: …“, Tippflächen ab 44 px, Pausenmenü mit Weiter, Einstellungen, Neu starten, Hauptmenü, Einstellungen aus der Pause („Zurück zur Pause“, Hinweis „Gilt ab der nächsten Runde“), Schalter wirken sofort und werden gespeichert (Schwierigkeit erst nächste Runde, weiche Schatten, Spuren, Tipps, Kamera umkehren, Musik-Regler), Escape führt zurück, nach Kartenwechsel ist der Spielstart offen, Hinweis auf gespeicherte Runde
 - Spiel: Start, 3D-Grafik, Pause, Wellen, Ton, Ton nach Unterbrechung, automatische Pause

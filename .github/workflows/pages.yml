@@ -1,7 +1,8 @@
 name: GitHub Pages
 
-# Every push to main: assemble the site, test it in a real browser, and only deploy if
-# the test passes. Pull requests run the same test without deploying.
+# Pull requests: the browser test, split into four parts that run at the same time.
+# Push to main (after a merge): assemble the site and publish it, without testing again.
+# Merge only when the test of the pull request is green.
 on:
   push:
     branches: [main]
@@ -18,7 +19,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3, 4]
+    name: test (Teil ${{ matrix.part }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Seite zusammenstellen
+        run: |
+          mkdir _site
+          cp -r index.html tonstudio.html sw.js manifest.webmanifest .nojekyll css js fonts icons vendor _site/
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # the test browser is kept between runs; only the system libraries are installed each time
+      - uses: actions/cache@v4
+        id: pw
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Test-Browser installieren
+        run: |
+          npm ci
+          if [ "${{ steps.pw.outputs.cache-hit }}" = "true" ]; then npx playwright install-deps chromium; else npx playwright install --with-deps chromium; fi
+
+      - name: Spiel testen (Teil ${{ matrix.part }} von 4)
+        run: node tests/smoke.cjs _site
+        env:
+          KK_PART: ${{ matrix.part }}
+
   build:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,24 +77,9 @@ jobs:
           grep -q "kk-$V" _site/sw.js
           grep -q "content=\"$V\"" _site/index.html
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Test-Browser installieren
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-
-      - name: Spiel testen
-        run: node tests/smoke.cjs _site
-
       - uses: actions/configure-pages@v5
-        if: github.event_name != 'pull_request'
 
       - uses: actions/upload-pages-artifact@v3
-        if: github.event_name != 'pull_request'
         with:
           path: _site
 
