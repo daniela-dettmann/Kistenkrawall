@@ -122,14 +122,32 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
     }
     return hit;
   };
-  // a jagged bolt from the clouds (height y0) down to (x, y1, z)
-  function drawBolt(X,Z,y0,y1,w){
-    const pts=[];let x=X+rand(-3,3),z=Z+rand(-3,3);
-    for(let y=y0;y>y1;y-=rand(2.5,4.5)){pts.push(new THREE.Vector3(x,y,z));x+=(X-x)*0.25+rand(-1.2,1.2);z+=(Z-z)*0.25+rand(-1.2,1.2);}
-    pts.push(new THREE.Vector3(X,y1,Z));
-    const path=new THREE.CurvePath();for(let i=1;i<pts.length;i++)path.add(new THREE.LineCurve3(pts[i-1],pts[i]));
-    const m=new THREE.Mesh(new THREE.TubeGeometry(path,pts.length*2,w*(y0>40?2.4:1),4,false),boltMat.clone());m.renderOrder=5;scene.add(m);return m;
+  // A bolt from the clouds (height y0) down to (x, y1, z): the line is split again and again, every middle point
+  // pushed sideways (less at each level), which gives the many short kinks of a real bolt; two to four thinner
+  // branches fork off and fade out into the air.
+  function jag(a,b,disp,depth,out){
+    if(depth===0){out.push(b);return;}
+    const m=a.clone().lerp(b,0.5);m.x+=rand(-disp,disp);m.z+=rand(-disp,disp);m.y+=rand(-disp,disp)*0.2;
+    jag(a,m,disp*0.58,depth-1,out);jag(m,b,disp*0.58,depth-1,out);
   }
+  function tube(pts,w,mat){
+    const path=new THREE.CurvePath();for(let i=1;i<pts.length;i++)path.add(new THREE.LineCurve3(pts[i-1],pts[i]));
+    const m=new THREE.Mesh(new THREE.TubeGeometry(path,(pts.length-1)*2,w,3,false),mat);m.renderOrder=5;return m;
+  }
+  function drawBolt(X,Z,y0,y1,w){
+    const far=y0>40,W0=w*(far?2.6:1),mat=boltMat.clone(),g=new THREE.Group();
+    const top=new THREE.Vector3(X+rand(-6,6),y0,Z+rand(-6,6)),bot=new THREE.Vector3(X,y1,Z),main=[top];
+    jag(top,bot,top.distanceTo(bot)*0.3,7,main);
+    g.add(tube(main,W0,mat));
+    const nb=2+Math.floor(Math.random()*3);
+    for(let k=0;k<nb;k++){
+      const s0=main[Math.floor(rand(0.1,0.65)*main.length)],len=rand(5,12)*(far?1.4:1);
+      const e=new THREE.Vector3(s0.x+rand(-1,1)*len*0.8,s0.y-len*rand(0.6,1),s0.z+rand(-1,1)*len*0.8),br=[s0.clone()];
+      jag(s0,e,len*0.22,4,br);g.add(tube(br,W0*0.45,mat));
+    }
+    g.userData.mat=mat;scene.add(g);return g;
+  }
+  function dropBolt(b){scene.remove(b);b.traverse(o=>{if(o.isMesh)o.geometry.dispose();});}
   function strike(t){
     t.burnt=true;WX.strikes++;
     const bolt=drawBolt(t.x,t.z,36,hgt(t.x,t.z)+3.4,0.13);
@@ -185,7 +203,9 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
           else{x=cx+rand(-26,26);z=cz+rand(-26,26);y=rand(cy-2,cy+8);}
         }
         sp[i*3]=x;sp[i*3+1]=y;sp[i*3+2]=z;
-        const o=i*6;line[o]=x;line[o+1]=y;line[o+2]=z;line[o+3]=x-vx*L;line[o+4]=y-vy*L;line[o+5]=z-vz*L;
+        // a streak right in front of the lens would show as a huge straight line: those are left out
+        const o=i*6,near=(x-cx)*(x-cx)+(z-cz)*(z-cz)<16&&Math.abs(y-camera.position.y)<6,k=near?0:L;
+        line[o]=x;line[o+1]=y;line[o+2]=z;line[o+3]=x-vx*k;line[o+4]=y-vy*k;line[o+5]=z-vz*k;
       }
       sGeo.setDrawRange(0,n*2);sGeo.attributes.position.needsUpdate=true;WX.streaks=n;
     }
@@ -218,9 +238,9 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
     }
     // lightning bolts, fires and smoke
     for(let i=fires.length-1;i>=0;i--){const f=fires[i],t=f.t;
-      if(f.far){f.life-=dt;f.bolt.material.opacity=f.life>0?(0.6+0.4*Math.sin(f.life*90)):0;if(f.life<=0){scene.remove(f.bolt);f.bolt.geometry.dispose();fires.splice(i,1);}continue;}
+      if(f.far){f.life-=dt;f.bolt.userData.mat.opacity=f.life>0?(0.6+0.4*Math.sin(f.life*90)):0;if(f.life<=0){dropBolt(f.bolt);fires.splice(i,1);}continue;}
       const top=hgt(t.x,t.z)+2.2;
-      if(f.bolt){f.life-=dt;f.bolt.material.opacity=f.life>0?(0.6+0.4*Math.sin(f.life*90)):0;if(f.life<=0){scene.remove(f.bolt);f.bolt.geometry.dispose();f.bolt=null;}}
+      if(f.bolt){f.life-=dt;f.bolt.userData.mat.opacity=f.life>0?(0.6+0.4*Math.sin(f.life*90)):0;if(f.life<=0){dropBolt(f.bolt);f.bolt=null;}}
       f.fire-=dt;f.charAt-=dt;if(f.charAt<=0&&!t.charred)charTree(t);
       f.puffT-=dt;
       if(f.fire>0&&f.puffT<=0&&parts.length<230){f.puffT=0.12;
