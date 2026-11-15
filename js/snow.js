@@ -52,7 +52,9 @@ if(SNOW.on)(function(){
   let fadeT=0;
   function drawTrail(dt){
     const prev=renderer.getRenderTarget(),ac=renderer.autoClear;renderer.autoClear=false;renderer.setRenderTarget(rt);
-    fadeT+=dt;if(fadeT>=0.2){fadeT=0;renderer.render(fadeScene,trailCam);}
+    // a blizzard fills the trails three to four times faster
+    const W=typeof DN!=='undefined'?DN.wx:null,fq=W&&W.kind==='schnee'?1+W.s*(W.storm?3:1):1;
+    fadeT+=dt;if(fadeT>=0.2/fq){fadeT=0;renderer.render(fadeScene,trailCam);}
     if(sn){stampMesh.count=sn;stampMesh.instanceMatrix.needsUpdate=true;renderer.render(trailScene,trailCam);sn=0;}
     renderer.setRenderTarget(prev);renderer.autoClear=ac;
   }

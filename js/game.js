@@ -229,7 +229,7 @@ function update(dt){
   // crates
   if(SIM)for(const c of crates.slice()){
     if(c.state==='fall'){
-      if(c.chute){c.y+=c.vy*dt;c.m.rotation.y+=dt*0.6;c.chute.position.set(c.x,c.y+1.3,c.z);c.ring.scale.setScalar(1+Math.max(0,(c.y-hgt(c.x,c.z))/12));}
+      if(c.chute){c.y+=c.vy*dt;c.m.rotation.y+=dt*0.6;if(window.wxCrate)wxCrate(c,dt);c.chute.position.set(c.x,c.y+1.3,c.z);c.ring.scale.setScalar(1+Math.max(0,(c.y-hgt(c.x,c.z))/12));}
       else{c.vy-=22*dt;c.x+=c.vx*dt;c.z+=c.vz*dt;c.y+=c.vy*dt;c.m.rotation.x+=dt*3;
         c.x=clamp(c.x,-LIM,LIM);c.z=clamp(c.z,-LIM,LIM);}
       const gy=hgt(c.x,c.z)+0.5;

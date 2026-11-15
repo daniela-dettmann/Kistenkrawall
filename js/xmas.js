@@ -344,7 +344,8 @@ if(XMAS)(function(){
     // snow follows the camera
     const P=snowGeo.attributes.position,a=P.array,cx=camera.position.x,cz=camera.position.z,cy=camera.position.y;
     for(let i=0;i<SN;i++){
-      a[i*3+1]-=dt*(1.6+(i%7)*0.18);a[i*3]+=Math.sin(tAcc*0.7+i)*dt*0.4;
+      // wind (weather.js / daynight.js): in a blizzard the flakes drive sideways and fall a little faster
+      const w=(window.wxWind||1)-1;a[i*3+1]-=dt*(1.6+(i%7)*0.18)*(1+w*0.35);a[i*3]+=Math.sin(tAcc*0.7+i)*dt*0.4+dt*w*(4+(i%5));
       if(a[i*3+1]<cy-14){a[i*3+1]=cy+16;a[i*3]=cx+rand(-38,38);a[i*3+2]=cz+rand(-38,38);}
       if(Math.abs(a[i*3]-cx)>40)a[i*3]=cx+rand(-38,38);if(Math.abs(a[i*3+2]-cz)>40)a[i*3+2]=cz+rand(-38,38);
     }

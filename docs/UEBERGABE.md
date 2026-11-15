@@ -6,9 +6,9 @@ Stand: 15. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `4e6bf9d` (PR #28, mit #27) |
-| `main` | `c27373d` (#29 Menü gemergt, Deploy scheiterte am Sieg-Jingle-Test) |
-| Offener Pull Request | #30: Sieg-Jingle-Test robust, damit #29 (Menü) live geht |
+| Live auf GitHub Pages | `3ef02f1` (PR #30, mit #29 Menü) |
+| `main` | `3ef02f1` |
+| Offener Pull Request | #31: Auftrag „Dynamisches Wetter“ (Drive: `Kistenkrawall-Auftrag-Wetter.md`) |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
