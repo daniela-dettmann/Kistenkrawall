@@ -18,7 +18,7 @@ if(MOUNTAIN)(function(){
     const g=new THREE.Group();g.position.set(Math.cos(a)*r,-2,Math.sin(a)*r);g.rotation.y=srand()*3;
     const m=new THREE.Mesh(peakG,new THREE.MeshLambertMaterial({color:haze(0x6d7685,k),fog:false}));m.scale.set(s,hgt2,s);m.position.y=hgt2/2;g.add(m);
     const cap=new THREE.Mesh(capG,new THREE.MeshLambertMaterial({color:haze(0xf6f9fc,k*0.7),fog:false}));cap.scale.set(s*0.42,hgt2*0.42,s*0.42);cap.position.y=hgt2*0.79;g.add(cap);
-    scene.add(g);
+    g.userData.kkFar=true;scene.add(g);   // weather.js hides them in thick weather (no fog of their own)
   }
 
   /* Eagles circle high above instead of seagulls: bigger, brown, slower, gliding */

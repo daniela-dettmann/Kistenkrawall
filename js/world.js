@@ -2,7 +2,7 @@
 'use strict';
 // Things that never move or change after loading (trees, rocks, sandbags, bridges, far scenery).
 // gfx.js merges them into a few large meshes, which saves most of the draw calls.
-const STATIC_ROOTS=[],FAR_ROOTS=[];   // FAR_ROOTS: islands on the horizon, one colour per part, no fog
+const STATIC_ROOTS=[],FAR_ROOTS=[],TREES=[];   // FAR_ROOTS: islands on the horizon, one colour per part, no fog
 /* ---------- Terrain ---------- */
 // Mountain colours: snow on flat ground, grey-blue rock on steep slopes and in the chasm, trodden paths
 function mountainColor(x,z,h){
@@ -265,6 +265,7 @@ function addTree(x,z,block){
     for(const [bx,by,bz,r] of blobs){const m=new THREE.Mesh(new THREE.IcosahedronGeometry(r*s,1),lm);m.position.set(bx*s,by*s,bz*s);m.scale.y=0.9;g.add(m);}
   }
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(g);STATIC_ROOTS.push(g);
+  TREES.push({x,z,g});   // weather.js: lightning chars a tree (a dark copy over the merged original)
   if(block)obstacles.push({x,z,r:0.6});
 }
 function addRock(x,z,s){

@@ -31,6 +31,7 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
 | `js/mountain.js`, `js/volcano.js` | Karten Gebirge und Vulkan: Licht, Wetter, Krater und Ausbruch |
 | `js/gfx.js` | Grafik: Qualitätsschalter, Bildausgabe, Uferschaum, Lavaglut, runde Kanten, Schattierung, Zusammenfassen |
+| `js/weather.js` | Wetter: Plan, Regen, Pfützen, Gewitter mit Einschlägen, Schneesturm, Wind |
 | `js/menu.js` | Menü: Hauptmenü, Spielstart, Einstellungen (Spiel, Grafik, Ton, Steuerung), Pause; Mehrspieler-Pause als Ebene |
 | `js/snow.js` | Schnee: Spurenkarte, Verwehungen (bremsen), Schneehauben, Schneestaub |
 | `js/water.js` | Wasser: Tiefenfarbe aus Küstenabstand, Uferschaum, Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzer |
@@ -106,7 +107,7 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 
 ## Tag, Nacht und Wetter
 
-`js/daynight.js`, auf allen Karten, nur Optik und Ton. Einstellungen › Spiel: Tageszeit Auto / Tag / Nacht (`kk-tod`, `DN.tod`) und Wetter an/aus (`kk-dn`, `DN.on`; `?tagnacht=an|aus`).
+`js/daynight.js`, auf allen Karten, nur Optik und Ton. Einstellungen › Spiel: Tageszeit Auto / Tag / Nacht (`kk-tod`, `DN.tod`) und Wetter Zufall / Klar / Regen / Gewitter / Schneesturm (`kk-wx`, `DN.wsel`; `?tagnacht=aus` heißt Klar). Wetterzustand in `DN.wx` (`want`, `kind`, `storm`, Stärke `s` gegen `lvl`); den Plan bei „Zufall“, Regenstreifen, Tropfenringe, Nässe (`WX.wet`, Glanz der gemeinsamen Phong-Materialien), Pfützen, Blitzeinschläge (`TREES` aus `js/world.js`, `WX.strike`), Schneesturm-Streifen und Wind an Fallschirmkisten (`wxCrate`, aufgerufen in `js/game.js`) macht `js/weather.js`. Objekte ohne Nebel am Horizont tragen `userData.kkFar` und werden bei dichtem Wetter ausgeblendet.
 
 - **Tageszeit:** hängt an der Spielzeit `gameT`. Ein Tag dauert 8 Minuten (`DN.DAY`), die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten wird es Abend, die Nacht dauert etwa drei Minuten. Weil der Gast im Mehrspieler die Spielzeit des Hosts kennt, sehen beide dieselbe Tageszeit. Der Spielstand speichert die Spielzeit und damit auch die Tageszeit.
 - **Licht:** Das Modul läuft direkt nach `updateMood` und verändert dessen Ergebnis: Sonnenstand (`SUN_OFF`), Farben von Sonne, Himmel und Dunst, Abendrot, Mondlicht, Sterne.

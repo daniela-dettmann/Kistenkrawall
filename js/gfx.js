@@ -123,7 +123,7 @@ scene.traverse(o=>{
     }
     const n=pos.reduce((s,x)=>s+x.length,0),g=new THREE.BufferGeometry();
     g.setAttribute('position',new THREE.BufferAttribute(join(pos,n),3));g.setAttribute('normal',new THREE.BufferAttribute(join(nor,n),3));g.setAttribute('color',new THREE.BufferAttribute(join(col,n),3));
-    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true,fog:false}));m.matrixAutoUpdate=false;scene.add(m);made++;
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true,fog:false}));m.matrixAutoUpdate=false;m.userData.kkFar=true;scene.add(m);made++;
   }
   GFX.merged={roots:gone.length,meshes:made};
 })();

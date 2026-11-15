@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 15. November 2026 · Live-Version auf `main`: `4e6bf9d` (PR #28). #29 (Menü) ist gemergt, sein Deploy scheiterte am Sieg-Jingle-Test; mit dem Merge von #30 geht das Menü live
+Stand: 15. November 2026 · Live-Version auf `main`: `3ef02f1` (PR #30; damit ist auch #29, das neue Menü, live)
 
 ## Links
 
@@ -44,6 +44,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `4e6bf9d` (PR #28). #29 (Me
 | #28 | Schnee nachgebessert nach Danielas iPhone-Test: Fußspuren erschienen im echten Spiel nie (der Merker „läuft“ war schon zurückgesetzt, als der Schnee ihn las; gleicher Fehler bei Fahrzeugstaub und Aschespuren), jetzt größer, deutlicher und gut 25 s sichtbar; Schnee liegt ungleich (dünne Stellen mit Gras, tiefe Schneefelder mit Verwehungen); Verwehungen als weiche Hügel statt Halbkugeln; Morgennebel mit weichen Rändern (war die grünlich gesprenkelte Fläche mit gerader Kante); Deploy-Fehler von #27 (Sieg-Jingle) behoben | gemergt |
 | #29 | Auftrag „Menü aufräumen und Einstellungen im Spiel“: Hauptmenü mit drei Knöpfen und „Zuletzt: …“, Spielstart mit Kartenbildern und Schwierigkeit, Einstellungen in vier Bereichen (Spiel, Grafik, Ton, Steuerung) mit neuen Schaltern (Tageszeit, Wetter, Tipps, weiche Schatten, Spuren im Schnee, Kamera umkehren, Vibration), aus Hauptmenü und Pause erreichbar; Pausenmenü neu, Pause-Knopf oben rechts; Mehrspieler-Pause nur als Ebene | gemergt |
 | #30 | Test „Sieg-Jingle am Rundenende“ robust: Der Jingle dauert nur 3,6 s; auf ausgelasteten Testmaschinen schaute der Test erst nach dessen Ende nach (Deploys von #27 und #29 scheiterten daran). Jetzt hält er fest, welches Stück das Rundenende startet | gemergt |
+| #31 | Auftrag „Dynamisches Wetter“: Wetterwahl Zufall/Klar/Regen/Gewitter/Schneesturm, Unwetter zu Beginn der Angriffswellen, Schauer in der Bauruhe, Weihnachtsedition mit Schneefall statt Dunst; Regenstreifen, Tropfenringe, nasser Glanz, Pfützen mit Spritzern; Gewitter mit dunklem Himmel, Blitzstrahlen und Einschlägen in Bäume (Feuer, angekohlt); Schneesturm waagerecht mit dichtem Nebel und schnell zuschneienden Spuren; Wind lässt Fallschirmkisten schwanken | gemergt |
 
 ## Was umgesetzt ist
 
@@ -170,10 +171,15 @@ Stand: 15. November 2026 · Live-Version auf `main`: `4e6bf9d` (PR #28). #29 (Me
 ### Tag, Nacht und Wetter (alle Karten)
 - Ein Tag dauert 8 Minuten. Die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten kommt das Abendrot, dann etwa drei Minuten Nacht, dann der Morgen. Die erste Welle fällt bei sechs Minuten Bauruhe in die Nacht.
 - Nachts: Mondlicht, Sterne, eine Laterne am eigenen Blechling, Lichtkegel vor allen Blechlingen und Fahrzeugen, leuchtende Kisten und Hauptquartiere. Die Lava leuchtet von selbst und erhellt die Vulkannacht.
-- Wetter kommt und geht von selbst: auf der Insel Regen, manchmal mit Gewitter (Blitz und Donner), im Gebirge Schneesturm mit Nebel, am Vulkan Ascheregen. In der Weihnachtsedition auf der Insel gibt es statt Regen nur Dunst, dort schneit es ja schon.
-- Nur Optik und Ton: Sichtweite, Zielen und KI bleiben gleich.
-- Im Mehrspieler sehen beide dieselbe Tageszeit und dasselbe Wetter.
-- Einstellungen › Spiel: Tageszeit Auto / Tag / Nacht und Wetter an/aus, beides gemerkt (bis #28 ein gemeinsamer Schalter „Tag, Nacht & Wetter“; wer ihn aus hatte, bekommt „Tag“).
+- Wetter (Auftrag „Dynamisches Wetter“, `js/weather.js`): Einstellungen › Spiel › Wetter: **Zufall / Klar / Regen / Gewitter / Schneesturm**, gemerkt, wirkt sofort, auch aus der Pause (bis #30 nur an/aus; wer es aus hatte, bekommt „Klar“).
+- Warum man vorher kaum Wetter sah: In der Weihnachtsedition auf der Insel gab es nur „Dunst“ ohne Regen oder Partikel; sonst kam das erste Wetter frühestens nach 70 bis 110 Sekunden, Regen waren winzige Punkte, und der Schneesturm verstärkte nur das ohnehin laufende Schneetreiben.
+- Zufall: In jeder Bauruhe kommt nach 50 bis 90 Sekunden ein Schauer bzw. Schneefall (40 bis 70 s). Zu Beginn einer Angriffswelle zieht oft ein Unwetter auf (bei der ersten Welle immer, wenn es noch keins gab); nach der Welle klart es langsam auf. Im Mehrspieler (ohne Wellen) wechselt es nach Zeit. Weihnachtsedition und Gebirge: Schneefall bis Schneesturm; Insel: Regen und Gewitter; Vulkan: Ascheregen und Gewitter.
+- Übergänge blenden über einige Sekunden; ein Unwetter macht Himmel und Licht deutlich dunkler, der Wind frischt auf (Bäume, Gras, Schnee).
+- Regen: Regenstreifen um die Kamera (1400, auf „Niedrig“ unter der Hälfte), Tropfenringe auf dem Wasser und in Pfützen (nur „Hoch“), nasser Glanz auf Kisten, Blechlingen und Fahrzeugen, bis zu 26 Pfützen an flachen Stellen (meist auf den Wegen), die den Himmel spiegeln und nach dem Regen langsam trocknen; Fahrzeuge spritzen beim Durchfahren.
+- Gewitter: dunkler Himmel, Blitz über der ganzen Szene (manchmal doppelt), Donner leicht verzögert; meist ist ein Blitzstrahl in der Ferne zu sehen, ab und zu schlägt einer in einen Baum in der Nähe ein, der brennt kurz mit Feuer und Rauch und ist danach angekohlt.
+- Schneesturm: waagerecht treibende Schneestreifen in Windrichtung, Schneefall treibt seitlich, dichter Nebel, Spuren schneien drei- bis viermal schneller zu. Inseln und Berge am Horizont (ohne eigenen Nebel) werden bei dichtem Wetter ausgeblendet, damit sie nicht in der Luft schweben.
+- Wind: Fallschirmkisten schwanken und landen bis gut eine Einheit versetzt, nie Richtung Wasser oder Lava. Sonst keine Wirkung aufs Spiel: Sichtweite, Zielen und KI bleiben gleich.
+- Im Mehrspieler entscheidet der Host das Wetter, der Gast sieht dasselbe; Blitzeinschläge in Bäume sind nur Optik und können auf beiden Geräten verschieden sein.
 - Neue Töne im Tonstudio: Regen, Donner.
 
 ### Mehrspieler (1 gegen 1)
@@ -216,7 +222,8 @@ Vor jedem Deploy startet GitHub das Spiel in einem echten Browser und prüft unt
 - Wasser: Küstenabstand berechnet, Tiefenfarbe und Schaum im Shader, Spritzer mit Tropfen und Schaumring
 - Grafik neu: Belichtungskurve, dunklere Ecken nur in „Schön“, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus, Explosion mit Feuerball, Rauch und Glut, Mündungsfeuer
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
-- Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Tageszeit „Tag“ und „Nacht“, Wetter aus
+- Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Tageszeit „Tag“ und „Nacht“
+- Wetter: Wetterwahl Regen (Streifen, nass, Pfützen), Gewitter mit Blitzeinschlag (Baum angekohlt), Schneesturm (waagerecht, Nebel, Wind), Klar; Zufall mit Schauer in der Bauruhe und Unwetter zur ersten Welle, danach Aufklaren; Wind versetzt Fallschirmkisten etwas, nie ins Wasser
 - Tonstudio und Update-Hinweis
 
 Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikkarte, drei Browserseiten gleichzeitig). Er läuft deshalb nur lokal vor dem Push; mit `KK_MP_TEST=1` lässt er sich auch auf GitHub erzwingen.
@@ -234,6 +241,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 | `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
 | `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
 | `js/daynight.js` | Tag, Nacht und Wetter |
+| `js/weather.js` | Wetter: Plan bei „Zufall“, Regenstreifen, Tropfenringe, nasser Glanz, Pfützen, Blitzeinschläge, Schneesturm, Wind an den Fallschirmkisten |
 | `js/menu.js` | Menü: Hauptmenü, Spielstart, Einstellungen mit vier Bereichen, Pause, Mehrspieler-Pause als Ebene, Schalter für Tipps, Spuren, Kamera umkehren, Vibration |
 | `js/snow.js` | Schnee: Spurenkarte, Verwehungen mit Bremsen, Schneehauben, Schneestaub |
 | `js/water.js` | Wasser: Tiefenfarbe, Uferschaum, Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzer |
@@ -258,6 +266,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 - Grafik-Paket: nur im Browser ohne Grafikkarte geprüft. Wie flüssig „Schön“ auf echten Handys läuft und ob die Farben dort stimmen, ist offen; der Schalter und das automatische Herunterschalten sind die Absicherung.
 - Tag, Nacht und Wetter: nur im Browser ohne Grafikkarte geprüft. Ob die Nacht auf einem Handy-Bildschirm im Hellen noch gut lesbar ist, ist offen. Der Regen besteht aus Punkten statt Strichen. Im Mehrspieler-Test wird die Wettermeldung an den Gast nicht eigens geprüft.
 - Vulkan: Auf echten Handys nicht gemessen. Das Gleichgewicht (Brücken näher beieinander, Ausbrüche) ist nur in simulierten Runden geprüft, nicht von Menschen gespielt.
+- Wetter: nur im Browser ohne Grafikkarte geprüft (dort 1 bis 2 Bilder pro Sekunde mit und ohne Unwetter, also kein Maß). FPS auf dem iPhone mit und ohne Unwetter stehen noch aus. Pfützen gibt es nicht auf Schnee (Gebirge, Weihnachtsedition).
 - Ein eigenes Bauruhe-Stück fürs Gebirge (im Auftrag optional) gibt es noch nicht.
 - Bildfehler aus Danielas Screenshots vom 15. November: Die grünlich gesprenkelte Fläche mit gerader Kante war der Morgennebel (eine flache Ebene, die Hänge hart anschnitt und auf dem iPhone flimmerte); er dünnt jetzt über dem Boden aus. Im Testbrowser trat die Kante nicht auf, ob sie auf dem iPhone weg ist, zeigt erst Danielas Test. Der helle Halbkreis am Stapelplatz ist noch ungeklärt.
 - Die Musik konnte ich nicht anhören, nur messen: keine Übersteuerung, keine Lücken, gleiche Lautstärke.

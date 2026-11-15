@@ -150,7 +150,7 @@
       <div class="srow col"><span class="slbl">Schwierigkeit<small class="later">Gilt ab der nächsten Runde</small></span><div class="seg diffSeg" id="diffSegS"><button data-d="leicht" aria-pressed="false">Leicht</button><button data-d="normal" aria-pressed="true">Normal</button><button data-d="schwer" aria-pressed="false">Schwer</button></div></div>
       <div class="srow col"><span class="slbl">Bauruhe zwischen den Wellen<small class="later">Gilt ab der nächsten Bauruhe</small></span><div class="seg" id="peaceSeg"><button data-p="5" aria-pressed="false">5 Min</button><button data-p="6" aria-pressed="true">6 Min</button><button data-p="7" aria-pressed="false">7 Min</button></div></div>
       <div class="srow col"><span class="slbl">Tageszeit</span><div class="seg" id="todSeg"><button data-t="auto" aria-pressed="true">Auto</button><button data-t="tag" aria-pressed="false">Tag</button><button data-t="nacht" aria-pressed="false">Nacht</button></div></div>
-      <div class="srow"><span class="slbl">Wetter</span><button class="sw" id="dnToggle" role="switch" aria-checked="false" aria-label="Wetter"><i></i></button></div>
+      <div class="srow col"><span class="slbl">Wetter</span><div class="seg seg5" id="wxSeg"><button data-w="zufall" aria-pressed="true">Zufall</button><button data-w="klar" aria-pressed="false">Klar</button><button data-w="regen" aria-pressed="false">Regen</button><button data-w="gewitter" aria-pressed="false">Gewitter</button><button data-w="schnee" aria-pressed="false">Schnee&shy;sturm</button></div></div>
       <div class="srow"><span class="slbl">Tipps anzeigen</span><button class="sw" id="tipsToggle" role="switch" aria-checked="false" aria-label="Tipps anzeigen"><i></i></button></div>
       <button class="go2" id="helpBtn">Wie wird gespielt?</button>
     </div>
@@ -302,6 +302,7 @@
 <script src="js/look.js"></script>
 <script src="js/water.js"></script>
 <script src="js/snow.js"></script>
+<script src="js/weather.js"></script>
 <script src="vendor/peerjs-1.5.4.min.js"></script>
 <script src="js/net.js"></script>
 <script src="js/menu.js"></script>

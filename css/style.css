@@ -254,3 +254,6 @@ table.stack{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-nu
   #panelSettings .tiles{grid-template-columns:repeat(4,1fr)}
   .tile{padding:8px 6px;font-size:14px}
 }
+.seg.seg5{grid-template-columns:repeat(5,1fr)}
+.seg.seg5 button{font-size:13px;padding:9px 2px;hyphens:manual}
+@media (max-width:420px){.seg.seg5{grid-template-columns:repeat(3,1fr)}}

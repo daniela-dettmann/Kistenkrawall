@@ -1,0 +1,233 @@
+/* Kistenkrawall: dynamisches Wetter (Auftrag „Dynamisches Wetter“). Baut auf daynight.js auf (DN.wx: Art, Stärke s,
+   Gewitter-Flag, Blitzhelligkeit) und bringt das Wetter ins Bild und ins Spiel:
+   - Plan bei „Zufall“: in jeder Bauruhe nach 50 bis 90 Sekunden ein Schauer bzw. Schneefall (40 bis 70 s), zu Beginn
+     einer Angriffswelle oft ein Unwetter (die erste Welle immer, wenn es noch keins gab), das nach der Welle aufklart.
+     Im Mehrspieler (ohne Wellen) wechselt es nach Zeit. Gewählt in Einstellungen › Spiel › Wetter; eine feste Wahl
+     gilt sofort, auch aus der Pause.
+   - Regen: Streifen um die Kamera, Tropfenringe auf dem Wasser, nasser Glanz auf Kisten, Blechlingen und Fahrzeugen,
+     Pfützen an flachen Stellen, die den Himmel spiegeln; Fahrzeuge spritzen beim Durchfahren.
+   - Gewitter: Blitz über der ganzen Szene (daynight.js), ab und zu ein sichtbarer Einschlag in einen Baum, der kurz
+     brennt und danach angekohlt ist.
+   - Schneesturm: waagerecht treibende Streifen, dichter Nebel (daynight.js), Spuren schneien schneller zu (snow.js).
+   - Wind: Fallschirmkisten schwanken und landen etwas versetzt (höchstens gut eine Einheit, nie im Wasser).
+   Auf „Grafik: Niedrig“ weniger als halb so viele Streifen, keine Tropfenringe. */
+'use strict';
+const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,ringsLive:0,streaks:0,plan:null};
+(function(){
+  const FARS=[];scene.traverse(o=>{if(o.userData.kkFar)FARS.push(o);});
+  const W=DN.wx,snowy=MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO);
+
+  /* ---------- Plan ---------- */
+  const R={had:false,wave:false,inWave:false,light:rand(50,90),lightEnd:0,mpT:rand(60,100),lastT:0};
+  WX.plan=R;
+  function storm(){if(snowy)DN.setWeather('schnee',true,1);else if(VOLCANO&&Math.random()<0.4)DN.setWeather('asche',true,1);else DN.setWeather('regen',Math.random()<0.75,1);}
+  function shower(){if(snowy)DN.setWeather('schnee',false,0.6);else if(VOLCANO)DN.setWeather('asche',false,0.7);else DN.setWeather('regen',false,0.7);}
+  const SEL={regen:['regen',false,0.85],gewitter:['regen',true,1],schnee:['schnee',true,1]};
+  // a fixed choice from the settings: applied at once, also in the menu and the pause
+  function applySel(){
+    const s=DN.wsel;
+    if(s==='zufall'){if(!R.wave&&R.lightEnd<=0)DN.setWeather('klar',false);return;}
+    if(s==='klar'){if(W.want!=='klar')DN.setWeather('klar',false);return;}
+    const [k,st,l]=SEL[s];if(W.want!==k||W.storm!==st)DN.setWeather(k,st,l);
+  }
+  DN.applySel=applySel;
+  DN.roll=function(dt,playing){
+    if(gameT<R.lastT){R.had=false;R.wave=false;R.inWave=false;R.light=rand(50,90);R.lightEnd=0;R.mpT=rand(60,100);WX.dir=Math.random()*TAU;}
+    R.lastT=gameT;
+    if(DN.wsel!=='zufall'){applySel();return;}
+    if(!playing)return;
+    if(!MP){
+      const inWave=peaceT<=0&&waveT>0;
+      if(inWave&&!R.inWave&&(!R.had||Math.random()<0.6)){storm();R.had=true;R.wave=true;R.lightEnd=0;}   // a storm comes with the wave
+      if(!inWave&&R.inWave&&R.wave){DN.setWeather('klar',false);R.wave=false;R.light=rand(70,140);}        // after the wave it clears slowly
+      R.inWave=inWave;
+      if(!inWave&&!R.wave){
+        if(R.lightEnd>0){R.lightEnd-=dt;if(R.lightEnd<=0){R.lightEnd=0;DN.setWeather('klar',false);R.light=rand(80,150);}}
+        else{R.light-=dt;if(R.light<=0){shower();R.had=true;R.lightEnd=rand(40,70);}}
+      }
+    }else{
+      R.mpT-=dt;
+      if(R.mpT<=0){if(W.want==='klar'){if(Math.random()<0.45)storm();else shower();R.had=true;R.mpT=rand(50,80);}else{DN.setWeather('klar',false);R.mpT=rand(70,120);}}
+    }
+  };
+  applySel();
+
+  /* ---------- Streaks: rain falls, a blizzard drives sideways ---------- */
+  const SN=1400,sp=new Float32Array(SN*3),line=new Float32Array(SN*6);
+  for(let i=0;i<SN;i++){sp[i*3]=rand(-26,26);sp[i*3+1]=rand(-2,18);sp[i*3+2]=rand(-26,26);}
+  const sGeo=new THREE.BufferGeometry();sGeo.setAttribute('position',new THREE.BufferAttribute(line,3));
+  const sMat=new THREE.LineBasicMaterial({color:0xd4e2f2,transparent:true,opacity:0,depthWrite:false});
+  const streaks=new THREE.LineSegments(sGeo,sMat);streaks.frustumCulled=false;streaks.visible=false;streaks.renderOrder=3;scene.add(streaks);
+  WX.streakMesh=streaks;
+
+  /* ---------- Rings on the water (and in puddles) ---------- */
+  const RN=60,ringM=new THREE.InstancedMesh(new THREE.RingGeometry(0.55,0.72,18).rotateX(-Math.PI/2),
+    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}),RN);
+  ringM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);ringM.frustumCulled=false;ringM.count=0;scene.add(ringM);
+  const rings=[],rd=new THREE.Object3D(),rc=new THREE.Color();
+  for(let i=0;i<RN;i++){rings.push({x:0,y:0,z:0,t:1});ringM.setColorAt(i,rc.setRGB(0,0,0));}
+  const isWater=(x,z)=>!!WATER.dist&&hgtRaw(x,z)<-1.8&&!(VOLCANO&&Math.abs(z)<BANK+3);
+
+  /* ---------- Wet shine: the shared materials of crates, Blechlinge and vehicles ---------- */
+  const shiny=Object.values(M).filter(m=>m&&m.isMeshPhongMaterial).map(m=>({m,sh:m.shininess,sp:m.specular.clone()}));
+  const WET_SP=new THREE.Color(0x8a96a4);
+
+  /* ---------- Puddles: flat spots on dry land, they fill in the rain and mirror the sky ---------- */
+  const puddles=[];
+  if(!snowy){
+    for(let x=-48;x<=48&&puddles.length<26;x+=3)for(let z=-48;z<=48&&puddles.length<26;z+=3){
+      const jx=x+(((x*7+z*3)%5+5)%5)*0.3,jz=z+(((x*3+z*11)%5+5)%5)*0.3,h=hgtRaw(jx,jz);
+      if(h<-0.4||h>2.5||Math.abs(jx)>LIM-2||Math.abs(jz)>LIM-2||onBridge(jx,jz)||onPlatform(jx,jz))continue;
+      if(VOLCANO&&Math.abs(jz)<BANK+4)continue;
+      let flat=true;for(const [dx,dz] of [[1.6,0],[-1.6,0],[0,1.6],[0,-1.6],[1.1,1.1],[-1.1,-1.1]])if(Math.abs(hgtRaw(jx+dx,jz+dz)-h)>0.07){flat=false;break;}
+      if(!flat)continue;
+      if(obstacles.some(o=>Math.hypot(o.x-jx,o.z-jz)<o.r+1.6)||pads.some(p=>Math.hypot(p.x-jx,p.z-jz)<3.4)||hqs.some(q=>Math.hypot(q.x-jx,q.z-jz)<5))continue;
+      if(pathDist(jx,jz)>3.5&&((jx*13+jz*7)%10+10)%10<6)continue;   // mostly on the paths, where the ground is trodden flat
+      const r=1+((jx*5+jz*9)%7+7)%7*0.17;
+      puddles.push({x:jx,z:jz,y:hgt(jx,jz)+0.045,r,rz:r*(0.6+((jx+jz)%4+4)%4*0.1),rot:(jx*0.7+jz*1.3)%TAU});
+    }
+  }
+  WX.puddles=puddles.length;
+  const alpha=(function(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,8,32,32,32);
+    r.addColorStop(0,'#fff');r.addColorStop(0.7,'#ddd');r.addColorStop(1,'#000');g.fillStyle=r;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+  const pMat=new THREE.MeshPhongMaterial({color:0x1a222b,specular:0x9fb2c4,shininess:160,transparent:true,opacity:0,depthWrite:false,alphaMap:alpha,
+    envMap:(M.metal&&M.metal.envMap)||null,reflectivity:0.42,combine:THREE.MixOperation,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  const pM=new THREE.InstancedMesh(new THREE.CircleGeometry(1,22).rotateX(-Math.PI/2),pMat,Math.max(1,puddles.length));
+  pM.count=puddles.length;pM.receiveShadow=true;pM.visible=false;pM.frustumCulled=false;scene.add(pM);WX.puddleMesh=pM;
+  const pd=new THREE.Object3D();let pScale=-1;
+  function placePuddles(k){
+    puddles.forEach((p,i)=>{pd.position.set(p.x,p.y,p.z);pd.rotation.set(0,p.rot,0);pd.scale.set(p.r*k,1,p.rz*k);pd.updateMatrix();pM.setMatrixAt(i,pd.matrix);});
+    pM.instanceMatrix.needsUpdate=true;
+  }
+  WX.inPuddle=(x,z)=>{if(WX.wet<0.35)return null;for(const p of puddles){const k=0.4+0.6*WX.wet;if(Math.hypot((x-p.x)/(p.r*k),(z-p.z)/(p.rz*k))<1)return p;}return null;};
+
+  /* ---------- Lightning into a tree: bolt, a short fire with smoke, then the tree stays charred ---------- */
+  const charMat=new THREE.MeshLambertMaterial({color:0x221c18});
+  const boltMat=new THREE.MeshBasicMaterial({color:0xf2f6ff,transparent:true,opacity:1,fog:false,depthWrite:false,blending:THREE.AdditiveBlending});
+  const fires=[];
+  DN.onBolt=function(){
+    if(Math.random()>0.4||!player)return false;
+    const cx=player.x,cz=player.z,cand=TREES.filter(t=>!t.burnt&&Math.hypot(t.x-cx,t.z-cz)<34&&Math.hypot(t.x-cx,t.z-cz)>5);
+    if(!cand.length)return false;
+    strike(cand[Math.floor(Math.random()*cand.length)]);return true;
+  };
+  // most flashes also show a bolt far away, in front of the camera, from the clouds down to the horizon
+  const _onBolt=DN.onBolt;
+  DN.onBolt=function(){
+    const hit=_onBolt();
+    if(!hit&&Math.random()<0.75){
+      const d=new THREE.Vector3();camera.getWorldDirection(d);d.y=0;d.normalize();
+      const a=rand(-0.6,0.6),dist=rand(45,75),x=camera.position.x+(d.x*Math.cos(a)-d.z*Math.sin(a))*dist,z=camera.position.z+(d.z*Math.cos(a)+d.x*Math.sin(a))*dist;
+      fires.push({bolt:drawBolt(x,z,48,-1,0.22),life:0.3,fire:0,far:true});WX.farBolts=(WX.farBolts||0)+1;
+    }
+    return hit;
+  };
+  // a jagged bolt from the clouds (height y0) down to (x, y1, z)
+  function drawBolt(X,Z,y0,y1,w){
+    const pts=[];let x=X+rand(-3,3),z=Z+rand(-3,3);
+    for(let y=y0;y>y1;y-=rand(2.5,4.5)){pts.push(new THREE.Vector3(x,y,z));x+=(X-x)*0.25+rand(-1.2,1.2);z+=(Z-z)*0.25+rand(-1.2,1.2);}
+    pts.push(new THREE.Vector3(X,y1,Z));
+    const path=new THREE.CurvePath();for(let i=1;i<pts.length;i++)path.add(new THREE.LineCurve3(pts[i-1],pts[i]));
+    const m=new THREE.Mesh(new THREE.TubeGeometry(path,pts.length*2,w*(y0>40?2.4:1),4,false),boltMat.clone());m.renderOrder=5;scene.add(m);return m;
+  }
+  function strike(t){
+    t.burnt=true;WX.strikes++;
+    const bolt=drawBolt(t.x,t.z,36,hgt(t.x,t.z)+3.4,0.13);
+    fires.push({t,bolt,life:0.32,fire:6.5,charAt:1.8,puffT:0});
+    W.flash=1.15;
+    if(typeof sfx==='function')sfx('boom',t.x,t.z);
+  }
+  WX.strike=strike;
+  function charTree(t){
+    const c=t.g.clone();c.scale.multiplyScalar(1.035);
+    c.traverse(o=>{if(o.isMesh){o.material=charMat;o.castShadow=false;o.receiveShadow=true;}});
+    scene.add(c);t.charred=c;WX.charred++;
+  }
+
+  /* ---------- Wind on the parachute crates (game.js calls this while a crate hangs on its chute) ---------- */
+  window.wxCrate=function(c,dt){
+    if(WX.wind<0.05)return;
+    const ph=(c.ph===undefined?(c.ph=Math.random()*TAU):c.ph),sw=Math.sin(gameT*1.9+ph)*0.28*WX.wind;
+    c.m.rotation.z=sw;if(c.chute)c.chute.rotation.z=sw*0.6;
+    // drift a little with the wind, at most about one unit, and never towards the water
+    c.drift=c.drift||0;if(c.drift>1.2)return;
+    const v=0.32*WX.wind*dt,nx=c.x+Math.cos(WX.dir)*v,nz=c.z+Math.sin(WX.dir)*v;
+    if(Math.abs(nx)>LIM-1||Math.abs(nz)>LIM-1||hgtRaw(nx,nz)<-0.6||(Math.abs(nz)<BANK+1.6&&!onPlatform(nx,nz))||(VOLCANO&&Math.abs(nz)<BANK+3))return;
+    c.x=nx;c.z=nz;c.drift+=v;if(c.ring)c.ring.position.set(c.x,hgt(c.x,c.z)+0.05,c.z);
+  };
+
+  /* ---------- Every frame ---------- */
+  let splashT=0,acc=0;
+  function step(dt){
+    const s=W.s,kind=W.kind,fine=gfxFine(),rain=kind==='regen'&&s>0.02,blizzard=kind==='schnee'&&W.storm&&s>0.02;
+    // far islands and horizon mountains have no fog of their own; in thick weather they would float in the haze
+    {const far=scene.fog.far>115;if(far!==WX.farShown){WX.farShown=far;for(const r of FARS)r.visible=far;}}
+    WX.wind=(kind==='regen'||kind==='schnee'||kind==='asche')?s*(W.storm?1:0.45):0;
+    // wet: rises with the rain, dries off slowly afterwards
+    const wantWet=kind==='regen'?s:0;WX.wet+=(wantWet-WX.wet)*Math.min(1,dt*(wantWet>WX.wet?0.25:0.035));if(WX.wet<0.003)WX.wet=0;
+    for(const o of shiny){o.m.shininess=o.sh+WX.wet*70;o.m.specular.copy(o.sp).lerp(WET_SP,WX.wet*0.75);}
+    // puddles
+    pM.visible=puddles.length>0&&WX.wet>0.02;
+    if(pM.visible){pMat.opacity=Math.min(1,WX.wet*1.4)*0.72;const k=Math.round((0.4+0.6*WX.wet)*20)/20;if(k!==pScale){pScale=k;placePuddles(k);}}
+    // streaks
+    streaks.visible=rain||blizzard;WX.streaks=0;
+    if(streaks.visible){
+      const n=Math.floor((fine?SN:SN*0.42)*(blizzard?1:Math.min(1,0.45+s*0.6))),cx=camera.position.x,cz=camera.position.z,cy=Math.min(camera.position.y,22);
+      const ux=Math.cos(WX.dir),uz=Math.sin(WX.dir);
+      sMat.color.setHex(blizzard?0xffffff:0xc9d8ea);sMat.opacity=(blizzard?0.85:0.55)*Math.min(1,s*1.2);
+      for(let i=0;i<n;i++){
+        let vx,vy,vz,L;
+        if(blizzard){const v=15+(i%6)*2.2;vx=ux*v;vz=uz*v+Math.sin(gameT*2+i)*1.5;vy=-2.5-(i%4)*0.6;L=0.05;}
+        else{const v=24+(i%7);vx=ux*(2+WX.wind*7);vz=uz*(2+WX.wind*7);vy=-v;L=0.03;}
+        let x=sp[i*3]+vx*dt,y=sp[i*3+1]+vy*dt,z=sp[i*3+2]+vz*dt;
+        if(y<-3||Math.abs(x-cx)>27||Math.abs(z-cz)>27){
+          if(blizzard){x=cx+rand(-26,26);z=cz+rand(-26,26);y=rand(-1,cy+2);}
+          else{x=cx+rand(-26,26);z=cz+rand(-26,26);y=rand(cy-2,cy+8);}
+        }
+        sp[i*3]=x;sp[i*3+1]=y;sp[i*3+2]=z;
+        const o=i*6;line[o]=x;line[o+1]=y;line[o+2]=z;line[o+3]=x-vx*L;line[o+4]=y-vy*L;line[o+5]=z-vz*L;
+      }
+      sGeo.setDrawRange(0,n*2);sGeo.attributes.position.needsUpdate=true;WX.streaks=n;
+    }
+    // rings on water and in puddles
+    let live=0;
+    if(rain&&fine&&player){
+      acc+=dt*s*70;
+      while(acc>=1){acc-=1;
+        const free=rings.find(r=>r.t>=1);if(!free)break;
+        let ok=false;
+        for(let k=0;k<4&&!ok;k++){const x=player.x+rand(-22,22),z=player.z+rand(-22,22);
+          if(isWater(x,z)){free.x=x;free.z=z;free.y=-1.62;ok=true;}
+          else{const p=WX.inPuddle(x,z);if(p){free.x=x;free.z=z;free.y=p.y+0.015;ok=true;}}}
+        if(ok)free.t=0;
+      }
+    }
+    rings.forEach((r,i)=>{
+      if(r.t<1){r.t+=dt/0.65;live++;}
+      const on=r.t<1,k=on?0.25+r.t*1.1:0.001;
+      rd.position.set(r.x,r.y,r.z);rd.scale.set(k,1,k);rd.updateMatrix();ringM.setMatrixAt(i,rd.matrix);
+      const a=on?(1-r.t)*0.5:0;ringM.setColorAt(i,rc.setRGB(a,a,a*1.05));
+    });
+    ringM.count=RN;ringM.visible=live>0;ringM.instanceMatrix.needsUpdate=true;if(ringM.instanceColor)ringM.instanceColor.needsUpdate=true;WX.ringsLive=live;
+    // vehicles splash through puddles
+    splashT-=dt;
+    if(splashT<=0&&WX.wet>0.35&&fine){splashT=0.12;
+      for(const u of units){if(!u.alive||!isVeh(u)||u.kind==='turm')continue;
+        const mv=u._wpx!==undefined&&Math.hypot(u.x-u._wpx,u.z-u._wpz)>0.05;u._wpx=u.x;u._wpz=u.z;
+        if(mv&&parts.length<220){const p=WX.inPuddle(u.x,u.z);if(p){puffs(u.x,p.y+0.15,u.z,2,0xcfe0ee,{size:0.45,up:1.8,life:0.5,spread:1,op:0.65});WX.splashes=(WX.splashes||0)+1;}}}
+    }
+    // lightning bolts, fires and smoke
+    for(let i=fires.length-1;i>=0;i--){const f=fires[i],t=f.t;
+      if(f.far){f.life-=dt;f.bolt.material.opacity=f.life>0?(0.6+0.4*Math.sin(f.life*90)):0;if(f.life<=0){scene.remove(f.bolt);f.bolt.geometry.dispose();fires.splice(i,1);}continue;}
+      const top=hgt(t.x,t.z)+2.2;
+      if(f.bolt){f.life-=dt;f.bolt.material.opacity=f.life>0?(0.6+0.4*Math.sin(f.life*90)):0;if(f.life<=0){scene.remove(f.bolt);f.bolt.geometry.dispose();f.bolt=null;}}
+      f.fire-=dt;f.charAt-=dt;if(f.charAt<=0&&!t.charred)charTree(t);
+      f.puffT-=dt;
+      if(f.fire>0&&f.puffT<=0&&parts.length<230){f.puffT=0.12;
+        if(f.fire>1.5)puffs(t.x+rand(-0.4,0.4),top+rand(0,1),t.z+rand(-0.4,0.4),1,Math.random()<0.5?0xffa030:0xffd060,{size:0.55,up:1.6,life:0.5,spread:0.5,op:0.9});
+        puffs(t.x,top+1.2,t.z,1,0x4a4642,{size:1.1,up:2.6,life:1.4,spread:0.6,op:0.55});}
+      if(f.fire<=0&&!f.bolt)fires.splice(i,1);
+    }
+  }
+  const _mood=updateMood;updateMood=function(dt){_mood(dt);try{step(dt);}catch(e){console.warn(e);}};
+})();

@@ -3,27 +3,31 @@
      Im Mehrspieler kennt der Gast die Spielzeit des Hosts, beide sehen also dieselbe Tageszeit.
    - Nachts: Mondlicht, Sterne, eine Laterne am eigenen Blechling, Lichtkegel vor allen Einheiten,
      leuchtende Kisten und Hauptquartiere. Die Lava leuchtet von selbst.
-   - Wetter je Karte: Insel Regen und Gewitter, Gebirge Schneesturm mit Nebel, Vulkan Ascheregen.
-     Wer rechnet (Einzelspieler, Host), würfelt das Wetter; der Gast bekommt es gemeldet.
-   - Einstellungen › Spiel: Tageszeit Auto / Tag / Nacht (kk-tod) und Wetter an/aus (kk-dn; ?tagnacht=an|aus). */
+   - Wetter je Karte: Insel Regen und Gewitter, Gebirge und Weihnachtsedition Schneefall bis Schneesturm,
+     Vulkan Ascheregen und Gewitter. Wann welches Wetter kommt, plant js/weather.js (DN.roll); wer rechnet
+     (Einzelspieler, Host), entscheidet, der Gast bekommt es gemeldet.
+   - Einstellungen › Spiel: Tageszeit Auto / Tag / Nacht (kk-tod) und Wetter Zufall / Klar / Regen / Gewitter /
+     Schneesturm (kk-wx; ?tagnacht=aus heißt Klar). */
 'use strict';
 const DN={
-  on:(function(){
-    const q=/[?&#]tagnacht=(an|aus)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase()==='an';
-    try{return localStorage.getItem('kk-dn')!=='0';}catch(e){return true;}
+  on:true,                      // weather may show at all (false only while the setting is „Klar“)
+  // the weather setting: 'zufall' (planned by weather.js), 'klar', 'regen', 'gewitter', 'schnee' (Schneesturm)
+  wsel:(function(){
+    const q=/[?&#]tagnacht=(an|aus)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase()==='an'?'zufall':'klar';
+    try{const w=localStorage.getItem('kk-wx');if(['zufall','klar','regen','gewitter','schnee'].includes(w))return w;return localStorage.getItem('kk-dn')==='0'?'klar':'zufall';}catch(e){return 'zufall';}
   })(),
   DAY:480,START:0.36,           // seconds per day; a round begins in the morning
   phase:0.36,night:0,dusk:0,    // phase: 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset
   fixed:null,                   // tests: a fixed phase instead of the game clock
   // Tageszeit in the settings: 'auto' (the day runs with the round), 'tag' or 'nacht' (fixed); DN.on is the weather switch
   tod:(function(){try{const t=localStorage.getItem('kk-tod');if(t==='auto'||t==='tag'||t==='nacht')return t;return localStorage.getItem('kk-dn')==='0'?'tag':'auto';}catch(e){return 'auto';}})(),
-  wx:{kind:'klar',s:0,want:'klar',next:rand(70,110),storm:false,flash:0,boltT:0}
+  wx:{kind:'klar',s:0,lvl:1,want:'klar',next:rand(70,110),storm:false,flash:0,boltT:0}
 };
 (function(){
   const C=h=>new THREE.Color(h);
   const N_HOR=C(0x1b2743),N_TOP=C(0x050a1c),N_SUN=C(0x93b2ff),N_HEMI=C(VOLCANO?0x7a4a3c:0x3a4a78);   // the lava lights the volcano's night from below
   const D_HOR=C(0xff9c5e),D_TOP=C(0x54508f),D_SUN=C(0xff8748);
-  const GREY=C(0x8b929a),ASH=C(0x5a4a44),tmp=C(0);
+  const GREY=C(0x8b929a),STORM=C(0x4a515b),ASH=C(0x5a4a44),tmp=C(0);
 
   /* ----- Stars ----- */
   const starG=new THREE.BufferGeometry(),sp=[];
@@ -46,8 +50,10 @@ const DN={
   const COL={blau:C(0x6aa8ff),gelb:C(0xffd24a),gold:C(0xfff0a0)};
 
   /* ----- Weather particles: one cloud of points that follows the camera ----- */
-  const KIND=VOLCANO?'asche':MOUNTAIN?'schnee':(typeof XMAS!=='undefined'&&XMAS)?'dunst':'regen';
-  const WN=KIND==='regen'?900:KIND==='asche'?500:0,wGeo=new THREE.BufferGeometry(),wp=new Float32Array(WN*3);
+  // the map's own weather: snow on the mountain and in the Christmas edition, ash on the volcano, rain elsewhere.
+  // Rain and driving snow are streaks drawn by weather.js; this cloud of points is only the ash.
+  const KIND=VOLCANO?'asche':MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS)?'schnee':'regen';
+  const WN=KIND==='asche'?500:0,wGeo=new THREE.BufferGeometry(),wp=new Float32Array(WN*3);
   for(let i=0;i<WN;i++){wp[i*3]=rand(-30,30);wp[i*3+1]=rand(0,26);wp[i*3+2]=rand(-30,30);}
   wGeo.setAttribute('position',new THREE.BufferAttribute(wp,3));
   const wPts=new THREE.Points(wGeo,new THREE.PointsMaterial(KIND==='regen'
@@ -60,12 +66,14 @@ const DN={
     if(!AC||!soundOn||state!=='play'||AC.state!=='running'||typeof SND[kind]!=='function')return;
     try{playSound(AC,noiseBuf,kind,vol,master);}catch(e){}
   }
-  function setWeather(kind,storm){
-    const W=DN.wx;W.want=kind;W.storm=!!storm;
+  // lvl: how strong (a shower 0.6, a storm 1); the picture blends towards it over several seconds
+  function setWeather(kind,storm,lvl){
+    const W=DN.wx,was=W.want+(W.storm?'!':'');W.want=kind;W.storm=!!storm;W.lvl=lvl||(storm?1:0.65);
     if(kind!=='klar')W.kind=kind;
-    if(DN.on&&state==='play'&&kind!=='klar')toast(storm?'Ein Gewitter zieht auf':kind==='regen'?'Es fängt an zu regnen':kind==='schnee'?'Ein Schneesturm zieht auf':kind==='asche'?'Asche regnet vom Himmel':'Nebel zieht auf',2.4);
+    if(DN.on&&state==='play'&&kind!=='klar'&&was!==kind+(storm?'!':''))
+      toast(kind==='regen'?(storm?'Ein Gewitter zieht auf':'Es fängt an zu regnen'):kind==='schnee'?(storm?'Ein Schneesturm zieht auf':'Es fängt an zu schneien'):kind==='asche'?'Asche regnet vom Himmel':'Nebel zieht auf',2.4);
   }
-  window.dayNightEvent=e=>{if(e[0]==='wx'){const k=['klar','regen','schnee','asche','dunst'][e[1]]||'klar';if(DN.wx.want!==k||DN.wx.storm!==!!e[2])setWeather(k,e[2]);}};
+  window.dayNightEvent=e=>{if(e[0]==='wx'){const k=['klar','regen','schnee','asche','dunst'][e[1]]||'klar';if(DN.wx.want!==k||DN.wx.storm!==!!e[2])setWeather(k,!!e[2]);}};
 
   let lastNight=false,sendT=0,rainT=0,lastT=0;
   function step(dt){
@@ -80,23 +88,21 @@ const DN={
     lastNight=night>0.5;
 
     /* weather: who computes the game rolls it, the guest is told */
-    if(gameT<lastT){W.want='klar';W.storm=false;W.next=rand(70,110);}   // a new round
+    if(gameT<lastT&&DN.wsel==='zufall'){W.want='klar';W.storm=false;}   // a new round starts clear
     lastT=gameT;
+    if(sim&&DN.fixed===null&&DN.roll)DN.roll(dt,playing);
     if(sim&&playing&&DN.fixed===null){
-      W.next-=dt;
-      if(W.next<=0){
-        if(W.want==='klar'){setWeather(KIND,KIND==='regen'&&Math.random()<0.5);W.next=rand(45,75);}
-        else{setWeather('klar',false);W.next=rand(80,130);}
-      }
       sendT-=dt;if(MP==='host'&&sendT<=0){sendT=4;NET.pendingEv.push(['wx',Math.max(0,['klar','regen','schnee','asche','dunst'].indexOf(W.want)),W.storm?1:0]);}
     }
-    const target=DN.on&&W.want!=='klar'?1:0;
-    W.s+=(target-W.s)*Math.min(1,dt*0.25);if(W.s<0.01&&target===0)W.s=0;
+    const target=DN.on&&W.want!=='klar'?W.lvl:0;
+    W.s+=(target-W.s)*Math.min(1,dt*0.22);if(W.s<0.01&&target===0)W.s=0;
     const s=W.s,kind=W.kind;
 
     /* lightning */
     W.flash=Math.max(0,W.flash-dt*3.2);
-    if(W.storm&&s>0.6&&playing){W.boltT-=dt;if(W.boltT<=0){W.boltT=rand(5,12);W.flash=1;setTimeout(()=>sound('donner',0.9),rand(250,1100));}}
+    // lightning: a bright flash over the whole scene, sometimes a second flicker; thunder a little later
+    if(W.storm&&kind==='regen'&&s>0.55&&playing){W.boltT-=dt;if(W.boltT<=0){W.boltT=rand(4,10);W.flash=1;if(Math.random()<0.5)setTimeout(()=>{W.flash=Math.max(W.flash,0.7);},rand(120,220));
+      const strike=DN.onBolt?DN.onBolt():false;setTimeout(()=>sound('donner',strike?1:0.85),strike?rand(80,200):rand(400,1400));}}
     if(kind==='regen'&&s>0.3&&playing){rainT-=dt;if(rainT<=0){rainT=1.05;sound('regen',0.5*s);}}
 
     /* sun or moon: direction, colour, strength */
@@ -106,22 +112,22 @@ const DN={
       az=(ps-0.5)*2.6+0.63,h=night>0.5?0.72:Math.max(0.32,Math.min(1,els));
     SUN_OFF.set(Math.cos(az)*38*(1.25-h*0.5),16+h*26,Math.sin(az)*38*(1.25-h*0.5));
     sky.material.uniforms.sunDir.value.copy(SUN_OFF).normalize();
-    const dim=1-0.3*s*(kind==='dunst'?0.5:1);
+    const dim=1-s*(W.storm?0.6:0.32)*(kind==='dunst'?0.5:1);   // a storm darkens sky and light noticeably
     sun.color.lerp(D_SUN,dusk*0.75).lerp(N_SUN,night);sun.intensity=sun.intensity*(day+night*0.34)*dim+W.flash*1.4;
     hemi.color.lerp(N_HEMI,night*0.85);hemi.intensity=hemi.intensity*(day+night*(VOLCANO?0.8:0.6))*dim+W.flash*0.9;
     /* sky and haze */
     tmp.copy(scene.fog.color).lerp(D_HOR,dusk*0.6).lerp(N_HOR,night);
-    if(s>0)tmp.lerp(kind==='asche'?ASH:GREY,s*0.55*(1-night*0.5));
+    if(s>0)tmp.lerp(kind==='asche'?ASH:W.storm&&kind==='regen'?STORM:GREY,s*(W.storm?0.75:0.55)*(1-night*0.5));
     if(W.flash>0)tmp.lerp(C(0xdfe8ff),W.flash*0.7);
     scene.fog.color.copy(tmp);scene.background.copy(tmp);sky.material.uniforms.hor.value.copy(tmp);
-    const top=sky.material.uniforms.top.value;top.lerp(D_TOP,dusk*0.55).lerp(N_TOP,night);if(s>0)top.lerp(kind==='asche'?ASH:GREY,s*0.6*(1-night*0.6));
-    const fogK=kind==='schnee'||kind==='dunst'?0.72:kind==='asche'?0.5:0.4;
+    const top=sky.material.uniforms.top.value;top.lerp(D_TOP,dusk*0.55).lerp(N_TOP,night);if(s>0)top.lerp(kind==='asche'?ASH:W.storm&&kind==='regen'?STORM:GREY,s*(W.storm?0.85:0.6)*(1-night*0.6));
+    const fogK=kind==='schnee'?(W.storm?0.84:0.6):kind==='dunst'?0.72:kind==='asche'?0.5:W.storm?0.52:0.4;
     scene.fog.near=baseFog.near*(1-s*fogK);scene.fog.far=baseFog.far*(1-s*fogK*0.75);
     stars.visible=night>0.02;stars.material.opacity=night*(1-s*0.8);
-    window.wxWind=1+(kind==='schnee'?s*2.4:0);            // mountain.js blows its snow harder
+    window.wxWind=1+(kind==='schnee'?s*(W.storm?3.4:1.2):s*0.8);   // mountain.js and xmas.js blow their snow harder
 
     /* weather particles */
-    wPts.visible=s>0.02&&WN>0&&(kind==='regen'||kind==='asche');
+    wPts.visible=s>0.02&&WN>0&&kind==='asche';
     if(wPts.visible){
       wPts.material.opacity=(kind==='regen'?0.75:0.8)*s;
       const A=wp,cx=camera.position.x,cy=camera.position.y,cz=camera.position.z,n=typeof gfxFine==='function'&&!gfxFine()?WN>>1:WN,rain=kind==='regen';
@@ -155,11 +161,11 @@ const DN={
   updateMood=function(dt){_mood(dt);step(dt);};
 
   /* ----- Menu switch ----- */
-  // settings: weather on/off (#dnToggle) and time of day (#todSeg), both take effect at once
-  const btn=$('#dnToggle');
-  const label=()=>{if(btn)btn.setAttribute('aria-checked',DN.on?'true':'false');
+  // settings: weather (#wxSeg) and time of day (#todSeg), both take effect at once, also from the pause
+  const label=()=>{
+    for(const b of document.querySelectorAll('#wxSeg button'))b.setAttribute('aria-pressed',b.dataset.w===DN.wsel?'true':'false');
     for(const b of document.querySelectorAll('#todSeg button'))b.setAttribute('aria-pressed',b.dataset.t===DN.tod?'true':'false');};
-  if(btn)btn.addEventListener('click',()=>{DN.on=!DN.on;try{localStorage.setItem('kk-dn',DN.on?'1':'0');}catch(e){}label();});
+  for(const b of document.querySelectorAll('#wxSeg button'))b.addEventListener('click',()=>{DN.wsel=b.dataset.w;try{localStorage.setItem('kk-wx',DN.wsel);}catch(e){}label();if(DN.applySel)DN.applySel();});
   for(const b of document.querySelectorAll('#todSeg button'))b.addEventListener('click',()=>{DN.tod=b.dataset.t;try{localStorage.setItem('kk-tod',DN.tod);}catch(e){}label();});
   label();
   DN.step=step;DN.setWeather=setWeather;DN.lights={lantern,beams,crateGlow,hqGlow,stars,wPts};DN.kind=KIND;

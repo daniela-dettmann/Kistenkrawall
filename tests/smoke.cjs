@@ -359,7 +359,7 @@ async function main() {
   console.log('Tag, Nacht und Wetter');
   await page.goto(base + '?normal&karte=insel');
   await page.waitForSelector('#playBtn', { state: 'visible' });
-  check(await page.evaluate(() => DN.on && DN.tod === 'auto' && document.querySelector('#dnToggle').getAttribute('aria-checked') === 'true' && document.querySelector('#todSeg [data-t=auto]').getAttribute('aria-pressed') === 'true' && DN.kind === 'regen'), 'Tag und Nacht: Standard ist Tageszeit „Auto“, Wetter an');
+  check(await page.evaluate(() => DN.on && DN.tod === 'auto' && DN.wsel === 'zufall' && document.querySelector('#wxSeg [data-w=zufall]').getAttribute('aria-pressed') === 'true' && document.querySelector('#todSeg [data-t=auto]').getAttribute('aria-pressed') === 'true' && DN.kind === 'regen'), 'Tag und Nacht: Standard ist Tageszeit „Auto“, Wetter „Zufall“');
   await startRound(page);
   await page.waitForTimeout(1200);
   const mood = n => page.evaluate(n => { for (let i = 0; i < n; i++) updateMood(0.05); }, n);
@@ -372,10 +372,10 @@ async function main() {
     && DN.lights.hqGlow.every(g => g.visible) && sun.intensity < d * 0.5 && sun.intensity > 0.2, dayI), 'Nacht folgt der Spielzeit: Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht');
   await page.evaluate(() => { DN.fixed = 0.5; DN.setWeather('regen', true); });
   await mood(400);
-  check(await page.evaluate(() => DN.night === 0 && DN.wx.s > 0.8 && DN.lights.wPts.visible && scene.fog.far < 150 && DN.wx.storm), 'Regen und Gewitter: Tropfen, dichterer Dunst');
+  check(await page.evaluate(() => DN.night === 0 && DN.wx.s > 0.8 && WX.streakMesh.visible && WX.streaks > 300 && WX.wet > 0.5 && WX.puddleMesh.visible && WX.puddles > 10 && scene.fog.far < 150 && DN.wx.storm), 'Regen und Gewitter: Regenstreifen, nasser Glanz, Pfützen, dichterer Dunst');
   await page.evaluate(() => DN.setWeather('klar', false));
   await mood(700);
-  check(await page.evaluate(() => DN.wx.s === 0 && !DN.lights.wPts.visible && Math.abs(scene.fog.far - 170) < 1), 'Wetter klart wieder auf');
+  check(await page.evaluate(() => DN.wx.s === 0 && !WX.streakMesh.visible && Math.abs(scene.fog.far - 170) < 1), 'Wetter klart wieder auf (Pfützen trocknen langsam)');
   await page.evaluate(() => { DN.fixed = null; pause(true); toMenu(); });
   await clickHidden(page, '#todSeg [data-t=tag]');
   check(await page.evaluate(() => { state = 'play'; gameT = 290; for (let i = 0; i < 200; i++) updateMood(0.05); const ok = DN.tod === 'tag' && localStorage.getItem('kk-tod') === 'tag' && DN.night === 0 && !DN.lights.stars.visible; state = 'menu'; return ok; }),
@@ -383,10 +383,37 @@ async function main() {
   await clickHidden(page, '#todSeg [data-t=nacht]');
   check(await page.evaluate(() => { state = 'play'; gameT = 10; for (let i = 0; i < 200; i++) updateMood(0.05); const ok = DN.tod === 'nacht' && DN.night > 0.9 && DN.lights.stars.visible; state = 'menu'; return ok; }),
     'Tageszeit „Nacht“: sofort Nacht');
-  await clickHidden(page, '#dnToggle');
-  check(await page.evaluate(() => { state = 'play'; DN.setWeather('regen', false); for (let i = 0; i < 200; i++) updateMood(0.05); const ok = !DN.on && localStorage.getItem('kk-dn') === '0' && DN.wx.s === 0; state = 'menu'; return ok; }),
-    'Wetter aus: kein Regen, wird gemerkt');
-  await page.evaluate(() => { localStorage.removeItem('kk-dn'); localStorage.removeItem('kk-tod'); });
+  // Auftrag Wetter: every weather can be chosen in the settings and shows at once
+  check(await page.evaluate(() => {
+    const r = [], sel = w => { document.querySelector('#wxSeg [data-w=' + w + ']').click(); state = 'play'; for (let i = 0; i < 300; i++) updateMood(0.05); state = 'menu'; };
+    DN.tod = 'tag';
+    sel('regen'); r.push(DN.wx.want === 'regen' && !DN.wx.storm && DN.wx.s > 0.7 && WX.streaks > 300 && WX.wet > 0.5 && localStorage.getItem('kk-wx') === 'regen');
+    sel('gewitter'); r.push(DN.wx.want === 'regen' && DN.wx.storm && DN.wx.s > 0.9 && scene.fog.far < 120);
+    const t = TREES.find(t => !t.burnt); WX.strike(t); state = 'play'; for (let i = 0; i < 60; i++) updateMood(0.05); state = 'menu';
+    r.push(t.burnt && !!t.charred && WX.charred >= 1 && WX.strikes >= 1);
+    sel('schnee'); r.push(DN.wx.want === 'schnee' && DN.wx.storm && DN.wx.s > 0.9 && WX.streaks > 300 && scene.fog.far < 100 && window.wxWind > 3);
+    sel('klar'); r.push(DN.wx.want === 'klar' && DN.wx.s < 0.05 && !WX.streakMesh.visible);
+    return r.join();
+  }) === 'true,true,true,true,true', 'Wetterwahl: Regen, Gewitter mit Blitzeinschlag (Baum angekohlt), Schneesturm, Klar – wirkt sofort, wird gemerkt');
+  check(await page.evaluate(() => {
+    // Zufall: a shower in the building phase, a storm with the first wave, clear again after it
+    document.querySelector('#wxSeg [data-w=zufall]').click(); state = 'play'; const R = WX.plan;
+    peaceT = 300; waveT = 0; R.had = false; R.wave = false; R.inWave = false; R.light = 60; R.lightEnd = 0; DN.setWeather('klar', false);
+    let shower = false; for (let i = 0; i < 70; i++) { DN.roll(1, true); if (DN.wx.want !== 'klar') shower = true; }
+    DN.setWeather('klar', false); R.lightEnd = 0; R.light = 999;
+    peaceT = 0; waveT = 60; DN.roll(0.05, true); const storm = DN.wx.want !== 'klar' && DN.wx.storm && R.wave;
+    peaceT = 300; waveT = 0; DN.roll(0.05, true); const clear = DN.wx.want === 'klar';
+    state = 'menu'; return shower && storm && clear;
+  }), 'Zufall: Schauer in der Bauruhe, Unwetter mit der ersten Welle, danach klart es auf');
+  check(await page.evaluate(() => {
+    // wind: a parachute crate sways and lands a little off, never towards the water
+    DN.setWeather('regen', true, 1); DN.wx.s = 1; updateMood(0.05);
+    const pad = pads.find(q => q.team === 0), c = spawnCrate(pad.x + 4, pad.z + (pad.z > 0 ? 3 : -3), true, false, 'blau'), x0 = c.x, z0 = c.z;
+    for (let i = 0; i < 80; i++) wxCrate(c, 0.1);
+    const moved = Math.hypot(c.x - x0, c.z - z0), ok = WX.wind > 0.9 && moved > 0.3 && moved < 1.4 && Math.abs(c.z) > BANK + 1 && Math.abs(c.m.rotation.z) > 0;
+    removeCrate(c); DN.setWeather('klar', false); DN.wx.s = 0; return ok;
+  }), 'Wind: Fallschirmkisten schwanken und landen etwas versetzt, nie im Wasser');
+  await page.evaluate(() => { localStorage.removeItem('kk-wx'); localStorage.removeItem('kk-tod'); DN.wsel = 'zufall'; DN.tod = 'auto'; });
 
   console.log('Vulkan');
   await page.goto(base + '?normal');
