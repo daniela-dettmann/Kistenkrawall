@@ -5,7 +5,7 @@
      leuchtende Kisten und Hauptquartiere. Die Lava leuchtet von selbst.
    - Wetter je Karte: Insel Regen und Gewitter, Gebirge Schneesturm mit Nebel, Vulkan Ascheregen.
      Wer rechnet (Einzelspieler, Host), würfelt das Wetter; der Gast bekommt es gemeldet.
-   - Schalter im Menü: „Tag, Nacht & Wetter: an/aus“ (gemerkt; ?tagnacht=an|aus). */
+   - Einstellungen › Spiel: Tageszeit Auto / Tag / Nacht (kk-tod) und Wetter an/aus (kk-dn; ?tagnacht=an|aus). */
 'use strict';
 const DN={
   on:(function(){
@@ -15,6 +15,8 @@ const DN={
   DAY:480,START:0.36,           // seconds per day; a round begins in the morning
   phase:0.36,night:0,dusk:0,    // phase: 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset
   fixed:null,                   // tests: a fixed phase instead of the game clock
+  // Tageszeit in the settings: 'auto' (the day runs with the round), 'tag' or 'nacht' (fixed); DN.on is the weather switch
+  tod:(function(){try{const t=localStorage.getItem('kk-tod');if(t==='auto'||t==='tag'||t==='nacht')return t;return localStorage.getItem('kk-dn')==='0'?'tag':'auto';}catch(e){return 'auto';}})(),
   wx:{kind:'klar',s:0,want:'klar',next:rand(70,110),storm:false,flash:0,boltT:0}
 };
 (function(){
@@ -69,12 +71,12 @@ const DN={
   function step(dt){
     const W=DN.wx,sim=MP!=='guest',playing=state==='play';
     /* time of day */
-    const want=DN.fixed!==null?DN.fixed:(DN.on&&state!=='menu'?(gameT/DN.DAY+DN.START)%1:DN.START);
+    const want=DN.fixed!==null?DN.fixed:DN.tod==='tag'?0.42:DN.tod==='nacht'?0.0:(state!=='menu'?(gameT/DN.DAY+DN.START)%1:DN.START);
     let d=want-DN.phase;if(d>0.5)d-=1;if(d<-0.5)d+=1;
     DN.phase=(DN.phase+d*Math.min(1,dt*1.5)+1)%1;
     const p=DN.phase,el=Math.sin((p-0.25)*TAU)+0.38;      // sun height; the offset makes the day longer than the night
     const night=DN.night=smooth((0.02-el)/0.34),dusk=DN.dusk=Math.max(0,1-Math.abs(el-0.12)/0.4)*(1-night*0.6);
-    if(playing&&DN.on&&DN.fixed===null){if(night>0.5&&!lastNight)toast('Die Nacht bricht an',2.2);if(night<0.5&&lastNight)toast('Der Morgen dämmert',2.2);}
+    if(playing&&DN.tod==='auto'&&DN.fixed===null){if(night>0.5&&!lastNight)toast('Die Nacht bricht an',2.2);if(night<0.5&&lastNight)toast('Der Morgen dämmert',2.2);}
     lastNight=night>0.5;
 
     /* weather: who computes the game rolls it, the guest is told */
@@ -153,9 +155,12 @@ const DN={
   updateMood=function(dt){_mood(dt);step(dt);};
 
   /* ----- Menu switch ----- */
+  // settings: weather on/off (#dnToggle) and time of day (#todSeg), both take effect at once
   const btn=$('#dnToggle');
-  const label=()=>{if(btn){btn.textContent='Tag, Nacht & Wetter: '+(DN.on?'an':'aus');btn.setAttribute('aria-pressed',DN.on?'true':'false');}};
+  const label=()=>{if(btn)btn.setAttribute('aria-checked',DN.on?'true':'false');
+    for(const b of document.querySelectorAll('#todSeg button'))b.setAttribute('aria-pressed',b.dataset.t===DN.tod?'true':'false');};
   if(btn)btn.addEventListener('click',()=>{DN.on=!DN.on;try{localStorage.setItem('kk-dn',DN.on?'1':'0');}catch(e){}label();});
+  for(const b of document.querySelectorAll('#todSeg button'))b.addEventListener('click',()=>{DN.tod=b.dataset.t;try{localStorage.setItem('kk-tod',DN.tod);}catch(e){}label();});
   label();
   DN.step=step;DN.setWeather=setWeather;DN.lights={lantern,beams,crateGlow,hqGlow,stars,wPts};DN.kind=KIND;
 })();

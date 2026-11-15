@@ -10,6 +10,8 @@
    - Schneehauben auf Kisten, Felsen und Sandsäcken. Leichter Schneestaub an den Füßen beim Laufen. */
 'use strict';
 const SNOW={on:MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO),drifts:[],stamps:0,slow:0.82};
+// settings › Grafik › „Spuren im Schnee“ (also the ash prints on the volcano, look.js)
+SNOW.trails=(function(){try{return localStorage.getItem('kk-trails')!=='0';}catch(e){return true;}})();
 if(SNOW.on)(function(){
   const H=56;   // the trail map covers -56..56 in x and z
   const snowCol=new THREE.Color(MOUNTAIN?0xf3f6fb:0xffffff);
@@ -28,6 +30,7 @@ if(SNOW.on)(function(){
     renderer.setClearColor(cc,ca);renderer.setRenderTarget(prev);
   }
   makeRT();SNOW.target=()=>rt;
+  SNOW.clearTrails=()=>{if(rt){rt.dispose();rt=null;R=0;makeRT();}};
   // fading: subtract a little from every texel (dst - src)
   const fade=new THREE.Mesh(new THREE.PlaneGeometry(2*H,2*H),new THREE.MeshBasicMaterial({color:new THREE.Color(2/255,2/255,2/255),
     blending:THREE.CustomBlending,blendEquation:THREE.ReverseSubtractEquation,blendSrc:THREE.OneFactor,blendDst:THREE.OneFactor,depthTest:false,depthWrite:false,toneMapped:false}));
@@ -42,7 +45,7 @@ if(SNOW.on)(function(){
   const sd=new THREE.Object3D();let sn=0;
   // the trail scene lies in the x/y plane: x = world x, y = world z
   function stamp(x,z,rot,w,l){
-    if(sn>=SN||Math.abs(x)>H||Math.abs(z)>H)return;
+    if(!SNOW.trails||sn>=SN||Math.abs(x)>H||Math.abs(z)>H)return;
     if(onBridge(x,z)||onPlatform(x,z)||hgtRaw(x,z)<-0.6)return;
     sd.position.set(x,z,0);sd.rotation.set(0,0,-rot);sd.scale.set(w,l,1);sd.updateMatrix();stampMesh.setMatrixAt(sn++,sd.matrix);SNOW.stamps++;
   }

@@ -31,6 +31,7 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
 | `js/mountain.js`, `js/volcano.js` | Karten Gebirge und Vulkan: Licht, Wetter, Krater und Ausbruch |
 | `js/gfx.js` | Grafik: Qualitätsschalter, Bildausgabe, Uferschaum, Lavaglut, runde Kanten, Schattierung, Zusammenfassen |
+| `js/menu.js` | Menü: Hauptmenü, Spielstart, Einstellungen (Spiel, Grafik, Ton, Steuerung), Pause; Mehrspieler-Pause als Ebene |
 | `js/snow.js` | Schnee: Spurenkarte, Verwehungen (bremsen), Schneehauben, Schneestaub |
 | `js/water.js` | Wasser: Tiefenfarbe aus Küstenabstand, Uferschaum, Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzer |
 | `js/look.js` | Aussehen: Wind, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz, Lichtsaum, Spuren, Explosionen, Mündungsfeuer |
@@ -62,17 +63,17 @@ npm test
 
 ## Spielstand
 
-Eine laufende Partie wird automatisch gespeichert, sobald das Spiel pausiert (auch wenn die App in den Hintergrund geht) und alle 30 Sekunden. Im Startmenü erscheint dann „Weiterspielen“ mit Welle, Schwierigkeit und Zeitpunkt; fortgesetzt wird im Pausenmenü. Sieg, Niederlage oder „Neues Spiel“ löschen den Spielstand. Kugeln, Explosionen und Flieger im Anflug werden nicht gespeichert. Ändert sich das Format so, dass alte Spielstände nicht mehr passen, wird `SAVE_FORMAT` in `js/save.js` erhöht; alte Spielstände werden dann mit einem Hinweis verworfen.
+Eine laufende Partie wird automatisch gespeichert, sobald das Spiel pausiert (auch wenn die App in den Hintergrund geht) und alle 30 Sekunden. Im Spielstart erscheint dann „Weiterspielen“ mit Welle, Schwierigkeit und Zeitpunkt; fortgesetzt wird im Pausenmenü. Sieg, Niederlage oder „Neues Spiel“ löschen den Spielstand. Kugeln, Explosionen und Flieger im Anflug werden nicht gespeichert. Ändert sich das Format so, dass alte Spielstände nicht mehr passen, wird `SAVE_FORMAT` in `js/save.js` erhöht; alte Spielstände werden dann mit einem Hinweis verworfen.
 
 ## Karten
 
-Im Startmenü lässt sich zwischen **Insel**, **Gebirge** und **Vulkan** wählen. Insel und Gebirge folgen demselben Grundriss: Eine unpassierbare Mitte (Fluss bzw. Schlucht) wird bei x = −18 und x = +18 überquert, in der Mitte jedes Übergangs liegt ein Plateau, auf dem die Kisten landen. Deshalb funktionieren Bewegung und KI auf beiden Karten gleich. Auf dem Gebirge ist links eine breite Brücke, rechts ein enger Pass. Das Höhenprofil steht in `js/core.js` (`hgtMountain`), Licht, Horizont, Schneetreiben und Adler in `js/mountain.js`. Die Welt wird beim Laden gebaut, ein Kartenwechsel lädt die Seite neu. Zum Testen: `?karte=gebirge`, `?karte=vulkan` oder `?karte=insel`.
+Im Spielstart (nach „Spielen“) lässt sich zwischen **Insel**, **Gebirge** und **Vulkan** wählen. Insel und Gebirge folgen demselben Grundriss: Eine unpassierbare Mitte (Fluss bzw. Schlucht) wird bei x = −18 und x = +18 überquert, in der Mitte jedes Übergangs liegt ein Plateau, auf dem die Kisten landen. Deshalb funktionieren Bewegung und KI auf beiden Karten gleich. Auf dem Gebirge ist links eine breite Brücke, rechts ein enger Pass. Das Höhenprofil steht in `js/core.js` (`hgtMountain`), Licht, Horizont, Schneetreiben und Adler in `js/mountain.js`. Die Welt wird beim Laden gebaut, ein Kartenwechsel lädt die Seite neu. Zum Testen: `?karte=gebirge`, `?karte=vulkan` oder `?karte=insel`.
 
 Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin liegt eine einzige große Insel mit dem Vulkankegel. Von jedem Ufer führen zwei Brücken (x = −8 und x = +8) auf die Insel, alle Kisten landen dort. Die Maße stehen in `js/core.js` (`BX`, `BANK`, `ISL_RX`, `ISL_RZ`, `ZS` verschiebt alles, was am Ufer steht), das Höhenprofil in `hgtVolcano`, die Wegführung in `volcanoWaypoint` (`js/combat.js`), Krater, Rauch und Ausbruch in `js/volcano.js`. Beim Ausbruch wird eine Brücke nach kurzer Warnung mit Lavabrocken beworfen; `bridgeClosed(bx, seite)` sagt der Wegführung und der Minikarte, welche.
 
 ## Mehrspieler (1 gegen 1)
 
-„Gegen Freund spielen“ im Startmenü: Eine Person erstellt einen Raum und gibt den 8-stelligen Code weiter, die andere tritt bei. Die Geräte verbinden sich direkt und verschlüsselt per WebRTC; den Verbindungsaufbau vermittelt der kostenlose öffentliche PeerJS-Server (sieht die IP-Adressen, nicht das Spiel). Im gleichen WLAN läuft die Verbindung automatisch lokal.
+„Mehrspieler“ im Hauptmenü: Eine Person erstellt einen Raum und gibt den 8-stelligen Code weiter, die andere tritt bei. Die Geräte verbinden sich direkt und verschlüsselt per WebRTC; den Verbindungsaufbau vermittelt der kostenlose öffentliche PeerJS-Server (sieht die IP-Adressen, nicht das Spiel). Im gleichen WLAN läuft die Verbindung automatisch lokal.
 
 - Der Host (Orange) rechnet das Spiel und schickt etwa zehnmal pro Sekunde den Stand, der Gast (Petrol) schickt nur seine Eingaben. Beide Teams haben gleich starke KI-Mitstreiter, automatische Wellen gibt es im Mehrspieler nicht.
 - Raumcodes aus kryptografischem Zufall ohne 0/O/1/I/L, Ablauf nach 10 Minuten ohne Beitritt, nur ein Gast, Versionsvergleich, Prüfung jeder Nachricht (Format, Werte, Größe, Häufigkeit), kein Chat, keine persönlichen Daten.
@@ -82,7 +83,7 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 
 ## Grafik
 
-`js/gfx.js` hängt sich an das Bestehende an und gilt auf allen Karten. Im Startmenü steht „Grafik: Hoch / Niedrig“ (bis November 2026 „Schön / Schnell“) (gemerkt; zum Testen `?grafik=schoen` oder `?grafik=schnell`).
+`js/gfx.js` hängt sich an das Bestehende an und gilt auf allen Karten. In den Einstellungen (Bereich Grafik) steht „Qualität: Niedrig / Hoch“ (bis November 2026 „Schön / Schnell“) (gemerkt; zum Testen `?grafik=schoen` oder `?grafik=schnell`).
 
 - **Bildausgabe:** Beide Stufen zeichnen direkt auf den Bildschirm, damit die Kantenglättung des Geräts greift. Helle Stellen fängt eine eigene Belichtungskurve weich ab (`CustomToneMapping` in `js/render.js`: unter 0,62 bleibt jede Farbe, darüber läuft sie weich gegen 0,95, nichts wird reinweiß). Eine frühere Fassung zeichnete „Schön“ über einen Zwischenspeicher mit Schein- und Farbdurchgängen; auf dem iPhone krisselten dort die Kanten und das Bild überstrahlte.
 - **Beide Stufen:** Uferschaum und helles Flachwasser, Glut an den Lavaufern, unregelmäßiger Boden, nasser Saum am Wasser (Höhenprofil als Textur `hgtTex`), abgerundete Kanten an Kisten, Blechlingen, Fahrzeugen und Hauptquartieren (`gfxRoundBox`), Schattierung in Senken, an Baumfüßen und unter Brücken (beim Laden in die Bodenfarben gerechnet), Gras blendet in der Ferne aus, Schatten rasten auf ganze Schattenpixel ein (kein Kriechen der Schattenkanten), Wind in Bäumen, Wolkenschatten, Morgennebel, Wasserspiegelung, Metallglanz (`js/look.js`).
@@ -92,7 +93,7 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 - **Kontaktschatten:** `M.blob` mit weichem Rand unter Figuren und Fahrzeugen, Kisten über ein Instanzen-Netz (`LOOK.crateBlobs`).
 - Läuft das Spiel zweimal hintereinander unter 24 Bildern pro Sekunde und hat man nichts fest gewählt, stellt es von selbst auf „Schnell“.
 - **Weniger Zeichenvorgänge:** Bäume, Felsen, Sandsäcke, Schilf und Brücken (`STATIC_ROOTS` in `js/world.js`) werden beim Laden je Material und Kartenviertel zu wenigen großen Netzen zusammengefasst, die Inseln am Horizont (`FAR_ROOTS`) zu einem einzigen. Kleinteile der Blechlinge werfen keinen Schatten mehr. Auf der Insel sinken die Zeichenvorgänge pro Bild von etwa 1400 auf 400. Wer neue feste Deko baut, hängt sie an `STATIC_ROOTS` an; alles, was sich später bewegt oder ändert, darf dort nicht hinein.
-- **FPS-Anzeige:** Schalter im Startmenü (`?fps` zum Testen). Zeigt Bilder pro Sekunde, das längste Bild der letzten halben Sekunde, Zeichenvorgänge und Dreiecke.
+- **FPS-Anzeige:** Schalter in den Einstellungen, Bereich Grafik (`?fps` zum Testen). Zeigt Bilder pro Sekunde, das längste Bild der letzten halben Sekunde, Zeichenvorgänge und Dreiecke.
 - Shader anderer Dateien bleiben erhalten: `gfxChain` hängt sich hinter vorhandene `onBeforeCompile`-Funktionen und gibt jeder Änderung ein Kennzeichen (`customProgramCacheKey`), damit three.js einen geänderten Shader nie einem Material ohne diese Änderung gibt (Wasser, Lava, Durchblick-Loch).
 
 ## Wasser
@@ -105,7 +106,7 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 
 ## Tag, Nacht und Wetter
 
-`js/daynight.js`, auf allen Karten, nur Optik und Ton. Schalter im Startmenü „Tag, Nacht & Wetter: an/aus“ (gemerkt; `?tagnacht=an|aus`).
+`js/daynight.js`, auf allen Karten, nur Optik und Ton. Einstellungen › Spiel: Tageszeit Auto / Tag / Nacht (`kk-tod`, `DN.tod`) und Wetter an/aus (`kk-dn`, `DN.on`; `?tagnacht=an|aus`).
 
 - **Tageszeit:** hängt an der Spielzeit `gameT`. Ein Tag dauert 8 Minuten (`DN.DAY`), die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten wird es Abend, die Nacht dauert etwa drei Minuten. Weil der Gast im Mehrspieler die Spielzeit des Hosts kennt, sehen beide dieselbe Tageszeit. Der Spielstand speichert die Spielzeit und damit auch die Tageszeit.
 - **Licht:** Das Modul läuft direkt nach `updateMood` und verändert dessen Ergebnis: Sonnenstand (`SUN_OFF`), Farben von Sonne, Himmel und Dunst, Abendrot, Mondlicht, Sterne.
@@ -125,3 +126,7 @@ Vom 1. November bis 10. Januar schaltet sich jedes Jahr automatisch die Weihnach
 - Setzt das Gerät die 3D-Grafik zurück, pausiert das Spiel und zeigt einen Hinweis, bis sie wiederhergestellt ist.
 
 Die Hauptversion des Spiels ist dieses Repository. Änderungen im ursprünglichen Claude-Artifact kommen hier nicht automatisch an.
+
+## Menü und Einstellungen
+
+`js/menu.js` (lädt nach `js/net.js`) steuert Hauptmenü (`#panelStart`: Spielen, Mehrspieler, Einstellungen), Spielstart (`#panelPlay`: Kartenbilder `#mapSeg`, Schwierigkeit `#diffSeg`, `#startBtn`, `#continueBtn`), Einstellungen (`#panelSettings`, vier Bereiche als Reiter, Bereich gemerkt in `kk-settab`) und Pause. Die Schalter sitzen in den Dateien, die sie betreffen: Qualität und weiche Schatten (`kk-soft`) in `js/gfx.js`, Tageszeit und Wetter in `js/daynight.js`, Ton und Schwierigkeit in `js/game.js` (beide Schwierigkeitsleisten tragen die Klasse `diffSeg`; während einer Runde gilt die Wahl erst für die nächste, `D` bleibt), Weihnachtsedition in `js/xmas.js`; Tipps (`kk-tips`, Klasse `notips`), Spuren (`kk-trails`, `SNOW.trails`), Kamera umkehren (`kk-inv`, `lookInv` in `js/input.js`) und Vibration (`kk-vib`) in `js/menu.js`. Im Mehrspieler ist die Pause eine Ebene (`MENU.overlay`), `state` bleibt `'play'`.

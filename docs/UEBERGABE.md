@@ -6,9 +6,9 @@ Stand: 15. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `7fabd55` (PR #26: Schnee) |
-| `main` | `b53eedf` (#27 gemergt, Deploy scheiterte an einem wackligen Musiktest) |
-| Offener Pull Request | #28: Schnee nachgebessert (Fußspuren, ungleiche Schneedecke, weiche Verwehungen) und Deploy-Fehler behoben |
+| Live auf GitHub Pages | `4e6bf9d` (PR #28, mit #27) |
+| `main` | `4e6bf9d` |
+| Offener Pull Request | #29: Auftrag „Menü aufräumen und Einstellungen im Spiel“ (Drive: `Kistenkrawall-Auftrag-Menue.md`) |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 

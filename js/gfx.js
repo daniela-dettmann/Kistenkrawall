@@ -301,7 +301,7 @@ scene.traverse(o=>{
   document.body.appendChild(el);
   let on=false;try{on=localStorage.getItem('kk-fps')==='1';}catch(e){}
   if(/[?&#]fps\b/i.test(location.search+location.hash))on=true;
-  const btn=$('#fpsToggle'),label=()=>{if(btn){btn.textContent='FPS-Anzeige: '+(on?'an':'aus');btn.setAttribute('aria-pressed',on?'true':'false');}el.hidden=!on;};
+  const btn=$('#fpsToggle'),label=()=>{if(btn)btn.setAttribute('aria-checked',on?'true':'false');el.hidden=!on;};
   if(btn)btn.addEventListener('click',()=>{on=!on;try{localStorage.setItem('kk-fps',on?'1':'0');}catch(e){}label();});
   label();
   let n=0,t0=performance.now(),worst=0,prev=t0;
@@ -328,14 +328,20 @@ function gfxApply(){
   if(!GFX.texs){GFX.texs=new Set(Object.values(TX));scene.traverse(o=>{if(o.material&&o.material.map)GFX.texs.add(o.material.map);});}
   for(const t of GFX.texs)if(t&&t.isTexture&&t.anisotropy!==an){t.anisotropy=an;t.needsUpdate=true;}
   if(typeof resize==='function')resize();
-  const b=$('#gfxToggle');if(b){b.textContent='Grafik: '+(gfxFine()?'Hoch':'Niedrig');b.setAttribute('aria-pressed',gfxFine()?'true':'false');}
+  for(const b of document.querySelectorAll('#gfxSeg button'))b.setAttribute('aria-pressed',b.dataset.g===GFX.mode?'true':'false');
+  // soft shadows (settings › Grafik): PCF soft or plain PCF; materials are rebuilt once when it changes
+  const st=GFX.soft?THREE.PCFSoftShadowMap:THREE.PCFShadowMap;
+  if(renderer.shadowMap.type!==st){renderer.shadowMap.type=st;scene.traverse(o=>{if(o.material)for(const m of [].concat(o.material))m.needsUpdate=true;});renderer.shadowMap.needsUpdate=true;}
+  const sb=$('#shadowToggle');if(sb)sb.setAttribute('aria-checked',GFX.soft?'true':'false');
 }
 function gfxSet(mode,byUser){
   GFX.mode=mode==='schnell'?'schnell':'schoen';
   if(byUser){GFX.chosen=true;try{localStorage.setItem('kk-gfx',GFX.mode);}catch(e){}}
   gfxApply();
 }
-{const b=$('#gfxToggle');if(b)b.addEventListener('click',()=>gfxSet(gfxFine()?'schnell':'schoen',true));}
+GFX.soft=(function(){try{return localStorage.getItem('kk-soft')!=='0';}catch(e){return true;}})();
+for(const b of document.querySelectorAll('#gfxSeg button'))b.addEventListener('click',()=>gfxSet(b.dataset.g,true));
+{const b=$('#shadowToggle');if(b)b.addEventListener('click',()=>{GFX.soft=!GFX.soft;try{localStorage.setItem('kk-soft',GFX.soft?'1':'0');}catch(e){}gfxApply();});}
 gfxApply();
 /* Slow device: after two slow stretches in a row, switch to "Schnell" unless the player chose a mode themselves */
 (function(){

@@ -29,7 +29,7 @@ function snapshot(){
   return {
     format:SAVE_FORMAT,savedAt:Date.now(),map:MAP,
     app:(document.querySelector('meta[name="kk-version"]')||{}).content||'dev',
-    diffKey,peaceMin,
+    diffKey:Object.keys(DIFFS).find(k=>DIFFS[k]===D)||diffKey,peaceMin,   // the difficulty the round runs with
     g:{gameT,spawnT,peaceT,waveT,waveNo,spawnSide,peaceWarnT,nextId},
     stats:Object.assign({},stats),
     respawns:respawns.map(r=>Object.assign({},r)),
@@ -76,7 +76,7 @@ function clearSave(){if(MP)return;try{localStorage.removeItem(SAVE_KEY);}catch(e
 
 function restore(s){
   clearWorld();
-  diffKey=DIFFS[s.diffKey]?s.diffKey:'normal';D=DIFFS[diffKey];peaceMin=s.peaceMin||peaceMin;
+  D=DIFFS[DIFFS[s.diffKey]?s.diffKey:'normal'];   // the saved round keeps its difficulty; the setting is for the next roundpeaceMin=s.peaceMin||peaceMin;
   ({gameT,spawnT,peaceT,waveT,waveNo,spawnSide,peaceWarnT}=s.g);
   Object.assign(stats,s.stats);
   respawns=s.respawns;placeQueue=s.placeQueue;
@@ -147,7 +147,6 @@ function resumeGame(){
   initAudio();tryLandscape();
   try{restore(s);}
   catch(e){console.error(e);clearSave();toast('Der Spielstand ließ sich nicht laden und wurde verworfen.',3);newGame(true);return;}
-  for(const b of document.querySelectorAll('#diffSeg button'))b.setAttribute('aria-pressed',b.dataset.d===diffKey?'true':'false');
   state='play';$('#menu').hidden=true;$('#hud').hidden=false;
   pause(true);   // start paused, so the player can get their bearings first
   toast('Spielstand geladen',1.6);
