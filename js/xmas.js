@@ -16,6 +16,16 @@ const XMAS=(function(){
 })();
 function xmasSeason(d){d=d||new Date();const m=d.getMonth(),day=d.getDate();return m===10||m===11||(m===0&&day<=10);}
 const XMAS_FORCED=/weihnachten/i.test(location.search+location.hash);
+/* How much snow lies at a spot, 0 (a thin dusting, grass shows through) to 1 (deep, fresh snow). Smooth value noise
+   in two sizes, so there are wide deep fields, thin patches and everything in between. Used for the ground, the grass
+   and the drifts (snow.js). */
+function snowCover(x,z){
+  const hash=(i,j)=>{const s=Math.sin(i*127.1+j*311.7)*43758.5453;return s-Math.floor(s);};
+  const vn=(x,z)=>{const i=Math.floor(x),j=Math.floor(z),fx=x-i,fz=z-j,u=fx*fx*(3-2*fx),v=fz*fz*(3-2*fz);
+    return (hash(i,j)*(1-u)+hash(i+1,j)*u)*(1-v)+(hash(i,j+1)*(1-u)+hash(i+1,j+1)*u)*v;};
+  const n=vn(x/17+3.1,z/17+7.7)*0.68+vn(x/6.5+11.3,z/6.5+1.9)*0.32;
+  return Math.max(0,Math.min(1,(n-0.3)*2.1));
+}
 
 /* ----- menu: toggle (only in season or when forced) ----- */
 (function(){
@@ -62,19 +72,21 @@ if(XMAS)(function(){
   scene.traverse(o=>{
     if(!o.isMesh)return;
     if(!MOUNTAIN&&!VOLCANO&&o.material&&o.material.map===TX.ground&&o.geometry.attributes.color){
-      const p=o.geometry.attributes.position,col=o.geometry.attributes.color,snow=new THREE.Color(0xffffff),dirt=new THREE.Color(0xa99a86),c=new THREE.Color();
+      const p=o.geometry.attributes.position,col=o.geometry.attributes.color,snow=new THREE.Color(0xffffff),dirt=new THREE.Color(0xa99a86),deep=new THREE.Color(0xf4f8ff),c=new THREE.Color();
       for(let i=0;i<p.count;i++){
         const x=p.getX(i),z=p.getZ(i),h=p.getY(i);if(h<-1.05)continue;   // keep beach sand under water
         c.setRGB(col.getX(i),col.getY(i),col.getZ(i));
-        const path=pathDist(x,z),k=h<-0.6?0.4:0.93;
-        c.lerp(snow,k);if(path<2.0)c.lerp(dirt,(1-path/2)*0.3);
+        // thin snow: the ground shows through as a cool grey green; deep snow: pure white with a touch of blue in the shade
+        const path=pathDist(x,z),sc=snowCover(x,z),k=h<-0.6?0.4:0.62+0.37*sc;
+        c.lerp(snow,k);if(sc>0.75)c.lerp(deep,(sc-0.75)*1.2);if(path<2.0)c.lerp(dirt,(1-path/2)*0.3);
         col.setXYZ(i,c.r,c.g,c.b);
       }
       col.needsUpdate=true;
     }
     if(!VOLCANO&&o.material&&o.position.y===-1.65&&o.material.transparent){o.material.color.set(0x4f9fc9);}
   });
-  scene.traverse(o=>{if(o.isInstancedMesh&&o.count>2000){const c=new THREE.Color();for(let i=0;i<o.count;i++){o.getColorAt(i,c);c.lerp(new THREE.Color(0xeef4fa),0.85);o.setColorAt(i,c);}o.instanceColor.needsUpdate=true;}
+  // grass: frosted where the snow is deep, still green where it is thin (and shorter in deep snow, it is half buried)
+  scene.traverse(o=>{if(o.isInstancedMesh&&o.count>2000){const c=new THREE.Color(),m=new THREE.Matrix4(),P=new THREE.Vector3(),Q=new THREE.Quaternion(),S=new THREE.Vector3();for(let i=0;i<o.count;i++){o.getMatrixAt(i,m);m.decompose(P,Q,S);const sc=snowCover(P.x,P.z);o.getColorAt(i,c);c.lerp(new THREE.Color(0xeef4fa),0.55+0.4*sc);o.setColorAt(i,c);S.y*=1-0.45*sc;m.compose(P,Q,S);o.setMatrixAt(i,m);}o.instanceColor.needsUpdate=true;o.instanceMatrix.needsUpdate=true;}
     else if(o.isInstancedMesh&&o.count>200&&o.count<=2000&&o.geometry.type==='IcosahedronGeometry'){const c=new THREE.Color();for(let i=0;i<o.count;i++)o.setColorAt(i,c.set(ORN[i%ORN.length]));o.instanceColor.needsUpdate=true;}});
   bagMat.color.set(0xf2f6ff);bagMat.emissive=new THREE.Color(0x141c26);
   rockMat.color.set(0xc9ccd2);

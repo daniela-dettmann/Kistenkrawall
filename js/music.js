@@ -393,6 +393,7 @@ const MUSIC=(function(){
       play(name,opts){
         opts=opts||{};
         if(cur&&!opts.now&&!TRACKS[name].once){pending=name;return;}
+        pending=null;   // a jingle or an immediate switch drops a change that was still waiting for the next bar
         startTrack(name,ctx.currentTime+0.08);ensureTimer();pump(ctx.currentTime+0.5);
       },
       stop(fade){

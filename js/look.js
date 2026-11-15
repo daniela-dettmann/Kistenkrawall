@@ -99,7 +99,9 @@ const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:
     stepT-=dt;if(stepT>0)return;stepT=0.16;
     const cx=camera.position.x,cz=camera.position.z;
     for(const u of units){
-      if(!u.alive||!u.moving||u.kind==='turm'||Math.hypot(u.x-cx,u.z-cz)>45)continue;
+      if(!u.alive||u.kind==='turm')continue;
+      const mv=u._lpx!==undefined&&Math.hypot(u.x-u._lpx,u.z-u._lpz)>0.02;u._lpx=u.x;u._lpz=u.z;   // u.moving is reset every frame
+      if(!mv||Math.hypot(u.x-cx,u.z-cz)>45)continue;
       u._pT=(u._pT||0)-0.16;if(u._pT>0)continue;
       const a=isVeh(u)?(u.hull||0):u.h,rx=Math.cos(a),rz=-Math.sin(a);
       if(isVeh(u)){u._pT=0.2;const w=(u.r||1)*0.75;for(const s of [-1,1])stamp(u.x+rx*w*s,u.z+rz*w*s,a,2.4,3.2);}
