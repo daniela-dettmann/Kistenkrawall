@@ -4,7 +4,7 @@
    - Spuren in Schnee und Asche, Spritzer im Wasser, Mündungsfeuer, Explosionen mit Feuerball, Rauch und Glut.
    Alles nur Optik; im Mehrspieler zeichnet jedes Gerät die Effekte selbst. */
 'use strict';
-const LOOK={rim:{value:0.32},rimC:{value:new THREE.Color(0xfff2dc)},wind:{value:1},day:{value:1},cloud:{value:0.2},prints:0};
+const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:1},day:{value:1},cloud:{value:0.2},prints:0};
 (function(){
   const glowTex=(function(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,1,32,32,32);
     r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.3,'rgba(255,255,255,.55)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
@@ -146,13 +146,33 @@ const LOOK={rim:{value:0.32},rimC:{value:new THREE.Color(0xfff2dc)},wind:{value:
      }
    };}
 
+  /* ---------- Contact shadows: soft dark blobs under units, vehicles and crates ----------
+     Units and vehicles already had a flat black disc. It now has a soft edge, is a little larger and darker in the
+     middle, so everything stands on the ground instead of hovering. Crates get the same, smaller when they fall. */
+  const blobTex=(function(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,1,32,32,32);
+    r.addColorStop(0,'rgba(0,0,0,1)');r.addColorStop(.45,'rgba(0,0,0,.75)');r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+  Object.assign(M.blob,{map:blobTex,opacity:0.55,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});M.blob.needsUpdate=true;
+  G.blob.scale(1.35,1,1.35);
+  const CB=160,cblob=new THREE.InstancedMesh(new THREE.CircleGeometry(0.85,20).rotateX(-Math.PI/2),M.blob,CB),cbd=new THREE.Object3D();
+  cblob.frustumCulled=false;cblob.renderOrder=1;cblob.count=0;scene.add(cblob);LOOK.crateBlobs=cblob;
+  function crateShadows(){
+    let n=0;
+    for(const c of crates){
+      if(n>=CB)break;if(c.state!=='ground'&&c.state!=='fall')continue;
+      const gy=hgt(c.x,c.z),up=Math.max(0,c.y-gy-0.5),k=Math.max(0.25,1-up/14);
+      cbd.position.set(c.x,gy+0.035,c.z);cbd.rotation.set(0,0,0);cbd.scale.set(k,1,k);cbd.updateMatrix();cblob.setMatrixAt(n++,cbd.matrix);
+    }
+    cblob.count=n;cblob.instanceMatrix.needsUpdate=true;
+  }
+
   /* ---------- Per frame: time of day, weather and the switch ---------- */
   const _mood=updateMood;
   updateMood=function(dt){
     _mood(dt);
     const fine=gfxFine(),dn=typeof DN!=='undefined'?DN:null,night=dn?dn.night:0,W=dn?dn.wx:{s:0,kind:'klar',storm:false};
     LOOK.day.value=1-night;
-    LOOK.rim.value=fine?0.32:0;LOOK.rimC.value.setRGB(1-night*0.45,0.95-night*0.3,0.86+night*0.1);
+    // warm rim light on units and vehicles (Auftrag Grafik-Upgrade, Schritt 3); a little softer on „Niedrig“, a little cooler at night
+    LOOK.rim.value=fine?0.36:0.22;LOOK.rimC.value.setRGB(1-night*0.3,0.85-night*0.12,0.62+night*0.25);
     LOOK.wind.value=1+W.s*(W.storm?1.8:W.kind==='schnee'?1.4:W.kind==='regen'?0.8:0.4);
     LOOK.cloud.value=(0.15+W.s*0.08)*(1-night);
     // morning mist: strongest around sunrise, gone by mid-morning
@@ -161,5 +181,6 @@ const LOOK={rim:{value:0.32},rimC:{value:new THREE.Color(0xfff2dc)},wind:{value:
     if(dawn>0){scene.fog.near*=1-0.35*dawn;scene.fog.far*=1-0.3*dawn;}
     envT-=dt;if(envT<=0){envT=3;envUpdate();}
     printStep(dt);
+    crateShadows();
   };
 })();
