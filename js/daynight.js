@@ -64,7 +64,7 @@ const DN={
 
   function sound(kind,vol){
     if(!AC||!soundOn||state!=='play'||AC.state!=='running'||typeof SND[kind]!=='function')return;
-    try{playSound(AC,noiseBuf,kind,vol,master);}catch(e){}
+    try{playSound(AC,noiseBuf,kind,vol,natureOut||master);}catch(e){}   // thunder: the nature volume
   }
   // lvl: how strong (a shower 0.6, a storm 1); the picture blends towards it over several seconds
   function setWeather(kind,storm,lvl){

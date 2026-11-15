@@ -71,9 +71,10 @@ function toMenu(){
 $('#startBtn').addEventListener('click',startGame);
 function syncSoundUI(){
   for(const b of document.querySelectorAll('.sndBtn'))b.setAttribute('aria-checked',soundOn?'true':'false');
-  {const a=$('#sndNum'),b=$('#musNum');if(a)a.textContent=Math.round(soundVol*100);if(b)b.textContent=Math.round(musicVol*100);}
-  for(const r of document.querySelectorAll('.sndVol input')){r.value=soundVol;r.disabled=!soundOn;}
-  for(const r of document.querySelectorAll('.musVol input')){r.value=musicVol;r.disabled=!soundOn;}
+  // four sliders: Gesamt, Musik, Effekte, Natur und Wetter (audio.js)
+  for(const [cls,num,v] of [['mainVol','mainNum',mainVol],['musVol','musNum',musicVol],['sndVol','sndNum',soundVol],['natVol','natNum',natVol]]){
+    const n=$('#'+num);if(n)n.textContent=Math.round(v*100);
+    for(const r of document.querySelectorAll('.'+cls+' input')){r.value=v;r.disabled=!soundOn;}}
 }
 for(const b of document.querySelectorAll('.sndBtn'))b.addEventListener('click',()=>{
   soundOn=!soundOn;try{localStorage.setItem('kk-snd',soundOn?'1':'0');}catch(e){}
@@ -82,6 +83,10 @@ for(const b of document.querySelectorAll('.sndBtn'))b.addEventListener('click',(
 });
 for(const r of document.querySelectorAll('.musVol input'))
   r.addEventListener('input',()=>{musicVol=+r.value;try{localStorage.setItem('kk-mvol-v2',String(musicVol));}catch(e){}initAudio();syncSoundUI();});
+for(const r of document.querySelectorAll('.mainVol input'))
+  r.addEventListener('input',()=>{mainVol=+r.value;try{localStorage.setItem('kk-main',String(mainVol));}catch(e){}initAudio();applyVolume();syncSoundUI();});
+for(const r of document.querySelectorAll('.natVol input'))
+  r.addEventListener('input',()=>{natVol=+r.value;try{localStorage.setItem('kk-nat',String(natVol));}catch(e){}initAudio();applyVolume();syncSoundUI();});
 for(const r of document.querySelectorAll('.sndVol input')){
   r.addEventListener('input',()=>{soundVol=+r.value;try{localStorage.setItem('kk-vol-v2',String(soundVol));}catch(e){}initAudio();applyVolume();syncSoundUI();});
   r.addEventListener('change',()=>{if(AC&&soundOn)playSound(AC,noiseBuf,'hit',1,master);});

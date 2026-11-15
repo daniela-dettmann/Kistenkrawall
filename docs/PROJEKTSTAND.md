@@ -46,7 +46,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `8a06327` (PR #32: Tests nu
 | #30 | Test „Sieg-Jingle am Rundenende“ robust: Der Jingle dauert nur 3,6 s; auf ausgelasteten Testmaschinen schaute der Test erst nach dessen Ende nach (Deploys von #27 und #29 scheiterten daran). Jetzt hält er fest, welches Stück das Rundenende startet | gemergt |
 | #31 | Auftrag „Dynamisches Wetter“: Wetterwahl Zufall/Klar/Regen/Gewitter/Schneesturm, Unwetter zu Beginn der Angriffswellen, Schauer in der Bauruhe, Weihnachtsedition mit Schneefall statt Dunst; Regenstreifen, Tropfenringe, nasser Glanz, Pfützen mit Spritzern; Gewitter mit dunklem Himmel, Blitzstrahlen und Einschlägen in Bäume (Feuer, angekohlt); Schneesturm waagerecht mit dichtem Nebel und schnell zuschneienden Spuren; Wind lässt Fallschirmkisten schwanken | gemergt |
 | #32 | Browser-Test nur noch im Pull Request, in vier Teilen gleichzeitig, Testbrowser im Cache; Deploy ohne erneuten Test. Gewitter-Ton neu: Regenrauschen statt „tsch, tsch“, Donner nach Blitzkanal-Modell, leises Grummeln, Wind im Schneesturm; Vulkan-Grollen wieder eigenständig | gemergt |
-| #33 | CLAUDE.md: Umfang des lokalen Tests (voll vor dem ersten Push, bei Korrekturen nur betroffene Teile, außer bei Spielcode für mehrere Teile); erst mergen, wenn alle vier Testteile grün sind | gemergt |
+| #33 | CLAUDE.md: Umfang des lokalen Tests (voll vor dem ersten Push, bei Korrekturen nur betroffene Teile, außer bei Spielcode für mehrere Teile), erst mergen, wenn alle vier Testteile grün sind. Wetter „Zufall“ unabhängig von Bauruhe und Welle. Ton in vier Reglern: Gesamt, Musik, Effekte, Natur und Wetter | gemergt |
 
 ## Was umgesetzt ist
 
@@ -77,7 +77,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `8a06327` (PR #32: Tests nu
 ### Ton und Musik
 - Alle Töne werden live im Browser erzeugt, es gibt keine Audiodateien.
 - Ton kommt nach Bildschirmsperre, App-Wechsel oder Anruf zurück. Auf dem iPhone ist er auch bei eingeschaltetem Stummschalter hörbar (Safari 16.4+).
-- Getrennte Regler für Effekte und Musik in den Einstellungen (Bereich Ton, auch aus der Pause), dazu „Ton aus“. Standard: Effekte 70 %, Musik 10 %.
+- Einstellungen › Ton: Ton an/aus und vier Regler mit Zahl: **Gesamt** (alles), **Musik**, **Effekte** (Schüsse, Explosionen, Kisten, Signale, auch das Vulkan-Grollen als Warnung) und **Natur und Wetter** (Regen, Wind, Donner, Grummeln). Standard: Gesamt 100 %, Musik 10 %, Effekte 70 %, Natur und Wetter 50 %. Gemessen: Die Musik liegt damit gut 7 dB über dem Regen (vorher, als Natur über den Effekt-Regler lief, nur etwa 4 dB).
 - Eigene Hintergrundmusik im Stil funkiger Konsolenspiele der späten 90er, mit Slap-Bass, Orgel, Clavinet, Bläsern, Vibraphon und Schlagzeug:
   - Titelthema im Menü (Funk in E, 104 BPM)
   - Bauruhe (Groove in D, 90 BPM)
@@ -175,7 +175,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `8a06327` (PR #32: Tests nu
 - Nachts: Mondlicht, Sterne, eine Laterne am eigenen Blechling, Lichtkegel vor allen Blechlingen und Fahrzeugen, leuchtende Kisten und Hauptquartiere. Die Lava leuchtet von selbst und erhellt die Vulkannacht.
 - Wetter (Auftrag „Dynamisches Wetter“, `js/weather.js`): Einstellungen › Spiel › Wetter: **Zufall / Klar / Regen / Gewitter / Schneesturm**, gemerkt, wirkt sofort, auch aus der Pause (bis #30 nur an/aus; wer es aus hatte, bekommt „Klar“).
 - Warum man vorher kaum Wetter sah: In der Weihnachtsedition auf der Insel gab es nur „Dunst“ ohne Regen oder Partikel; sonst kam das erste Wetter frühestens nach 70 bis 110 Sekunden, Regen waren winzige Punkte, und der Schneesturm verstärkte nur das ohnehin laufende Schneetreiben.
-- Zufall: In jeder Bauruhe kommt nach 50 bis 90 Sekunden ein Schauer bzw. Schneefall (40 bis 70 s). Zu Beginn einer Angriffswelle zieht oft ein Unwetter auf (bei der ersten Welle immer, wenn es noch keins gab); nach der Welle klart es langsam auf. Im Mehrspieler (ohne Wellen) wechselt es nach Zeit. Weihnachtsedition und Gebirge: Schneefall bis Schneesturm; Insel: Regen und Gewitter; Vulkan: Ascheregen und Gewitter.
+- Zufall: Klar und Wetter wechseln sich zufällig ab, unabhängig von Bauruhe, Angriffswelle oder Mehrspieler: 60 bis 150 Sekunden klar (zu Rundenbeginn nur 40 bis 80 s, damit jede Runde früh Wetter hat), dann 40 bis 90 Sekunden Wetter, zu 60 % ein Schauer bzw. Schneefall, zu 40 % ein Unwetter, danach klart es auf. Weihnachtsedition und Gebirge: Schneefall bis Schneesturm; Insel: Regen und Gewitter; Vulkan: Ascheregen und Gewitter. (Bis #32 hing das Unwetter an der Angriffswelle.)
 - Übergänge blenden über einige Sekunden; ein Unwetter macht Himmel und Licht deutlich dunkler, der Wind frischt auf (Bäume, Gras, Schnee).
 - Regen: Regenstreifen um die Kamera (1400, auf „Niedrig“ unter der Hälfte), Tropfenringe auf dem Wasser und in Pfützen (nur „Hoch“), nasser Glanz auf Kisten, Blechlingen und Fahrzeugen, bis zu 26 Pfützen an flachen Stellen (meist auf den Wegen), die den Himmel spiegeln und nach dem Regen langsam trocknen; Fahrzeuge spritzen beim Durchfahren.
 - Gewitter: dunkler Himmel, Blitz über der ganzen Szene (manchmal doppelt), Donner leicht verzögert; meist ist ein Blitzstrahl in der Ferne zu sehen, ab und zu schlägt einer in einen Baum in der Nähe ein, der brennt kurz mit Feuer und Rauch und ist danach angekohlt.
@@ -225,7 +225,7 @@ Bei jedem Pull Request startet GitHub das Spiel in einem echten Browser (vier Te
 - Grafik neu: Belichtungskurve, dunklere Ecken nur in „Schön“, Schattierung in Senken, runde Kanten, Wind, Lichtsaum, Metallglanz, Gras blendet aus, Explosion mit Feuerball, Rauch und Glut, Mündungsfeuer
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
 - Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Tageszeit „Tag“ und „Nacht“
-- Wetter: Wetterwahl Regen (Streifen, nass, Pfützen), Gewitter mit Blitzeinschlag (Baum angekohlt), Schneesturm (waagerecht, Nebel, Wind), Klar; Zufall mit Schauer in der Bauruhe und Unwetter zur ersten Welle, danach Aufklaren; Wind versetzt Fallschirmkisten etwas, nie ins Wasser
+- Wetter: Wetterwahl Regen (Streifen, nass, Pfützen), Gewitter mit Blitzeinschlag (Baum angekohlt), Schneesturm (waagerecht, Nebel, Wind), Klar; Zufall: Wetter kommt und geht zufällig, in der Bauruhe wie in der Welle; Wind versetzt Fallschirmkisten etwas, nie ins Wasser
 - Tonstudio und Update-Hinweis
 
 Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikkarte, drei Browserseiten gleichzeitig). Er läuft deshalb nur lokal vor dem Push; mit `KK_MP_TEST=1` lässt er sich auch auf GitHub erzwingen.

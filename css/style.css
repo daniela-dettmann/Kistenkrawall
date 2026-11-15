@@ -240,7 +240,10 @@ table.stack{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-nu
 #menu.ingame .slbl .later{display:block}
 .slbl .num{display:inline;font-variant-numeric:tabular-nums;color:var(--crate);margin-left:6px}
 .srow.col .slbl{flex-direction:row;flex-wrap:wrap;align-items:baseline;column-gap:8px}
-.srow .musVol input,.srow .sndVol input{width:100%;height:32px}
+.srow .musVol input,.srow .sndVol input,.srow .mainVol input,.srow .natVol input{width:100%;height:32px}
+.mainVol,.natVol{display:flex;align-items:center}
+.mainVol input,.natVol input{flex:1;accent-color:var(--orange)}
+.srow.col .slbl small{flex-basis:100%}
 .sw{flex:0 0 auto;width:64px;height:44px;border:0;background:transparent;position:relative;padding:0}
 .sw::before{content:"";position:absolute;left:3px;top:5px;width:58px;height:34px;border-radius:999px;background:rgba(245,241,227,.18);transition:background .15s}
 .sw i{position:absolute;left:7px;top:9px;width:26px;height:26px;border-radius:50%;background:#f5f1e3;transition:transform .15s}
