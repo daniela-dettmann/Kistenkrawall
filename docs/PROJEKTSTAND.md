@@ -41,7 +41,7 @@ Stand: 15. November 2026 · Live-Version auf `main`: `7fabd55` (PR #26: Schnee).
 | #25 | Auftrag „Grafik-Upgrade Wasser, Schnee und Plastizität“, Schritt 1: Wasser mit Tiefenfarbe aus Küstenabstand, zwei Schaumlinien, gegenläufigen Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzern mit Tropfen; Wolken werfen keine harten Schatten mehr; Schalter heißt jetzt „Grafik: Hoch / Niedrig“ | gemergt |
 | #26 | Auftrag Grafik-Upgrade, Schritt 2: Schnee mit Spurenkarte (Fußabdrücke, Reifenrillen, schneien nach gut 12 s zu), Verwehungen an Bäumen, Felsen, Sandsäcken, Hauptquartieren und in Senken (bremsen auf 82 %, es staubt), Schneehauben auf Kisten, Felsen, Sandsäcken, Schneestaub an den Füßen | gemergt |
 | #27 | Auftrag Grafik-Upgrade, Schritt 3: weiche Kontaktschatten unter Figuren, Fahrzeugen und Kisten, warmes Randlicht auf Figuren und Fahrzeugen (auch auf „Niedrig“, dort schwächer), Grafikstufe beim ersten Start nach Gerät | gemergt |
-| #28 | Schnee nachgebessert nach Danielas iPhone-Test: Fußspuren erschienen im echten Spiel nie (der Merker „läuft“ war schon zurückgesetzt, als der Schnee ihn las; gleicher Fehler bei Fahrzeugstaub und Aschespuren), jetzt größer, deutlicher und gut 25 s sichtbar; Schnee liegt ungleich (dünne Stellen mit Gras, tiefe Schneefelder mit Verwehungen); Verwehungen als weiche Hügel statt Halbkugeln; Deploy-Fehler von #27 (Sieg-Jingle) behoben | gemergt |
+| #28 | Schnee nachgebessert nach Danielas iPhone-Test: Fußspuren erschienen im echten Spiel nie (der Merker „läuft“ war schon zurückgesetzt, als der Schnee ihn las; gleicher Fehler bei Fahrzeugstaub und Aschespuren), jetzt größer, deutlicher und gut 25 s sichtbar; Schnee liegt ungleich (dünne Stellen mit Gras, tiefe Schneefelder mit Verwehungen); Verwehungen als weiche Hügel statt Halbkugeln; Morgennebel mit weichen Rändern (war die grünlich gesprenkelte Fläche mit gerader Kante); Deploy-Fehler von #27 (Sieg-Jingle) behoben | gemergt |
 
 ## Was umgesetzt ist
 
@@ -242,7 +242,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 - Tag, Nacht und Wetter: nur im Browser ohne Grafikkarte geprüft. Ob die Nacht auf einem Handy-Bildschirm im Hellen noch gut lesbar ist, ist offen. Der Regen besteht aus Punkten statt Strichen. Im Mehrspieler-Test wird die Wettermeldung an den Gast nicht eigens geprüft.
 - Vulkan: Auf echten Handys nicht gemessen. Das Gleichgewicht (Brücken näher beieinander, Ausbrüche) ist nur in simulierten Runden geprüft, nicht von Menschen gespielt.
 - Ein eigenes Bauruhe-Stück fürs Gebirge (im Auftrag optional) gibt es noch nicht.
-- Bildfehler aus Danielas Screenshots vom 15. November (grünlich gesprenkelte Fläche mit gerader Kante in der Taktikansicht, heller Halbkreis am Stapelplatz) ließen sich im Testbrowser nicht nachstellen; offen.
+- Bildfehler aus Danielas Screenshots vom 15. November: Die grünlich gesprenkelte Fläche mit gerader Kante war der Morgennebel (eine flache Ebene, die Hänge hart anschnitt und auf dem iPhone flimmerte); er dünnt jetzt über dem Boden aus. Im Testbrowser trat die Kante nicht auf, ob sie auf dem iPhone weg ist, zeigt erst Danielas Test. Der helle Halbkreis am Stapelplatz ist noch ungeklärt.
 - Die Musik konnte ich nicht anhören, nur messen: keine Übersteuerung, keine Lücken, gleiche Lautstärke.
 - iPhone: iOS kann Daten von Web-Apps löschen, die etwa eine Woche nicht geöffnet wurden. Das betrifft auch den Spielstand.
 - Änderungen am ursprünglichen Claude-Artifact „Kistenkrawall“ kommen nicht automatisch ins Repo. Die Hauptversion ist das Repository.

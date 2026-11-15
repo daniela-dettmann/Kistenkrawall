@@ -78,6 +78,16 @@ const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:
     const m=new THREE.MeshBasicMaterial({map:noiseTex,color:0xffffff,transparent:true,opacity:0,depthWrite:false,fog:true});
     noiseTex.repeat.set(1,1);
     mist=new THREE.Mesh(new THREE.PlaneGeometry(172,172,1,1).rotateX(-Math.PI/2),m);mist.position.y=MOUNTAIN?0.45:-1.0;mist.renderOrder=3;mist.visible=false;scene.add(mist);
+    // The mist is a flat sheet. Where a slope cuts through it, it used to end in a hard straight edge (seen on the
+    // iPhone as a speckled patch). It now thins out over the last 0.8 units above the ground, so it only lies in the
+    // low places, with soft edges.
+    const mY=mist.position.y;
+    gfxChain(m,sh=>{
+      sh.uniforms.uHgt={value:hgtTex};
+      sh.vertexShader='varying vec2 vKkM;\n'+sh.vertexShader.replace('#include <project_vertex>','vKkM=(modelMatrix*vec4(transformed,1.0)).xz;\n#include <project_vertex>');
+      sh.fragmentShader='uniform sampler2D uHgt;varying vec2 vKkM;\n'+HGT_GLSL+sh.fragmentShader.replace('#include <fog_fragment>',
+        'gl_FragColor.a*=smoothstep(0.0,0.8,'+mY.toFixed(2)+'-kkHgt(vKkM));\n#include <fog_fragment>');
+    },'mistEdge');
   }
 
   /* ---------- Footprints in snow and ash, tracks behind vehicles ---------- */
