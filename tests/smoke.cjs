@@ -417,7 +417,7 @@ async function main() {
     peaceT = 300; waveT = 0; R.had = false; R.wave = false; R.inWave = false; R.light = 60; R.lightEnd = 0; DN.setWeather('klar', false);
     let shower = false; for (let i = 0; i < 70; i++) { DN.roll(1, true); if (DN.wx.want !== 'klar') shower = true; }
     DN.setWeather('klar', false); R.lightEnd = 0; R.light = 999; R.had = false;   // no storm yet this round: the first wave brings one for sure
-    peaceT = 0; waveT = 60; DN.roll(0.05, true); const storm = DN.wx.want !== 'klar' && DN.wx.storm && R.wave;
+    peaceT = 0; waveT = 60; DN.roll(0.05, true); const storm = DN.wx.want !== 'klar' && DN.wx.lvl === 1 && R.wave;   // full strength: a thunderstorm (75 %) or heavy rain
     peaceT = 300; waveT = 0; DN.roll(0.05, true); const clear = DN.wx.want === 'klar';
     state = 'menu'; return shower && storm && clear;
   }), 'Zufall: Schauer in der Bauruhe, Unwetter mit der ersten Welle, danach klart es auf');
