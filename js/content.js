@@ -10,6 +10,8 @@ const WEAPONS={
 WEAPONS.kanone={name:'Kanone',dmg:85,cd:1.5,speed:20,ammo:Infinity,pellets:1,spread:.015,range:26,rocket:true,splash:4};
 WEAPONS.mg={name:'MG',dmg:6,cd:.11,speed:32,ammo:Infinity,pellets:1,spread:.07,range:20};
 WEAPONS.moerser={name:'Mörser',dmg:70,cd:2.4,speed:15,ammo:Infinity,pellets:1,spread:.02,range:36,minRange:6,arc:true,splash:3.6};
+// the moon: bullets fly further, the mortar lobs further, flatter and slower (the same for both teams)
+if(typeof MOON!=='undefined'&&MOON){for(const w of Object.values(WEAPONS))w.range*=1.12;WEAPONS.moerser.range=36*1.2;WEAPONS.moerser.speed=12;}
 WEAPONS.turm={name:'Geschütz',dmg:10,cd:.45,speed:30,ammo:Infinity,pellets:1,spread:.03,range:17};
 /* Two crate sorts: blue = combat line, yellow = workshop line. The sort that dominates the stack decides. */
 const REWARDS={

@@ -381,6 +381,90 @@ if(URBAN)(function(){
     };
   }
 
+  if(MOON){
+    const panelTex=canvasTex(64,(g,S)=>{g.fillStyle='#ffffff';g.fillRect(0,0,S,S);g.strokeStyle='rgba(90,100,120,.45)';g.lineWidth=2;
+      for(let i=0;i<=4;i++){g.beginPath();g.moveTo(0,i*S/4);g.lineTo(S,i*S/4);g.stroke();g.beginPath();g.moveTo(i*S/4+(i%2)*4,0);g.lineTo(i*S/4+(i%2)*4,S);g.stroke();}});
+    /* ----- domes: a big one and a small one per base, joined by a short tube. Christmas: gingerbread with icing ----- */
+    const domeM=X?new THREE.MeshPhongMaterial({color:0xa8642e,shininess:12}):new THREE.MeshPhongMaterial({color:0xe9ecf2,map:panelTex,specular:0x8899aa,shininess:40});
+    const icing=new THREE.MeshLambertMaterial({color:0xffffff}),ringM=new THREE.MeshPhongMaterial({color:0x8d939c,shininess:30});
+    for(const d of URB.domes){
+      const y=hgt(d.x,d.z),g=new THREE.Group();g.position.set(d.x,y-0.05,d.z);
+      const dome=new THREE.Mesh(new THREE.SphereGeometry(d.r,28,14,0,TAU,0,Math.PI/2),domeM);dome.scale.y=0.82;g.add(dome);
+      const ring=new THREE.Mesh(new THREE.CylinderGeometry(d.r+0.15,d.r+0.25,0.6,28),X?icing:ringM);ring.position.y=0.3;g.add(ring);
+      const door=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.9,1.2),ringM);const a=Math.atan2(-d.x,-d.z);   // the door faces the middle of the mapdoor.position.set(Math.sin(a)*d.r,0.95,Math.cos(a)*d.r);door.rotation.y=a;g.add(door);
+      if(d.main){const ant=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,3,6),ringM);ant.position.y=d.r*0.82+1.4;g.add(ant);
+        const tip=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,6),new THREE.MeshBasicMaterial({color:0xff5040}));tip.position.y=d.r*0.82+2.95;g.add(tip);}
+      if(X){for(let i=0;i<10;i++){const b=new THREE.Mesh(new THREE.SphereGeometry(0.28,8,6),new THREE.MeshLambertMaterial({color:[0xd62828,0x3fa0ff,0x3fd46a,0xffd24a][i%4]}));
+          const aa=i/10*TAU,yy=d.r*0.82*0.55;b.position.set(Math.cos(aa)*d.r*0.84,yy,Math.sin(aa)*d.r*0.84);g.add(b);}
+        const top=new THREE.Mesh(new THREE.SphereGeometry(d.r*0.38,14,8,0,TAU,0,Math.PI/2),icing);top.position.y=d.r*0.82-d.r*0.2;top.scale.y=0.55;g.add(top);
+        for(let i=0;i<24;i++){const aa=i/24*TAU;lightPts.push([d.x+Math.cos(aa)*(d.r+0.3),y+0.75,d.z+Math.sin(aa)*(d.r+0.3)]);}}
+      g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(g);STATIC_ROOTS.push(g);
+      obstacles.push({x:d.x,z:d.z,r:d.r+0.3});
+    }
+    for(const s of [1,-1]){const a=URB.domes.find(d=>d.main&&Math.sign(d.z)===s),b=URB.domes.find(d=>!d.main&&Math.sign(d.z)===s);
+      const dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),c=new THREE.Mesh(new THREE.CylinderGeometry(1,1,L,12),domeM);
+      c.rotation.z=Math.PI/2;c.rotation.y=-Math.atan2(dz,dx);c.position.set((a.x+b.x)/2,hgt(a.x,a.z)+1,(a.z+b.z)/2);c.castShadow=true;scene.add(c);STATIC_ROOTS.push(c);
+      // the walkway between the domes is part of the base: nobody walks through it
+      for(let k=0.3;k<0.75;k+=0.15)obstacles.push({x:a.x+dx*k,z:a.z+dz*k,r:1.2});}
+    /* ----- the tube: a white half pipe with ribs and a row of small windows over its walls ----- */
+    const tubeM=new THREE.MeshPhongMaterial({color:0xdfe1e4,specular:0x667788,shininess:30,side:THREE.DoubleSide}),ribM=new THREE.MeshPhongMaterial({color:0x9aa1aa,shininess:20});
+    const winM=new THREE.MeshBasicMaterial({color:0x6fb6ff});
+    function pipe(ax,az,bx,bz,b){
+      const L=Math.hypot(bx-ax,bz-az),ang=Math.atan2(bx-ax,bz-az),cx=(ax+bx)/2,cz=(az+bz)/2,R=3.4,y=hgt(cx,cz)-0.05,mat=tubeM.clone();
+      const g=new THREE.Group();g.position.set(cx,y,cz);g.rotation.y=ang;
+      const half=new THREE.Mesh(new THREE.CylinderGeometry(R,R,L,20,1,true,Math.PI/2,Math.PI),mat);half.rotation.x=Math.PI/2;g.add(half);   // the upper half after turning the axis along the tube
+      for(let t=-L/2+1;t<=L/2-1;t+=4){const r=new THREE.Mesh(new THREE.TorusGeometry(R+0.05,0.12,6,20,Math.PI),ribM);r.position.z=t;g.add(r);}
+      for(const sd of [-1,1]){const w=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.35,L-2),winM);w.position.set(sd*R*0.93,1.3,0);g.add(w);}
+      g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(g);
+      fadeable.push({b,mats:[mat]});
+      if(X){const n=Math.round(L/1.4);for(let i=0;i<=n;i++){const t=-L/2+L*i/n;lightPts.push([cx+Math.sin(ang)*t,y+R*0.95+0.12,cz+Math.cos(ang)*t]);}}
+      return g;
+    }
+    pipe(44.2,-39.6,44.2,39.6,{x0:40.8,x1:47.6,z0:-39.6,z1:39.6,h:3.4});
+    for(const s of [1,-1]){   // closed ends of the long part
+      const cap=new THREE.Mesh(new THREE.CircleGeometry(3.4,20,0,Math.PI),tubeM);cap.position.set(44.2,hgt(44.2,s*39.6)-0.05,s*39.6);scene.add(cap);STATIC_ROOTS.push(cap);}
+    for(const s of [1,-1]){pipe(16,s*36.2,44.2,s*36.2,{x0:16,x1:42,z0:s>0?32.8:-39.6,z1:s>0?39.6:-32.8,h:3.4});
+      const fr=new THREE.Mesh(new THREE.TorusGeometry(3.5,0.35,8,20,Math.PI),ribM);fr.rotation.y=Math.PI/2;fr.position.set(16,hgt(16,s*36.2),s*36.2);scene.add(fr);STATIC_ROOTS.push(fr);
+      const sign=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.6,2.4),new THREE.MeshBasicMaterial({color:0xffc928}));sign.position.set(15.8,hgt(16,s*36.2)+3.2,s*36.2);scene.add(sign);STATIC_ROOTS.push(sign);}
+    /* ----- boulders ----- */
+    const rockM=new THREE.MeshPhongMaterial({color:0x8a8884,flatShading:true,shininess:4});
+    for(const b of URB.boxes){if(b.k!=='boulder')continue;
+      const w=b.x1-b.x0,cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2,m=new THREE.Mesh(new THREE.DodecahedronGeometry(w*0.62,1),rockM);
+      m.position.set(cx,hgt(cx,cz)+b.h*0.38,cz);m.scale.set(1,b.h/(w*1.1),0.95);m.rotation.y=cx;m.castShadow=m.receiveShadow=true;scene.add(m);STATIC_ROOTS.push(m);}
+    // loose stones everywhere (low, only to look at)
+    {const st=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.35,0),rockM,140),d=new THREE.Object3D();let n=0;
+     for(let k=0;k<1200&&n<140;k++){const x=(srand()*2-1)*50,z=(srand()*2-1)*50;
+       if(!urbanFree(x,z,1.5)||inTube(x,z,1.5)||BASES.some(b=>Math.hypot(b.x-x,b.z-z)<9)||obstacles.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+1)||URB.zones.flat().concat(URB.gold).some(r=>x>r.x0-2&&x<r.x1+2&&z>r.z0-2&&z<r.z1+2))continue;
+       d.position.set(x,hgt(x,z)+0.1,z);d.rotation.set(srand()*3,srand()*3,srand()*3);d.scale.setScalar(0.4+srand()*1.4);d.updateMatrix();st.setMatrixAt(n++,d.matrix);}
+     st.count=n;st.castShadow=true;st.receiveShadow=true;scene.add(st);}
+    /* ----- deco: a lander, two rovers, a flag on the crater rim, a satellite dish ----- */
+    const gold=new THREE.MeshPhongMaterial({color:0xd9a93a,specular:0xffe9a0,shininess:80}),white=new THREE.MeshPhongMaterial({color:0xf2f2f0,shininess:30}),darkM=new THREE.MeshLambertMaterial({color:0x2a2c30});
+    {const g=new THREE.Group(),x=-44,z=0;g.position.set(x,hgt(x,z),z);
+     const body=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.7,1.4,8),gold);body.position.y=1.6;g.add(body);
+     const cab=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.4,1.3,8),white);cab.position.y=2.95;g.add(cab);
+     const win=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.4,0.1),darkM);win.position.set(0,3.1,1.25);g.add(win);
+     for(let i=0;i<4;i++){const a=i/4*TAU+Math.PI/4,l=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,2.2,6),ribM);l.position.set(Math.cos(a)*1.8,0.9,Math.sin(a)*1.8);l.rotation.set(Math.sin(a)*0.45,0,-Math.cos(a)*0.45);g.add(l);
+       const f=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.4,0.1,10),ribM);f.position.set(Math.cos(a)*2.3,0.05,Math.sin(a)*2.3);g.add(f);}
+     g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(g);STATIC_ROOTS.push(g);obstacles.push({x,z,r:2.2});URB.lander=g;}
+    URB.rovers=[];
+    for(const s of [1,-1]){const g=new THREE.Group(),x=-38,z=s*27;g.position.set(x,hgt(x,z),z);g.rotation.y=s*0.6;
+      const deck=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.25,2.8),white);deck.position.y=0.8;g.add(deck);
+      for(const [wx,wz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.45,0.3,12),darkM);w.rotation.z=Math.PI/2;w.position.set(wx*1.05,0.45,wz*1.0);g.add(w);}
+      const seat=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.5,0.5),ribM);seat.position.set(0,1.15,-0.3);g.add(seat);
+      const dish=new THREE.Mesh(new THREE.SphereGeometry(0.45,12,6,0,TAU,0,Math.PI/2.5),white);dish.position.set(0.5,1.7,0.9);dish.rotation.x=-0.8;g.add(dish);
+      g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(g);STATIC_ROOTS.push(g);obstacles.push({x,z,r:1.7});URB.rovers.push(g);}
+    {const x=-11.6,z=0,y=hgt(x,z),pole=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,3.2,6),ribM);pole.position.set(x,y+1.6,z);scene.add(pole);STATIC_ROOTS.push(pole);
+     const ft=canvasTex(64,(g,S)=>{g.fillStyle='#ff8a1f';g.fillRect(0,0,S,S/2);g.fillStyle='#1fb5a8';g.fillRect(0,S/2,S,S/2);g.fillStyle='#ffffff';g.fillRect(S*0.36,S*0.3,S*0.28,S*0.4);g.fillStyle='#9a6a3c';g.fillRect(S*0.4,S*0.36,S*0.2,S*0.28);});
+     const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.6,1),new THREE.MeshLambertMaterial({map:ft,side:THREE.DoubleSide}));flag.position.set(x,y+2.7,z+0.8);flag.rotation.y=Math.PI/2;scene.add(flag);STATIC_ROOTS.push(flag);
+     const bar=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,1.6,5),ribM);bar.rotation.x=Math.PI/2;bar.position.set(x,y+3.2,z+0.8);scene.add(bar);STATIC_ROOTS.push(bar);obstacles.push({x,z,r:0.3,low:true});}
+    {const x=34,z=0,y=hgt(x,z),g=new THREE.Group();g.position.set(x,y,z);
+     const post=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.25,2.4,8),ribM);post.position.y=1.2;g.add(post);
+     const d=new THREE.Mesh(new THREE.SphereGeometry(1.6,18,8,0,TAU,0,Math.PI/2.6),white);d.position.y=2.7;d.rotation.z=-0.7;d.rotation.x=0.3;g.add(d);
+     const hornM=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,1.4,5),ribM);hornM.position.set(-0.6,3.1,0);hornM.rotation.z=-0.7;g.add(hornM);
+     g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(g);STATIC_ROOTS.push(g);obstacles.push({x,z,r:1});URB.dish=d;}
+    for(const b of birds)b.g.visible=false;   // no birds in a vacuum
+  }
+
   /* ---------- Xmas lights: one instanced mesh, colours cycle ---------- */
   if(X&&lightPts.length){
     const ORNC=[0xff3b3b,0xffd24a,0x4ad7ff,0x7dff7a,0xffffff];

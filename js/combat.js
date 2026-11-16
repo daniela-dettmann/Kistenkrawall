@@ -22,6 +22,7 @@ function boom(x,z,size){
   core.position.set(x,y,z);core.scale.setScalar(.2);scene.add(core);
   parts.push({m:core,vx:0,vy:1.5,vz:0,life:.4,max:.4,boom:size*0.6});
   puffs(x,y,z,Math.round(5+size*2),0x5e5c58,{size:1.2,grow:1.4,life:1.6,spread:1.6,up:.8,op:.75});
+  if(MOON)puffs(x,hgt(x,z)+0.3,z,Math.round(4+size),0xa8a6a0,{size:1.1,grow:.5,life:3,spread:2.4,up:.5,op:.55});   // a dust cloud that hangs and slowly sinks
   for(let i=0;i<Math.round(4+size*2)&&parts.length<280;i++){
     const d=new THREE.Mesh(G.debris,M.dark);d.position.set(x,y,z);scene.add(d);
     parts.push({m:d,vx:rand(-5,5),vy:rand(4,9),vz:rand(-5,5),life:rand(.7,1.1),max:1.1,grav:22,grow:0,debris:true,solid:true});
@@ -100,7 +101,7 @@ function fire(u,ang,cdMul,tgt){
     u.cd=W.cd*(cdMul||1);u.h=ang;u.lastFire=gameT;
     const sx=u.x+Math.sin(ang)*off,sz=u.z+Math.cos(ang)*off,m=new THREE.Mesh(G.bomb,M.dark);m.castShadow=true;scene.add(m);
     const D2=Math.hypot(tx-sx,tz-sz),T=Math.max(0.9,D2/W.speed);
-    shots.push({m,arc:true,x0:sx,z0:sz,y0:hgt(sx,sz)+2,x1:tx,z1:tz,T,t:0,peak:Math.max(DESERT?14:URBAN?10:0,5+D2*0.22),x:sx,z:sz,team:u.team,dmg:W.dmg*(u.weaponMul||1)*(u.dmgMul||1),splash:W.splash,owner:u,trail:0});
+    shots.push({m,arc:true,x0:sx,z0:sz,y0:hgt(sx,sz)+2,x1:tx,z1:tz,T,t:0,peak:MOON?Math.max(5,3+D2*0.1):Math.max(DESERT?14:URBAN?10:0,5+D2*0.22),x:sx,z:sz,team:u.team,dmg:W.dmg*(u.weaponMul||1)*(u.dmgMul||1),splash:W.splash,owner:u,trail:0});
     sfx('moerser',u.x,u.z);puffs(sx,hgt(sx,sz)+2,sz,3,0xdedad0,{size:.6});
     return true;
   }

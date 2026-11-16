@@ -97,7 +97,7 @@ async function main() {
     await openPlay(page);
     await Promise.all([page.waitForNavigation(), page.click('#mapSeg [data-m="' + m + '"]', { force: true })]);
     await page.waitForSelector('#startBtn', { state: 'visible' });
-    check(await page.evaluate(m => MAP === m && URBAN && URB.boxes.length >= 17 && localStorage.getItem('kk-map') === m, m), name + ': Kartenwahl, Gebäude stehen');
+    check(await page.evaluate(m => MAP === m && URBAN && URB.boxes.length >= (m === 'mond' ? 10 : 17) && localStorage.getItem('kk-map') === m, m), name + ': Kartenwahl, Gebäude stehen');
     check(await page.evaluate(() => {
       // crates never land on a roof: 600 drop spots, and a crate the wind pushes towards a house stays on the ground
       for (let i = 0; i < 600; i++) { const sp = dropSpot(DROPS[i % 2], i % 3 ? 1 : -1, i % 7 === 0); if (!urbanFree(sp.x, sp.z, 1)) return false; }
@@ -125,7 +125,7 @@ async function main() {
     check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && renderer.info.render.calls < 500), name + ': Runde läuft, unter 500 Zeichenvorgänge pro Bild');
     check(await page.evaluate(() => {
       // a house stops direct shots; the mortar lobs over it (the shots themselves are followed, other units may join the fight)
-      peaceT = 0; const b = URB.boxes.find(b => ['house', 'hangar', 'gate', 'pyr'].includes(b.k) && b.x0 > -40 && b.x1 < 40), cz = (b.z0 + b.z1) / 2;
+      peaceT = 0; const b = URB.boxes.find(b => ['house', 'hangar', 'gate', 'pyr', 'boulder'].includes(b.k) && b.x0 > -40 && b.x1 < 40), cz = (b.z0 + b.z1) / 2;
       const a = spawnUnit(0, b.x0 - 2, cz, 'kaempfer'), e = spawnUnit(1, b.x1 + 2, cz, 'kaempfer');
       const pin = () => { a.x = b.x0 - 2; a.z = cz; e.x = b.x1 + 2; e.z = cz; };
       pin(); a.cd = 0; const before = new Set(shots); fire(a, Math.PI / 2); const mine = shots.filter(s => !before.has(s)); let maxX = -99;
@@ -485,6 +485,54 @@ async function main() {
   await page.evaluate(() => { localStorage.removeItem('kk-wx'); localStorage.removeItem('kk-tod'); DN.wsel = 'zufall'; DN.tod = 'auto'; });
   }
 
+  if (part(2)) {   // Mond
+  console.log('Mond');
+  await urbanMapChecks(page, 'mond', 'Mond');
+  check(await page.evaluate(() => {
+    // no crate in the tube or on a dome: 800 drop spots
+    for (let i = 0; i < 800; i++) { const sp = dropSpot(DROPS[i % 2], i % 3 ? 1 : -1, i % 5 === 0);
+      if (inTube(sp.x, sp.z, 1) || URB.domes.some(d => Math.hypot(d.x - sp.x, d.z - sp.z) < d.r + 1) || !urbanFree(sp.x, sp.z, 1)) return false; }
+    return true;
+  }), 'Mond: Kisten landen nie im Schlauchgang und nie auf einer Kuppel');
+  check(await page.evaluate(() => {
+    // the tube: walkable from one base to the other, walls keep direct fire out
+    const g0 = navGrid(0), p = navPath(g0, 14, 36.2, 14, -36.2);
+    const len = p ? p.reduce((a, q, i) => i ? a + Math.hypot(q.x - p[i - 1].x, q.z - p[i - 1].z) : 0, 0) : 0;
+    const inside = navFree(g0, 44.2, 0) && navFree(g0, 30, 36.2) && navFree(g0, 30, -36.2);
+    const tubeWay = navPath(g0, 30, 36.2, 30, -36.2), viaTube = !!tubeWay && tubeWay.every(q => inTube(q.x, q.z) || q.x > 15);
+    return !!p && len > 60 && inside && viaTube && urbanBlocked(30, 0, 44.2, 0) && URB.domes.length === 4 && URB.craters.length === 3 && hgtRaw(0, 0) < hgtRaw(0, 10) - 1.5;
+  }), 'Mond: Schlauchgang von Basis zu Basis begehbar und vor Beschuss geschützt, Krater und Kuppeln');
+  check(await page.evaluate(() => {
+    // low gravity: crates float down slowly, the mortar reaches further in flatter arcs, dust hangs in the air
+    const c = spawnCrate(0, 20, true, false, 'blau'); let t = 0; const was = state; state = 'play';
+    for (; t < 40 && c.state === 'fall'; t += 0.1) update(0.1);
+    state = was; const slow = c.state !== 'fall' && t > 10; removeCrate(c);
+    return GRAV < 0.5 && slow && WEAPONS.moerser.range > 40 && WEAPONS.knipser.range > 20;
+  }), 'Mond: geringe Schwerkraft, Kisten schweben langsam herab, Mörser schießt weiter');
+  check(await page.evaluate(() => {
+    // no weather; „Zufall“ brings meteor showers that leave small craters
+    DN.wsel = 'regen'; DN.applySel(); updateMood(0.05);
+    const noWx = DN.wx.want === 'klar' && [...document.querySelectorAll('#wxSeg button')].filter(b => b.disabled).length === 3;
+    DN.wsel = 'zufall'; const was = state; state = 'play'; MOONFX.shower(); for (let i = 0; i < 300; i++) updateMood(0.05); state = was;
+    return noWx && MOONFX.showers > 0 && MOONFX.impacts > 0 && !!MOONFX.earth && DN.lights.stars.visible && clouds.every(c => !c.visible);
+  }), 'Mond: kein Wetter, Meteoritenschauer schlägt kleine Krater, Erde und Sterne am Himmel');
+  await page.evaluate(() => pause(true));
+  await page.goto(base + '?normal&karte=insel');
+  await openPlay(page);
+  await page.waitForSelector('#continueBtn', { state: 'visible' });
+  check((await page.textContent('#continueInfo')).startsWith('Mond · '), 'Spielstand merkt den Mond');
+  await Promise.all([page.waitForNavigation(), page.click('#continueBtn', { force: true })]);
+  await page.waitForFunction(() => typeof state !== 'undefined' && state === 'pause', null, { timeout: 60000 }).catch(() => {});
+  { const r = await page.evaluate(() => [MAP, state, units.length]); check(r[0] === 'mond' && r[1] === 'pause' && r[2] >= 3, 'Weiterspielen lädt den Mond und setzt fort (' + r.join(', ') + ')'); }
+  await page.evaluate(() => { endGame(false, 'Test.'); });
+  await page.goto(base + '?weihnachten&karte=mond');
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  await startRound(page);
+  await page.waitForTimeout(1200);
+  check(await page.evaluate(() => XMAS && !XSNOW && !SNOW.on && MAP === 'mond' && state === 'play' && !!URB.lights && URB.lights.count > 150 && crates.every(c => c.bow) && !!MOONFX.sleigh),
+    'Weihnachtsedition: Mond ohne Schnee, Lebkuchenkuppeln, Lichterketten am Schlauchgang, Geschenkkisten, Schlitten vor der Erde');
+  await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
+  }
   if (part(3)) {   // Flughafen und Stadt
   console.log('Flughafen und Stadt');
   for (const [m, name] of [['stadt', 'Stadt'], ['flughafen', 'Flughafen']]) await urbanMapChecks(page, m, name);

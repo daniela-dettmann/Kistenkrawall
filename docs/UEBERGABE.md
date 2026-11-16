@@ -6,9 +6,9 @@ Stand: 16. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `f737e1a` (PR #33) |
-| `main` | `f737e1a` |
-| Offener Pull Request | #34: Karten Flughafen und Stadt (Drive: `Kistenkrawall-Auftrag-Flughafen-Stadt.md`). Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone |
+| Live auf GitHub Pages | `c97e4d5` (PR #35, Karte Wüste) |
+| `main` | `c97e4d5` |
+| Offener Pull Request | #36: Karte Mond (Drive: `Kistenkrawall-Auftrag-Mond.md`). Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone (auch Wüste mit und ohne Sandsturm, Mond) |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
