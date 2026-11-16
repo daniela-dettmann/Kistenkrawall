@@ -135,7 +135,9 @@ function closeNet(){
 // leave multiplayer completely and go back to the single-player menu
 function leaveMultiplayer(msg){
   if(NET.conn&&NET.conn.open){send(NET.role==='host'?{t:'end',c:'left'}:{t:'bye'});}
-  setTimeout(closeNet,1000);   // give the goodbye time to arrive before the connection closes
+  // close only once the goodbye has left the send buffer (at most about 4 s): on a busy device a fixed second was
+  // sometimes too short, the message was lost and the other side only noticed much later
+  {const dc=NET.conn&&NET.conn.dataChannel;let n=0;const fin=()=>{if(dc&&dc.readyState==='open'&&dc.bufferedAmount>0&&n++<14){setTimeout(fin,250);return;}setTimeout(closeNet,700);};setTimeout(fin,300);}
   MP=null;player2=null;TAC_YAW=Math.PI;document.documentElement.classList.remove('mp');
   netOverlay(null);toMenu();
   if(msg)toast(msg,3);
