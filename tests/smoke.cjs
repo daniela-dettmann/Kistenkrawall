@@ -106,6 +106,11 @@ async function main() {
       for (let i = 0; i < 200; i++) wxCrate(c, 0.1);
       const ok = urbanFree(c.x, c.z, 1); removeCrate(c); DN.setWeather('klar', false); DN.wx.s = 0; return ok;
     }), name + ': Kisten landen nie auf Dächern, auch nicht durch Wind');
+  if (m === 'wueste' || m === 'mond') check(await page.evaluate(() => URB.zones.every(zs => {
+    // each crate colour lands on both halves of the field: on average as close to one base as to the other
+    const d = b => zs.reduce((a, r) => a + r.w * Math.hypot((r.x0 + r.x1) / 2 - b.x, (r.z0 + r.z1) / 2 - b.z), 0);
+    return Math.abs(d(BASES[0]) - d(BASES[1])) < 0.5 && zs.some(r => r.z1 > 0) && zs.some(r => r.z0 < 0);
+  })), name + ': blaue und gelbe Kisten landen auf beiden Seiten, für beide Basen gleich weit');
     check(await page.evaluate(() => {
       // every unit, on foot and in a tank, from both bases to every drop zone, the gold spot, the pads and the enemy HQ: arrives, never inside a building
       const goals = [];
