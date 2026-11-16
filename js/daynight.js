@@ -167,7 +167,9 @@ const DN={
     for(const b of document.querySelectorAll('#todSeg button'))b.setAttribute('aria-pressed',b.dataset.t===DN.tod?'true':'false');};
   for(const b of document.querySelectorAll('#wxSeg button'))b.addEventListener('click',()=>{DN.wsel=b.dataset.w;try{localStorage.setItem('kk-wx',DN.wsel);}catch(e){}label();if(DN.applySel)DN.applySel();});
   for(const b of document.querySelectorAll('#todSeg button'))b.addEventListener('click',()=>{DN.tod=b.dataset.t;try{localStorage.setItem('kk-tod',DN.tod);}catch(e){}label();});
-  if(DESERT){const b=document.querySelector('#wxSeg button[data-w="schnee"]');if(b)b.textContent='Sandsturm';}   // in the desert the storm is sand
+  if(DESERT){const b=document.querySelector('#wxSeg button[data-w="schnee"]');if(b)b.textContent='Sandsturm';}
+  // the moon has no weather: Zufall means meteor showers now and then, Klar none; rain, storm and snow cannot be chosen
+  if(MOON)for(const b of document.querySelectorAll('#wxSeg button'))if(!['zufall','klar'].includes(b.dataset.w)){b.disabled=true;b.title='Auf dem Mond gibt es kein Wetter';}   // in the desert the storm is sand
   label();
   DN.step=step;DN.setWeather=setWeather;DN.lights={lantern,beams,crateGlow,hqGlow,stars,wPts};DN.kind=KIND;
 })();

@@ -178,7 +178,7 @@ function spawnCrate(x,z,sky,gold,sort){
   if(!gold&&!sort)sort=Math.abs(x)>26?'gelb':'blau';
   const m=new THREE.Mesh(G.crate,gold?M.gold:M[sort]);m.castShadow=true;m.receiveShadow=true;m.rotation.y=Math.random()*TAU;scene.add(m);
   const gy=hgt(x,z);
-  const c={m,x,z,gold:!!gold,sort:gold?null:sort,y:sky?gy+18+rand(0,5):gy+0.5,vx:0,vz:0,vy:sky?-3.4:0,state:sky?'fall':'ground',chute:null,ring:null,claim:0};
+  const c={m,x,z,gold:!!gold,sort:gold?null:sort,y:sky?gy+(MOON?24:18)+rand(0,5):gy+0.5,vx:0,vz:0,vy:sky?(MOON?-1.6:-3.4):0,state:sky?'fall':'ground',chute:null,ring:null,claim:0};
   if(gold){const h=new THREE.Mesh(G.boom,M.goldGlow);h.scale.setScalar(0.95);m.add(h);c.halo=h;}
   if(sky){
     c.chute=new THREE.Mesh(G.chute,M.chute);scene.add(c.chute);
@@ -329,7 +329,7 @@ function spotValid(x,z,team){
   return true;
 }
 function autoPlaceTurret(team,boost){
-  const s=team?-1:1,xs=CITY&&team?-1:1,list=CITY?[[-18,14],[-14,18],[-26,18],[-18,26],[-30,22],[-22,30]]:AIRPORT?[[-18,16],[18,16],[0,16],[-8,34],[8,34],[-26,34],[26,34]]:DESERT?[[-11,23],[11,23],[-20,16],[20,16],[-14,30],[14,30],[0,27]]:[[-24,14],[24,14],[-12,14],[12,14],[-6,19],[6,19],[0,24]];
+  const s=team?-1:1,xs=CITY&&team?-1:1,list=CITY?[[-18,14],[-14,18],[-26,18],[-18,26],[-30,22],[-22,30]]:AIRPORT?[[-18,16],[18,16],[0,16],[-8,34],[8,34],[-26,34],[26,34]]:MOON?[[-12,24],[12,24],[0,27],[-20,28],[20,28],[-8,31],[8,31]]:DESERT?[[-11,23],[11,23],[-20,16],[20,16],[-14,30],[14,30],[0,27]]:[[-24,14],[24,14],[-12,14],[12,14],[-6,19],[6,19],[0,24]];
   const cands=list.map(([x,z])=>({x:xs*x+rand(-1.5,1.5),z:s*(z+ZS+rand(-1,1))}));
   for(const c of cands.sort(()=>Math.random()-.5))if(spotValid(c.x,c.z,team)){buildTurret(team,c.x,c.z,boost);return;}
 }

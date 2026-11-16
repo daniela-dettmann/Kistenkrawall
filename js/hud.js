@@ -37,12 +37,15 @@ function drawMap(){
   const S=mm.width,sc=S/(LIM*2+6),X=x=>(x+LIM+3)*sc,Z=z=>(z+LIM+3)*sc;
   mctx.clearRect(0,0,S,S);
   if(URBAN){   // airport and city: ground, buildings, drop zones
-    mctx.fillStyle=CITY?'rgba(150,150,150,.45)':DESERT?'rgba(226,195,135,.5)':'rgba(170,170,160,.45)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
-    if(DESERT){mctx.fillStyle='rgba(200,170,110,.7)';for(const d of URB.dunes){mctx.beginPath();mctx.ellipse(X(d.x),Z(d.z),7*sc,4.6*sc,0,0,TAU);mctx.fill();}
+    mctx.fillStyle=CITY?'rgba(150,150,150,.45)':MOON?'rgba(150,150,150,.45)':DESERT?'rgba(226,195,135,.5)':'rgba(170,170,160,.45)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
+    if(MOON){mctx.fillStyle='rgba(60,60,64,.75)';for(const c of URB.craters){mctx.beginPath();mctx.arc(X(c.x),Z(c.z),c.r*sc,0,TAU);mctx.fill();}
+      mctx.fillStyle='rgba(200,200,230,.85)';for(const d of URB.domes){mctx.beginPath();mctx.arc(X(d.x),Z(d.z),d.r*sc,0,TAU);mctx.fill();}
+      mctx.fillStyle='rgba(205,205,200,.55)';for(const r of URB.tube)mctx.fillRect(X(r.x0),Z(r.z0),(r.x1-r.x0)*sc,(r.z1-r.z0)*sc);}
+    else if(DESERT){mctx.fillStyle='rgba(200,170,110,.7)';for(const d of URB.dunes){mctx.beginPath();mctx.ellipse(X(d.x),Z(d.z),7*sc,4.6*sc,0,0,TAU);mctx.fill();}
       mctx.fillStyle='rgba(70,150,200,.9)';for(const p of URB.ponds){mctx.beginPath();mctx.arc(X(p.x),Z(p.z),p.r*sc,0,TAU);mctx.fill();}}
     else if(CITY){mctx.fillStyle='rgba(95,160,70,.8)';mctx.fillRect(X(22),Z(22),24*sc,24*sc);}
     else{mctx.fillStyle='rgba(60,62,66,.85)';mctx.fillRect(X(40),Z(-20),12*sc,40*sc);}
-    for(const b of URB.boxes){mctx.fillStyle=b.k==='pyr'?'rgba(150,120,80,.95)':b.k==='rock'?'rgba(140,110,80,.85)':b.k==='fence'?'rgba(80,90,80,.8)':b.k==='plane'||b.k==='wing'?'rgba(235,238,242,.95)':'rgba(70,64,60,.92)';mctx.fillRect(X(b.x0),Z(b.z0),(b.x1-b.x0)*sc,(b.z1-b.z0)*sc);}
+    for(const b of URB.boxes){mctx.fillStyle=b.k==='tube'?'rgba(225,225,220,.95)':b.k==='boulder'?'rgba(110,108,104,.95)':b.k==='pyr'?'rgba(150,120,80,.95)':b.k==='rock'?'rgba(140,110,80,.85)':b.k==='fence'?'rgba(80,90,80,.8)':b.k==='plane'||b.k==='wing'?'rgba(235,238,242,.95)':'rgba(70,64,60,.92)';mctx.fillRect(X(b.x0),Z(b.z0),(b.x1-b.x0)*sc,(b.z1-b.z0)*sc);}
     URB.zones.forEach((zs,i)=>{mctx.strokeStyle=i?'#ffc928':'#5aa0ff';mctx.lineWidth=1.5;for(const r of zs)mctx.strokeRect(X(r.x0),Z(r.z0),(r.x1-r.x0)*sc,(r.z1-r.z0)*sc);});
   }else{
   const bz=8.4+ZS;

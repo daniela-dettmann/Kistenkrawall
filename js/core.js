@@ -19,11 +19,12 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
    'flughafen' and 'stadt' have no band at all: flat paved ground with buildings (URB.boxes) that block movement,
    sight and direct shots; units find their way with a grid search (js/urban.js). BANK is set far out of reach there,
    so every band rule (bridges, islands, the river as a wall) simply never applies.
+   'mond' too: domes, craters, boulders and a covered tube round the side; low gravity (GRAV).
    'wueste' works like them: a pyramid with a cross-shaped passage in the middle, ruins, dunes and two oases.
    The world is built once at load, so changing the map reloads the page. ?karte=gebirge|insel overrides. */
-const MAPS={insel:'Insel',gebirge:'Gebirge',vulkan:'Vulkan',flughafen:'Flughafen',stadt:'Stadt',wueste:'Wüste'};
+const MAPS={insel:'Insel',gebirge:'Gebirge',vulkan:'Vulkan',flughafen:'Flughafen',stadt:'Stadt',wueste:'Wüste',mond:'Mond'};
 const MAP=(function(){
-  const q=/[?&#]karte=(insel|gebirge|vulkan|flughafen|stadt|wueste)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase();
+  const q=/[?&#]karte=(insel|gebirge|vulkan|flughafen|stadt|wueste|mond)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase();
   try{const m=localStorage.getItem('kk-map');if(MAPS[m])return m;}catch(e){}
   return 'insel';
 })();
@@ -36,11 +37,13 @@ const XMAS=(function(){
   try{if(localStorage.getItem('kk-xmas')==='off')return false;}catch(e){}
   return xmasSeason();
 })();
-const MOUNTAIN=MAP==='gebirge',VOLCANO=MAP==='vulkan',AIRPORT=MAP==='flughafen',CITY=MAP==='stadt',DESERT=MAP==='wueste',URBAN=AIRPORT||CITY||DESERT;
+const MOUNTAIN=MAP==='gebirge',VOLCANO=MAP==='vulkan',AIRPORT=MAP==='flughafen',CITY=MAP==='stadt',DESERT=MAP==='wueste',MOON=MAP==='mond',URBAN=AIRPORT||CITY||DESERT||MOON;
+// gravity relative to the other maps: on the moon crates float down, dust hangs in the air, shells fly in flat arcs
+const GRAV=MOON?0.3:1;
 // winter in the Christmas edition: snow on the ground and snow as weather (not on the volcano and not in the desert)
-const XSNOW=XMAS&&!VOLCANO&&!DESERT;
+const XSNOW=XMAS&&!VOLCANO&&!DESERT&&!MOON;
 // the city is point-symmetric (bases in opposite corners), all other maps mirror along z
-const BASES=CITY?[{x:-34,z:34},{x:34,z:-34}]:AIRPORT||DESERT?[{x:0,z:38},{x:0,z:-38}]:[{x:0,z:44},{x:0,z:-44}];
+const BASES=CITY?[{x:-34,z:34},{x:34,z:-34}]:AIRPORT||DESERT||MOON?[{x:0,z:38},{x:0,z:-38}]:[{x:0,z:44},{x:0,z:-44}];
 const LIM=52;
 // BX: the two lanes the waves and defenders think in (bridges on the band maps, streets and gates on the new ones)
 const BX=VOLCANO?8:18,BRIDGES=[-BX,BX],BANK=URBAN?-100:VOLCANO?12:6.2,ISL_RX=VOLCANO?15:6.2,ISL_RZ=VOLCANO?7:3.4;
@@ -92,6 +95,23 @@ const URB={boxes:[],zones:[[],[]],gold:[],routes:null,kind:MAP};
     URB.zones[1]=[{x0:3,x1:9,z0:-12,z1:12,w:2},{x0:22,x1:32,z0:-14,z1:14,w:2},{x0:42,x1:50,z0:-18,z1:-4,w:1}];
     URB.gold=[{x0:42,x1:50,z0:-14,z1:14,w:3},{x0:-2,x1:2,z0:-10,z1:10,w:1}];   // valuable crates mostly on the runway
     URB.routes=[[[-18,32],[-18,24],[-24,14]],[[18,32],[18,24],[24,14]],[[-8,34],[8,34],[10,42],[-10,42]]];
+  }else if(MOON){
+    // Moon. Dome base A (z>0) and dome base B (z<0); the big crater in the middle, two smaller craters on the west
+    // side, boulders on the east side, and beyond them a covered tube from one base round the east edge to the other:
+    // safe from direct fire inside, but a long way round. Everything mirrored along z.
+    const S=(x0,x1,z0,z1,h,k)=>B(Math.min(x0,x1),Math.max(x0,x1),Math.min(z0,z1),Math.max(z0,z1),h,k);
+    // the tube: inside 4.4 wide. Long part along x = 42..46.4, a spur at each end towards the base (inside z 34..38.4)
+    S(46.4,47.6,-39.6,39.6,3,'tube');S(40.8,42,-32.8,32.8,3,'tube');
+    for(const s of [1,-1]){S(16,47.6,s*38.4,s*39.6,3,'tube');S(16,42,s*32.8,s*34,3,'tube');
+      S(20.3,23.7,s*17.3,s*20.7,2.6,'boulder');S(24.6,26.4,s*12.6,s*14.4,1.6,'boulder');}
+    URB.tube=[{x0:40.8,x1:47.6,z0:-39.6,z1:39.6},{x0:16,x1:47.6,z0:32.8,z1:39.6},{x0:16,x1:47.6,z0:-39.6,z1:-32.8}];
+    URB.craters=[{x:0,z:0,r:11,d:1.5},{x:-30,z:16,r:6,d:1.1},{x:-30,z:-16,r:6,d:1.1}];
+    URB.domes=[];for(const s of [1,-1])URB.domes.push({x:-16,z:s*45,r:5.5,main:true},{x:-27,z:s*37,r:3.2});
+    const sq=(x,z,r,w)=>({x0:x-r,x1:x+r,z0:z-r,z1:z+r,w});
+    URB.zones[0]=[sq(0,20,1.5,2),sq(-30,16,2,1.5),sq(17.5,23.5,1.3,1.5)];
+    URB.zones[1]=[sq(0,-20,1.5,2),sq(-30,-16,2,1.5),sq(17.5,-23.5,1.3,1.5)];
+    URB.gold=[sq(0,0,3,1)];   // the big crater: the hotspot
+    URB.routes=[[[-14,26],[-24,20],[-30,10]],[[14,28],[24,27],[44,22],[44,6]],[[-8,32],[8,32],[6,46],[-4,47]]];
   }else{
     // Desert. Oasis A (z>0) and oasis B (z<0) face each other across a pyramid (28 x 28, apex in the middle) that
     // a cross-shaped passage, 6 wide, cuts into four blocks: a sheltered short cut, wide enough for vehicles too.
@@ -121,6 +141,8 @@ const URB={boxes:[],zones:[[],[]],gold:[],routes:null,kind:MAP};
 })();
 // is (x, z) on open ground, at least m away from every building?
 // inside the pyramid's footprint (passages included): crates never land or drift there
+// inside the moon tube or its walls
+function inTube(x,z,m){m=m||0;return MOON&&URB.tube.some(r=>x>r.x0-m&&x<r.x1+m&&z>r.z0-m&&z<r.z1+m);}
 function inPyramid(x,z,m){return DESERT&&Math.abs(x)<URB.pyr.r+(m||0)&&Math.abs(z)<URB.pyr.r+(m||0);}
 function urbanFree(x,z,m){m=m||0;for(const b of URB.boxes)if(x>b.x0-m&&x<b.x1+m&&z>b.z0-m&&z<b.z1+m)return false;return true;}
 // push a circle of radius r out of the buildings (the shortest way out)
@@ -156,6 +178,7 @@ const crossW=x=>CW[x<0?0:1];
 function islandE(x,z){if(URBAN)return 9;if(VOLCANO)return Math.hypot(x/ISL_RX,z/ISL_RZ);let e=9;for(const bx of BRIDGES)e=Math.min(e,Math.hypot((x-bx)/ISL_RX,z/ISL_RZ));return e;}
 function hgtRaw(x,z){
   if(DESERT)return hgtDesert(x,z);
+  if(MOON)return hgtMoon(x,z);
   if(URBAN)return 0.32;   // paved and flat
   if(MOUNTAIN)return hgtMountain(x,z);
   if(VOLCANO)return hgtVolcano(x,z);
@@ -182,6 +205,22 @@ function hgtDesert(x,z){
   const e=smooth((Math.max(Math.abs(x),Math.abs(z))-55)/8);
   return h+e*(1.6+1.2*Math.sin(x*0.13)*Math.cos(z*0.11));
 }
+// moon: dusty plain with the three craters (bowl, raised rim), many small ones for the look; flat at the bases,
+// under the tube and round the boulders
+function hgtMoon(x,z){
+  const bowl=(d,r,dep)=>{const t=d/r;return t<1?-dep*(1-t*t)+dep*0.75*smooth((t-0.55)/0.45):dep*0.75*(1-smooth((t-1)/0.45));};
+  let h=0.32+0.08*Math.sin(x*0.31+z*0.17)*Math.cos(z*0.23-x*0.11);
+  for(const c of LITTLE)h+=bowl(Math.hypot(x-c[0],z-c[1]),c[2],c[2]*0.12);
+  let f=1;for(const b of BASES)f=Math.min(f,smooth((Math.hypot(x-b.x,z-b.z)-10)/6));
+  for(const r of URB.tube)f=Math.min(f,smooth((Math.max(r.x0-x,x-r.x1,r.z0-z,z-r.z1))/3));
+  for(const s of [1,-1])f=Math.min(f,smooth((Math.hypot(x-22,z-s*18)-4)/3),smooth((Math.hypot(x+16,z-s*45)-6)/3),smooth((Math.hypot(x+27,z-s*37)-3.5)/3));
+  h=0.32+(h-0.32)*f;
+  for(const c of URB.craters)h+=bowl(Math.hypot(x-c.x,z-c.z),c.r,c.d);
+  const e=smooth((Math.max(Math.abs(x),Math.abs(z))-56)/10);
+  return h+e*(1.5+1.5*Math.sin(x*0.09)*Math.cos(z*0.07));
+}
+// small craters only for the look (x, z, radius), kept off the lanes and the drop zones
+const LITTLE=[[-12,12,2.2],[12,-10,1.8],[-40,30,3],[-44,-4,2.6],[30,4,2.4],[-18,-26,2],[10,14,1.6],[-6,-14,1.5],[34,-24,2.2],[-38,-30,2.8],[28,30,1.8],[-22,4,1.7],[6,28,1.4],[-48,18,2.4],[50,48,3],[-50,-48,3]];
 function hgtMountain(x,z){
   const raw=Math.sin(x*0.11+1.3)*Math.cos(z*0.09)*1.8+Math.sin(x*0.045-z*0.06+0.5)*1.5+Math.cos(z*0.19+x*0.03)*0.5;
   let f=1;for(const b of BASES)f=Math.min(f,smooth((Math.hypot(x-b.x,z-b.z)-11)/8));
@@ -241,7 +280,7 @@ function urbanSpot(zs){
   for(let k=0;k<60;k++){
     let q=Math.random()*tot,r=zs[0];for(const z of zs){q-=z.w;if(q<=0){r=z;break;}}
     const x=rand(r.x0,r.x1),z=rand(r.z0,r.z1);
-    if(urbanFree(x,z,1.2)&&!inPyramid(x,z,1)&&!(typeof obstacles!=='undefined'&&obstacles.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+1.2)))return {x,z};
+    if(urbanFree(x,z,1.2)&&!inPyramid(x,z,1)&&!inTube(x,z,1.5)&&!(typeof obstacles!=='undefined'&&obstacles.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+1.2)))return {x,z};
   }
   const r=zs[0];return {x:(r.x0+r.x1)/2,z:(r.z0+r.z1)/2};
 }

@@ -33,6 +33,7 @@ function volcanoColor(x,z,h){
 }
 // Airport and city: asphalt with painted lines, paving on squares, grass in the park and beside the runway
 function urbanGrass(x,z){
+  if(MOON)return false;
   if(DESERT)return URB.ponds.some(p=>{const d=Math.hypot(x-p.x,z-p.z);return d>p.r+0.3&&d<p.r+5;});   // green rings round the oasis ponds
   if(CITY)return x>22&&x<46&&z>22&&z<46;
   return x<-41.5&&Math.abs(z)<19.5&&urbanFree(x,z,0.4);   // a lawn around the tower
@@ -40,6 +41,13 @@ function urbanGrass(x,z){
 function urbanColor(x,z){
   const asph=new THREE.Color(0x5b5f63),light=new THREE.Color(0x8d8f8c),pave=new THREE.Color(0xb3a48d),grass=new THREE.Color(0x5d9a43),line=new THREE.Color(0xe8e2c8),yel=new THREE.Color(0xe6b93a);
   const n=Math.sin(x*0.37+z*0.21)*Math.cos(z*0.33-x*0.17)*0.5+0.5;
+  if(MOON){   // grey dust, darker crater floors, bright rims, trodden paths at the bases, a pale strip by the tube
+    const dust=new THREE.Color(0x9a9894),dark=new THREE.Color(0x6c6a68),pale=new THREE.Color(0xc4c2bc);
+    const h=hgtRaw(x,z),c=dust.clone().lerp(dark,n*0.25+clamp((0.2-h)/1.3,0,0.6)).lerp(pale,clamp((h-0.6)/0.6,0,0.55));
+    const g=Math.sin(x*2.1+z*1.7)*Math.sin(x*1.3-z*2.3);if(g>0.6)c.lerp(dark,0.15);
+    for(const b of BASES){const d=Math.hypot(x-b.x,z-b.z);if(d<10)c.lerp(dark,(1-d/10)*0.25);}
+    return c;
+  }
   if(DESERT){   // warm sand, wind ripples, packed paths, stone slabs round the pyramid, green at the oases
     const sand=new THREE.Color(0xe2c387),dark=new THREE.Color(0xc9a464),pale=new THREE.Color(0xf0dcaa),stone=new THREE.Color(0xcdb68a),oasis=new THREE.Color(0x8fa45a);
     const h=hgtRaw(x,z),rip=Math.sin(x*1.3+z*0.5+Math.sin(z*0.3)*2)*0.5+0.5;
@@ -154,7 +162,7 @@ let lavaMat=null;
     sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\nfloat sway=sin(uTime*1.8+instanceMatrix[3].x*0.35+instanceMatrix[3].z*0.22);transformed.x+=sway*0.09*position.y;transformed.z+=cos(uTime*1.3+instanceMatrix[3].x*0.2)*0.05*position.y;');
   };
-  const N=URBAN?(CITY?900:DESERT?320:600):MOUNTAIN?2200:VOLCANO?1500:6500,NF=MOUNTAIN||VOLCANO||AIRPORT?0:CITY?160:DESERT?40:760,im=new THREE.InstancedMesh(g,mat,N),fl=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075,0),new THREE.MeshLambertMaterial({color:0xffffff}),NF);
+  const N=URBAN?(CITY?900:DESERT?320:MOON?0:600):MOUNTAIN?2200:VOLCANO?1500:6500,NF=MOUNTAIN||VOLCANO||AIRPORT||MOON?0:CITY?160:DESERT?40:760,im=new THREE.InstancedMesh(g,mat,N),fl=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075,0),new THREE.MeshLambertMaterial({color:0xffffff}),NF);
   im.name='kkGrass';fl.name='kkFlowers';
   const d=new THREE.Object3D(),c=new THREE.Color();let n=0,f=0,tries=0;
   const FLC=[0xfff7e0,0xffd84a,0xff8fb1,0xb9a7ff];

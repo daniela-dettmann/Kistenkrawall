@@ -33,6 +33,7 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
   const SEL={regen:['regen',false,0.85],gewitter:['regen',true,1],schnee:DESERT?['sand',true,1]:['schnee',true,1]};
   // a fixed choice from the settings: applied at once, also in the menu and the pause
   function applySel(){
+    if(MOON){if(W.want!=='klar')DN.setWeather('klar',false);return;}   // no air, no weather (moon.js plans the meteor showers)
     const s=DN.wsel;
     if(s==='zufall'){if(!R.on)DN.setWeather('klar',false);return;}
     if(s==='klar'){if(W.want!=='klar')DN.setWeather('klar',false);return;}
@@ -40,6 +41,7 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
   }
   DN.applySel=applySel;
   DN.roll=function(dt,playing){
+    if(MOON){applySel();return;}
     if(gameT<R.lastT){R.next=rand(40,80);R.on=false;R.had=false;WX.dir=Math.random()*TAU;}   // a new round
     R.lastT=gameT;
     if(R.warn>0){R.warn-=dt;if(R.warn<=0&&W.want==='sand')W.lvl=1;}
@@ -73,7 +75,7 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
 
   /* ---------- Puddles: flat spots on dry land, they fill in the rain and mirror the sky ---------- */
   const puddles=[];
-  if(!snowy){
+  if(!snowy&&!MOON){
     for(let x=-48;x<=48&&puddles.length<26;x+=3)for(let z=-48;z<=48&&puddles.length<26;z+=3){
       const jx=x+(((x*7+z*3)%5+5)%5)*0.3,jz=z+(((x*3+z*11)%5+5)%5)*0.3,h=hgtRaw(jx,jz);
       if(h<-0.4||h>2.5||Math.abs(jx)>LIM-2||Math.abs(jz)>LIM-2||onBridge(jx,jz)||onPlatform(jx,jz))continue;
