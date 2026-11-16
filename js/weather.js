@@ -1,8 +1,7 @@
 /* Kistenkrawall: dynamisches Wetter (Auftrag „Dynamisches Wetter“). Baut auf daynight.js auf (DN.wx: Art, Stärke s,
    Gewitter-Flag, Blitzhelligkeit) und bringt das Wetter ins Bild und ins Spiel:
-   - Plan bei „Zufall“: in jeder Bauruhe nach 50 bis 90 Sekunden ein Schauer bzw. Schneefall (40 bis 70 s), zu Beginn
-     einer Angriffswelle oft ein Unwetter (die erste Welle immer, wenn es noch keins gab), das nach der Welle aufklart.
-     Im Mehrspieler (ohne Wellen) wechselt es nach Zeit. Gewählt in Einstellungen › Spiel › Wetter; eine feste Wahl
+   - Plan bei „Zufall“: klar und Wetter wechseln sich zufällig ab, unabhängig von Bauruhe und Welle: 60 bis 150 s klar
+     (zu Rundenbeginn nur 40 bis 80 s), dann 40 bis 90 s Schauer bzw. Schneefall (60 %) oder Unwetter (40 %). Gewählt in Einstellungen › Spiel › Wetter; eine feste Wahl
      gilt sofort, auch aus der Pause.
    - Regen: Streifen um die Kamera, Tropfenringe auf dem Wasser, nasser Glanz auf Kisten, Blechlingen und Fahrzeugen,
      Pfützen an flachen Stellen, die den Himmel spiegeln; Fahrzeuge spritzen beim Durchfahren.
@@ -18,7 +17,10 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
   const W=DN.wx,snowy=MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO);
 
   /* ---------- Plan ---------- */
-  const R={had:false,wave:false,inWave:false,light:rand(50,90),lightEnd:0,mpT:rand(60,100),lastT:0};
+  // Zufall: clear and weather take turns at random, the same in the building phase and during a wave and in
+  // multiplayer. A clear spell lasts 60 to 150 s (the first one only 40 to 80 s, so every round gets weather early),
+  // then 40 to 90 s of weather: a shower or snowfall (60 %) or a storm (40 %), and it clears up again.
+  const R={next:rand(40,80),on:false,lastT:0,had:false};
   WX.plan=R;
   function storm(){if(snowy)DN.setWeather('schnee',true,1);else if(VOLCANO&&Math.random()<0.4)DN.setWeather('asche',true,1);else DN.setWeather('regen',Math.random()<0.75,1);}
   function shower(){if(snowy)DN.setWeather('schnee',false,0.6);else if(VOLCANO)DN.setWeather('asche',false,0.7);else DN.setWeather('regen',false,0.7);}
@@ -26,29 +28,19 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
   // a fixed choice from the settings: applied at once, also in the menu and the pause
   function applySel(){
     const s=DN.wsel;
-    if(s==='zufall'){if(!R.wave&&R.lightEnd<=0)DN.setWeather('klar',false);return;}
+    if(s==='zufall'){if(!R.on)DN.setWeather('klar',false);return;}
     if(s==='klar'){if(W.want!=='klar')DN.setWeather('klar',false);return;}
     const [k,st,l]=SEL[s];if(W.want!==k||W.storm!==st)DN.setWeather(k,st,l);
   }
   DN.applySel=applySel;
   DN.roll=function(dt,playing){
-    if(gameT<R.lastT){R.had=false;R.wave=false;R.inWave=false;R.light=rand(50,90);R.lightEnd=0;R.mpT=rand(60,100);WX.dir=Math.random()*TAU;}
+    if(gameT<R.lastT){R.next=rand(40,80);R.on=false;R.had=false;WX.dir=Math.random()*TAU;}   // a new round
     R.lastT=gameT;
     if(DN.wsel!=='zufall'){applySel();return;}
     if(!playing)return;
-    if(!MP){
-      const inWave=peaceT<=0&&waveT>0;
-      if(inWave&&!R.inWave&&(!R.had||Math.random()<0.6)){storm();R.had=true;R.wave=true;R.lightEnd=0;}   // a storm comes with the wave
-      if(!inWave&&R.inWave&&R.wave){DN.setWeather('klar',false);R.wave=false;R.light=rand(70,140);}        // after the wave it clears slowly
-      R.inWave=inWave;
-      if(!inWave&&!R.wave){
-        if(R.lightEnd>0){R.lightEnd-=dt;if(R.lightEnd<=0){R.lightEnd=0;DN.setWeather('klar',false);R.light=rand(80,150);}}
-        else{R.light-=dt;if(R.light<=0){shower();R.had=true;R.lightEnd=rand(40,70);}}
-      }
-    }else{
-      R.mpT-=dt;
-      if(R.mpT<=0){if(W.want==='klar'){if(Math.random()<0.45)storm();else shower();R.had=true;R.mpT=rand(50,80);}else{DN.setWeather('klar',false);R.mpT=rand(70,120);}}
-    }
+    R.next-=dt;if(R.next>0)return;
+    if(!R.on){if(Math.random()<0.4)storm();else shower();R.on=true;R.had=true;R.next=rand(40,90);}
+    else{DN.setWeather('klar',false);R.on=false;R.next=rand(60,150);}
   };
   applySel();
 
@@ -254,7 +246,7 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
     const len=AC.sampleRate*3,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
     for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
     const mk=(type,f,q)=>{const src=AC.createBufferSource();src.buffer=buf;src.loop=true;const fl=AC.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;
-      const g=AC.createGain();g.gain.value=0;src.connect(fl);fl.connect(g);g.connect(master);src.start(AC.currentTime,Math.random()*2.5);return g;};
+      const g=AC.createGain();g.gain.value=0;src.connect(fl);fl.connect(g);g.connect(natureOut||master);src.start(AC.currentTime,Math.random()*2.5);return g;};
     return {hiss:mk('bandpass',2400,0.3),patter:mk('lowpass',800,0.4),wind:mk('lowpass',380,0.9)};
   }
   function sounds(dt){
@@ -267,7 +259,7 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
     bed.hiss.gain.setTargetAtTime(rain*0.05,t,0.6);bed.patter.gain.setTargetAtTime(rain*0.07,t,0.6);bed.wind.gain.setTargetAtTime(blow*0.13*gust,t,0.8);
     // a thunderstorm grumbles in the distance now and then, not all the time
     if(state==='play'&&soundOn&&W.storm&&W.kind==='regen'&&s>0.5){rumbleT-=0.25;
-      if(rumbleT<=0){rumbleT=rand(12,30);try{playSound(AC,noiseBuf,'grummeln',rand(0.35,0.6),master);}catch(e){}WX.rumbles=(WX.rumbles||0)+1;}}
+      if(rumbleT<=0){rumbleT=rand(12,30);try{playSound(AC,noiseBuf,'grummeln',rand(0.35,0.6),natureOut||master);}catch(e){}WX.rumbles=(WX.rumbles||0)+1;}}
   }
   const _mood=updateMood;updateMood=function(dt){_mood(dt);try{step(dt);sounds(dt);}catch(e){console.warn(e);}};
 })();

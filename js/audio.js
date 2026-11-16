@@ -1,21 +1,27 @@
 /* Kistenkrawall: Audio im Spiel: Ausgabe starten/aufwecken, Lautstärke, sfx() */
 'use strict';
 /* ---------- Audio ---------- */
-let AC=null,noiseBuf=null,master=null;
+let AC=null,noiseBuf=null,master=null,natureOut=null,mainOut=null;
+// Four volumes: Gesamt (everything, mainOut) and below it Musik, Effekte (master) and Natur & Wetter (natureOut:
+// rain, wind, thunder, distant grumbling). Music, effects and nature all run into mainOut.
+let mainVol=1,natVol=0.5;
+try{const a=parseFloat(localStorage.getItem('kk-main'));if(a>=0&&a<=1)mainVol=a;const b=parseFloat(localStorage.getItem('kk-nat'));if(b>=0&&b<=1)natVol=b;}catch(e){}
 // Defaults: effects 70 %, music 10 %. The '-v2' keys start everyone once at these defaults;
 // after that the player's own slider settings are remembered again.
 let soundOn=true,soundVol=0.7;
 try{const v=localStorage.getItem('kk-snd');if(v==='0')soundOn=false;const l=parseFloat(localStorage.getItem('kk-vol-v2'));if(l>=0&&l<=1)soundVol=l;}catch(e){}
 // iOS Safari: treat game audio as real playback so the ring/silent switch does not mute it
 try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
-function applyVolume(){if(master)master.gain.setTargetAtTime(soundOn?soundVol:0,AC.currentTime,0.02);}
+function applyVolume(){if(!master)return;const t=AC.currentTime;mainOut.gain.setTargetAtTime(soundOn?mainVol:0,t,0.02);master.gain.setTargetAtTime(soundVol,t,0.02);natureOut.gain.setTargetAtTime(natVol,t,0.02);}
 // Called on every user gesture: creates the context once, and wakes it up again whenever the
 // browser suspended or interrupted it (screen lock, app switch, phone call).
 function initAudio(){
   if(!AC){
     try{AC=new (window.AudioContext||window.webkitAudioContext)();
       noiseBuf=AC.createBuffer(1,AC.sampleRate*0.5,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
-      master=AC.createGain();master.gain.value=soundOn?soundVol:0;master.connect(AC.destination);
+      mainOut=AC.createGain();mainOut.gain.value=soundOn?mainVol:0;mainOut.connect(AC.destination);
+      master=AC.createGain();master.gain.value=soundVol;master.connect(mainOut);
+      natureOut=AC.createGain();natureOut.gain.value=natVol;natureOut.connect(mainOut);
     }catch(e){AC=null;return;}
   }
   if(AC.state!=='running'){const r=AC.resume();if(r&&r.catch)r.catch(()=>{});}
@@ -40,7 +46,7 @@ function wantedMusic(){
 function musicJingle(win){if(music&&soundOn)music.play(win?'sieg':'niederlage',{now:true});}
 setInterval(()=>{
   if(!AC)return;
-  if(!music){try{music=MUSIC.create(AC,AC.destination);music.volume=0;}catch(e){console.error(e);music=false;}}
+  if(!music){try{music=MUSIC.create(AC,mainOut);music.volume=0;}catch(e){console.error(e);music=false;}}
   if(!music)return;
   musicBusy*=0.8;
   const want=soundOn?wantedMusic():null;

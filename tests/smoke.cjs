@@ -111,7 +111,7 @@ async function main() {
   check(await page.evaluate(() => renderer.info.render.calls > 50), '3D-Szene wird gezeichnet');
   check(await page.evaluate(() => state === 'play' && units.length >= 6), 'Runde läuft mit beiden Teams');
   check(await page.evaluate(() => music && /^ruhe(_x)?$/.test(music.playing || '')), 'Musik: Bauruhe läuft beim Rundenstart');
-  check(await page.evaluate(() => soundVol === 0.7 && musicVol === 0.1), 'Standardlautstärke: Effekte 70 %, Musik 10 %');
+  check(await page.evaluate(() => soundVol === 0.7 && musicVol === 0.1 && mainVol === 1 && natVol === 0.5 && natureOut && mainOut), 'Standardlautstärke: Gesamt 100 %, Musik 10 %, Effekte 70 %, Natur und Wetter 50 %');
   await page.click('#pauseBtn', { force: true });
   check(await page.evaluate(() => state === 'pause'), 'Pause funktioniert');
   check(await page.evaluate(() => ['resumeBtn', 'pauseSetBtn', 'restartBtn', 'quitBtn'].every(id => document.getElementById(id).offsetParent) && document.querySelector('#quitBtn').textContent === 'Hauptmenü'), 'Pausenmenü: Weiter, Einstellungen, Neu starten, Hauptmenü');
@@ -124,7 +124,9 @@ async function main() {
     c('#trailToggle'); r.push(!SNOW.trails && localStorage.getItem('kk-trails') === '0'); c('#trailToggle');
     c('.tile[data-s=spiel]'); c('#tipsToggle'); r.push(document.documentElement.classList.contains('notips') && localStorage.getItem('kk-tips') === '0'); c('#tipsToggle');
     c('.tile[data-s=steuerung]'); c('#invertToggle'); r.push(lookInv === -1 && localStorage.getItem('kk-inv') === '1'); c('#invertToggle');
-    c('.tile[data-s=ton]'); const m = document.querySelector('.musVol input'); m.value = 0.3; m.dispatchEvent(new Event('input')); r.push(musicVol === 0.3 && document.querySelector('#musNum').textContent === '30'); m.value = 0.1; m.dispatchEvent(new Event('input'));
+    c('.tile[data-s=ton]'); const m = document.querySelector('.musVol input'); m.value = 0.3; m.dispatchEvent(new Event('input')); const n = document.querySelector('.natVol input'), g = document.querySelector('.mainVol input'); n.value = 0.2; n.dispatchEvent(new Event('input')); g.value = 0.6; g.dispatchEvent(new Event('input'));
+    r.push(musicVol === 0.3 && document.querySelector('#musNum').textContent === '30' && natVol === 0.2 && localStorage.getItem('kk-nat') === '0.2' && mainVol === 0.6 && document.querySelector('#mainNum').textContent === '60');
+    m.value = 0.1; m.dispatchEvent(new Event('input')); n.value = 0.5; n.dispatchEvent(new Event('input')); g.value = 1; g.dispatchEvent(new Event('input')); localStorage.removeItem('kk-nat'); localStorage.removeItem('kk-main');
     c('.tile[data-s=spiel]');
     return r.join();
   }) === 'true,true,true,true,true,true,true', 'Einstellungen wirken sofort und werden gespeichert (Schwierigkeit erst nächste Runde)');
@@ -412,15 +414,18 @@ async function main() {
     return r.join();
   }) === 'true,true,true,true,true', 'Wetterwahl: Regen, Gewitter mit Blitzeinschlag (Baum angekohlt), Schneesturm, Klar – wirkt sofort, wird gemerkt');
   check(await page.evaluate(() => {
-    // Zufall: a shower in the building phase, a storm with the first wave, clear again after it
-    document.querySelector('#wxSeg [data-w=zufall]').click(); state = 'play'; const R = WX.plan;
-    peaceT = 300; waveT = 0; R.had = false; R.wave = false; R.inWave = false; R.light = 60; R.lightEnd = 0; DN.setWeather('klar', false);
-    let shower = false; for (let i = 0; i < 70; i++) { DN.roll(1, true); if (DN.wx.want !== 'klar') shower = true; }
-    DN.setWeather('klar', false); R.lightEnd = 0; R.light = 999; R.had = false;   // no storm yet this round: the first wave brings one for sure
-    peaceT = 0; waveT = 60; DN.roll(0.05, true); const storm = DN.wx.want !== 'klar' && DN.wx.lvl === 1 && R.wave;   // full strength: a thunderstorm (75 %) or heavy rain
-    peaceT = 300; waveT = 0; DN.roll(0.05, true); const clear = DN.wx.want === 'klar';
-    state = 'menu'; return shower && storm && clear;
-  }), 'Zufall: Schauer in der Bauruhe, Unwetter mit der ersten Welle, danach klart es auf');
+    // Zufall: weather comes and goes at random, the same in the building phase and during a wave
+    document.querySelector('#wxSeg [data-w=zufall]').click(); state = 'play'; const R = WX.plan, r = [];
+    for (const [pt, wt] of [[300, 0], [0, 60]]) {
+      peaceT = pt; waveT = wt; R.next = rand(40, 80); R.on = false; DN.setWeather('klar', false);
+      let changes = 0, last = DN.wx.want, kinds = new Set();
+      for (let i = 0; i < 1800; i++) { DN.roll(1, true); if (DN.wx.want !== last) { changes++; last = DN.wx.want; kinds.add(DN.wx.want + (DN.wx.storm ? '!' : '')); } }
+      r.push(changes >= 8 && kinds.has('klar') && kinds.size >= 3);   // in 30 minutes: several changes, showers and storms
+    }
+    R.next = 60; R.on = false; DN.setWeather('klar', false); let first = 0; while (DN.wx.want === 'klar' && first < 200) { DN.roll(1, true); first++; }
+    r.push(first <= 61);
+    peaceT = 300; waveT = 0; state = 'menu'; return r.join();
+  }) === 'true,true,true', 'Zufall: Wetter kommt und geht zufällig, in der Bauruhe wie in der Welle');
   check(await page.evaluate(() => {
     // wind: a parachute crate sways and lands a little off, never towards the water
     DN.setWeather('regen', true, 1); DN.wx.s = 1; updateMood(0.05);
