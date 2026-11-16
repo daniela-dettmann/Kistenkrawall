@@ -437,6 +437,74 @@ async function main() {
   await page.evaluate(() => { localStorage.removeItem('kk-wx'); localStorage.removeItem('kk-tod'); DN.wsel = 'zufall'; DN.tod = 'auto'; });
   }
 
+  if (part(3)) {   // Flughafen und Stadt
+  console.log('Flughafen und Stadt');
+  for (const [m, name] of [['stadt', 'Stadt'], ['flughafen', 'Flughafen']]) {
+    await page.goto(base + '?normal');
+    await openPlay(page);
+    await Promise.all([page.waitForNavigation(), page.click('#mapSeg [data-m="' + m + '"]', { force: true })]);
+    await page.waitForSelector('#startBtn', { state: 'visible' });
+    check(await page.evaluate(m => MAP === m && URBAN && URB.boxes.length >= 17 && localStorage.getItem('kk-map') === m, m), name + ': Kartenwahl, Gebäude stehen');
+    check(await page.evaluate(() => {
+      // crates never land on a roof: 600 drop spots, and a crate the wind pushes towards a house stays on the ground
+      for (let i = 0; i < 600; i++) { const sp = dropSpot(DROPS[i % 2], i % 3 ? 1 : -1, i % 7 === 0); if (!urbanFree(sp.x, sp.z, 1)) return false; }
+      DN.setWeather('regen', true, 1); DN.wx.s = 1; updateMood(0.05); const b = URB.boxes[0];
+      const c = spawnCrate(b.x0 - 1.4, (b.z0 + b.z1) / 2, true, false, 'blau'); WX.dir = 0;
+      for (let i = 0; i < 200; i++) wxCrate(c, 0.1);
+      const ok = urbanFree(c.x, c.z, 1); removeCrate(c); DN.setWeather('klar', false); DN.wx.s = 0; return ok;
+    }), name + ': Kisten landen nie auf Dächern, auch nicht durch Wind');
+    check(await page.evaluate(() => {
+      // every unit, on foot and in a tank, from both bases to every drop zone, the gold spot, the pads and the enemy HQ: arrives, never inside a building
+      const goals = [];
+      for (const zs of URB.zones.concat([URB.gold])) for (const z of zs) goals.push({ x: (z.x0 + z.x1) / 2, z: (z.z0 + z.z1) / 2 });
+      goals.push({ x: hqs[1].x, z: hqs[1].z + 4 }, { x: pads[0].x, z: pads[0].z }, { x: pads[1].x, z: pads[1].z });
+      for (const kind of [undefined, 'tank']) for (const team of [0, 1]) for (const g of goals) {
+        const B = BASES[team], u = spawnUnit(team, B.x + 2, B.z + (team ? 3 : -3), 'kaempfer', kind); let i = 0, inside = 0;
+        const gg = navNearest(navGrid(kind ? 1 : 0), navCell(g.x), navCell(g.z)), gx = NAV.O + gg[0] + 0.5, gz = NAV.O + gg[1] + 0.5;
+        for (; i < 4000; i++) { if (moveToward(u, gx, gz, 0.05, ALLY, 1.6)) break; resolve(u); if (!urbanFree(u.x, u.z, (u.r || 0.45) - 0.05)) inside++; }
+        u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
+        if (i >= 4000 || inside) return false;
+      }
+      return true;
+    }), name + ': Wegfindung: Blechling und Panzer beider Teams kommen überall hin, durch Gassen, Tore und um Gebäude');
+    await startRound(page);
+    await page.waitForTimeout(1500);
+    check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && renderer.info.render.calls < 500), name + ': Runde läuft, unter 500 Zeichenvorgänge pro Bild');
+    check(await page.evaluate(() => {
+      // a house stops direct shots; the mortar lobs over it (the shots themselves are followed, other units may join the fight)
+      peaceT = 0; const b = URB.boxes.find(b => ['house', 'hangar', 'gate'].includes(b.k) && b.x0 > -40 && b.x1 < 40), cz = (b.z0 + b.z1) / 2;
+      const a = spawnUnit(0, b.x0 - 2, cz, 'kaempfer'), e = spawnUnit(1, b.x1 + 2, cz, 'kaempfer');
+      const pin = () => { a.x = b.x0 - 2; a.z = cz; e.x = b.x1 + 2; e.z = cz; };
+      pin(); a.cd = 0; const before = new Set(shots); fire(a, Math.PI / 2); const mine = shots.filter(s => !before.has(s)); let maxX = -99;
+      for (let i = 0; i < 60; i++) { update(0.02); pin(); for (const s of mine) if (shots.includes(s)) maxX = Math.max(maxX, s.x); }
+      const direct = mine.length > 0 && mine.every(s => !shots.includes(s)) && maxX < b.x1 && urbanBlocked(a.x, a.z, e.x, e.z);
+      a.alive = false; const mo = spawnUnit(0, b.x0 - 2, cz, 'fahrzeug', 'moerser'); e.hp = e.maxHp; const hp2 = e.hp;
+      mo.cd = 0; mo.h = mo.hull = Math.PI / 2; const b2 = new Set(shots); fire(mo, Math.PI / 2, 1, e); const shell = shots.find(s => !b2.has(s));
+      for (let i = 0; i < 200; i++) { update(0.02); mo.x = b.x0 - 2; mo.z = cz; e.x = b.x1 + 2; e.z = cz; }
+      const lob = !!shell && shell.arc && shell.x1 > b.x1 && !shots.includes(shell) && e.hp < hp2;
+      for (const u of [a, e, mo]) { u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1); }
+      return direct && lob;
+    }), name + ': Gebäude halten Schüsse auf, nur der Mörser schießt darüber');
+  }
+  check(await page.evaluate(() => URB.flyer && URB.boxes.filter(b => b.k === 'plane').length === 2 && URB.boxes.some(b => b.k === 'tower')), 'Flughafen: Flugzeuge, Tower, Flugzeug am Himmel');
+  await page.evaluate(() => pause(true));
+  await page.goto(base + '?normal&karte=insel');
+  await openPlay(page);
+  await page.waitForSelector('#continueBtn', { state: 'visible' });
+  check((await page.textContent('#continueInfo')).startsWith('Flughafen · '), 'Spielstand merkt den Flughafen');
+  await Promise.all([page.waitForNavigation(), page.click('#continueBtn', { force: true })]);
+  await page.waitForFunction(() => typeof state !== 'undefined' && state === 'pause', null, { timeout: 60000 }).catch(() => {});
+  { const r = await page.evaluate(() => [MAP, state, units.length]); check(r[0] === 'flughafen' && r[1] === 'pause' && r[2] >= 3, 'Weiterspielen lädt den Flughafen und setzt fort (' + r.join(', ') + ')'); }
+  await page.evaluate(() => { endGame(false, 'Test.'); });
+  for (const m of ['stadt', 'flughafen']) {
+    await page.goto(base + '?weihnachten&karte=' + m);
+    await page.waitForSelector('#playBtn', { state: 'visible' });
+    await startRound(page);
+    await page.waitForTimeout(1200);
+    check(await page.evaluate(m => XMAS && MAP === m && state === 'play' && !!URB.lights && URB.lights.count > 60 && crates.every(c => c.bow) && (m !== 'stadt' || obstacles.some(o => o.x === 0 && o.z === 0)), m), 'Weihnachtsedition: ' + (m === 'stadt' ? 'Stadt mit Baum auf dem Marktplatz' : 'Flughafen') + ', Lichterketten, Geschenkkisten');
+    await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
+  }
+  }
   if (part(4)) {   // Vulkan
   console.log('Vulkan');
   await page.goto(base + '?normal');

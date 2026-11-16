@@ -321,6 +321,7 @@ function buildTurret(team,x,z,boost){
 function spotValid(x,z,team){
   if(team===0?(z<11||z>LIM-2):(z>-11||z<-LIM+2))return false;
   if(Math.abs(x)>LIM-2)return false;
+  if(URBAN&&!urbanFree(x,z,3.2))return false;   // not next to a building and never in a gate, a jet bridge or the alley
   if(obstacles.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+1.3))return false;
   if(hqs.some(h=>Math.hypot(h.x-x,h.z-z)<h.r+1.8))return false;
   if(pads.some(pd=>Math.hypot(pd.x-x,pd.z-z)<2.8))return false;
@@ -328,7 +329,8 @@ function spotValid(x,z,team){
   return true;
 }
 function autoPlaceTurret(team,boost){
-  const s=team?-1:1,cands=[[-24,14],[24,14],[-12,14],[12,14],[-6,19],[6,19],[0,24]].map(([x,z])=>({x:x+rand(-1.5,1.5),z:s*(z+ZS+rand(-1,1))}));
+  const s=team?-1:1,xs=CITY&&team?-1:1,list=CITY?[[-18,14],[-14,18],[-26,18],[-18,26],[-30,22],[-22,30]]:AIRPORT?[[-18,16],[18,16],[0,16],[-8,34],[8,34],[-26,34],[26,34]]:[[-24,14],[24,14],[-12,14],[12,14],[-6,19],[6,19],[0,24]];
+  const cands=list.map(([x,z])=>({x:xs*x+rand(-1.5,1.5),z:s*(z+ZS+rand(-1,1))}));
   for(const c of cands.sort(()=>Math.random()-.5))if(spotValid(c.x,c.z,team)){buildTurret(team,c.x,c.z,boost);return;}
 }
 function turretUpdate(u,dt){
@@ -357,7 +359,7 @@ function updateGhost(){
 }
 function tryPlace(){
   const p=placeSpot();
-  if(!spotValid(p.x,p.z,0)){toast(p.z<11?'Nur in deiner Hälfte bauen (vor dem Fluss)':'Hier ist kein Platz',1.4);return;}
+  if(!spotValid(p.x,p.z,0)){toast(p.z<11?(URBAN?'Nur in deiner Hälfte bauen':'Nur in deiner Hälfte bauen (vor dem Fluss)'):'Hier ist kein Platz',1.4);return;}
   const q=placeQueue.shift();buildTurret(0,p.x,p.z,q.boost);
   toast(placeQueue.length?'Turm steht! Noch einer zu bauen.':'Geschützturm steht!',1.6);
 }

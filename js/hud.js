@@ -36,6 +36,13 @@ const mm=$('#mm'),mctx=mm.getContext('2d');
 function drawMap(){
   const S=mm.width,sc=S/(LIM*2+6),X=x=>(x+LIM+3)*sc,Z=z=>(z+LIM+3)*sc;
   mctx.clearRect(0,0,S,S);
+  if(URBAN){   // airport and city: ground, buildings, drop zones
+    mctx.fillStyle=CITY?'rgba(150,150,150,.45)':'rgba(170,170,160,.45)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
+    if(CITY){mctx.fillStyle='rgba(95,160,70,.8)';mctx.fillRect(X(22),Z(22),24*sc,24*sc);}
+    else{mctx.fillStyle='rgba(60,62,66,.85)';mctx.fillRect(X(40),Z(-20),12*sc,40*sc);}
+    for(const b of URB.boxes){mctx.fillStyle=b.k==='fence'?'rgba(80,90,80,.8)':b.k==='plane'||b.k==='wing'?'rgba(235,238,242,.95)':'rgba(70,64,60,.92)';mctx.fillRect(X(b.x0),Z(b.z0),(b.x1-b.x0)*sc,(b.z1-b.z0)*sc);}
+    URB.zones.forEach((zs,i)=>{mctx.strokeStyle=i?'#ffc928':'#5aa0ff';mctx.lineWidth=1.5;for(const r of zs)mctx.strokeRect(X(r.x0),Z(r.z0),(r.x1-r.x0)*sc,(r.z1-r.z0)*sc);});
+  }else{
   const bz=8.4+ZS;
   mctx.fillStyle=MOUNTAIN?'rgba(225,232,242,.35)':VOLCANO?'rgba(110,100,95,.45)':'rgba(120,170,90,.35)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
   mctx.fillStyle=MOUNTAIN?'rgba(40,52,70,.9)':VOLCANO?'rgba(255,110,30,.9)':'rgba(70,160,210,.85)';mctx.fillRect(X(-LIM),Z(-bz),LIM*2*sc,bz*2*sc);
@@ -45,6 +52,7 @@ function drawMap(){
   if(MOUNTAIN){mctx.fillStyle='rgba(150,155,165,.9)';mctx.fillRect(X(BRIDGES[1]-10),Z(-6),20*sc,12*sc);}
   if(!VOLCANO)for(const D of DROPS){mctx.fillStyle=MOUNTAIN?'#e8eef5':'#e2cf95';mctx.beginPath();mctx.ellipse(X(D.x),Z(0),ISL_RX*sc,ISL_RZ*sc,0,0,TAU);mctx.fill();mctx.strokeStyle=D.sort==='blau'?'#5aa0ff':'#ffc928';mctx.lineWidth=2.5;mctx.stroke();mctx.fillStyle='#b98a52';mctx.fillRect(X(D.x)-4,Z(-9),8,18*sc);}
   mctx.fillStyle=MOUNTAIN?'#d8dde4':VOLCANO?'#8a8079':'#b98a52';for(const bx of BRIDGES){if(VOLCANO)for(const sd of [-1,1]){mctx.fillStyle=typeof bridgeClosed==='function'&&bridgeClosed(bx,sd)&&Math.floor(performance.now()/250)%2?'#ffe04a':'#8a8079';mctx.fillRect(X(bx)-crossW(bx)*sc,Z(sd>0?4.7:-bz),crossW(bx)*2*sc,(bz-4.7)*sc);}else mctx.fillRect(X(bx)-crossW(bx)*sc,Z(-8.4),crossW(bx)*2*sc,16.8*sc);}
+  }
   for(const h of hqs){mctx.fillStyle=h.dead?'#555':(h.team?'#1fb5a8':'#ff8a1f');mctx.fillRect(X(h.x)-7,Z(h.z)-6,14,12);}
   for(const p of pads){mctx.strokeStyle=p.team?'#1fb5a8':'#ff8a1f';mctx.lineWidth=2;mctx.strokeRect(X(p.x)-6,Z(p.z)-6,12,12);}
   mctx.fillStyle='#e9b46a';

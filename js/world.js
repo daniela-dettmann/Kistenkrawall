@@ -31,6 +31,37 @@ function volcanoColor(x,z,h){
   else if(h<-0.9)c.lerp(sand,clamp((-h-0.9)/1.2,0,1));
   return c.multiplyScalar(1.05);
 }
+// Airport and city: asphalt with painted lines, paving on squares, grass in the park and beside the runway
+function urbanGrass(x,z){
+  if(CITY)return x>22&&x<46&&z>22&&z<46;
+  return x<-41.5&&Math.abs(z)<19.5&&urbanFree(x,z,0.4);   // a lawn around the tower
+}
+function urbanColor(x,z){
+  const asph=new THREE.Color(0x5b5f63),light=new THREE.Color(0x8d8f8c),pave=new THREE.Color(0xb3a48d),grass=new THREE.Color(0x5d9a43),line=new THREE.Color(0xe8e2c8),yel=new THREE.Color(0xe6b93a);
+  const n=Math.sin(x*0.37+z*0.21)*Math.cos(z*0.33-x*0.17)*0.5+0.5;
+  if(CITY){
+    const inB=(a,b)=>x>a&&x<b,cols=[[-46,-22],[-14,14],[22,46]];
+    const col=cols.findIndex(([a,b])=>inB(a,b)),row=cols.findIndex(([a,b])=>z>a&&z<b);
+    if(col===2&&row===2)return grass.clone().lerp(new THREE.Color(0x4c8a36),n*0.6);   // park
+    if(col>=0&&row>=0){   // squares (market, bases, under the houses): paving
+      const p=pave.clone().lerp(light,n*0.3);if(((Math.floor(x*0.7)+Math.floor(z*0.7))&1)===0)p.multiplyScalar(0.95);return p;}
+    const c=asph.clone().lerp(light,n*0.12);
+    // pavements along the blocks, a dashed centre line in the streets
+    const edge=Math.min(...cols.map(([a,b])=>Math.min(Math.abs(x-a),Math.abs(x-b))),...cols.map(([a,b])=>Math.min(Math.abs(z-a),Math.abs(z-b))));
+    if(edge<1.2)return light.clone().lerp(pave,0.3);
+    for(const m of [-18,18,-49,49]){if(Math.abs(x-m)<0.12&&Math.sin(z*0.9)>0)c.lerp(line,0.8);if(Math.abs(z-m)<0.12&&Math.sin(x*0.9)>0)c.lerp(line,0.8);}
+    return c;
+  }
+  // airport: concrete apron with joints, dark runway with white markings, yellow taxi lines, grass at the edges
+  if(urbanGrass(x,z))return grass.clone().lerp(new THREE.Color(0x4c8a36),n*0.5);
+  if(x>40){const c=asph.clone().multiplyScalar(0.8);if(Math.abs(x-46)<0.25&&Math.sin(z*0.8)>0.2)c.lerp(line,0.9);if(Math.abs(Math.abs(x-46)-5)<0.3)c.lerp(line,0.7);
+    if(Math.abs(z)>16&&Math.abs(z)<19&&(Math.floor(x*1.2)&1))c.lerp(line,0.8);return c;}
+  const c=light.clone().lerp(pave,0.15).lerp(asph,n*0.15);
+  if(Math.abs(x-Math.round(x/6)*6)<0.06||Math.abs(z-Math.round(z/6)*6)<0.06)c.multiplyScalar(0.88);   // concrete joints
+  if(Math.abs(z)<0.15&&x>12&&x<40)c.lerp(yel,0.85);   // taxi line to the runway
+  for(const cx of [-12,12])if(Math.abs(x-cx)<0.12&&Math.abs(z)<14)c.lerp(yel,0.85);   // stand lines under the planes
+  return c;
+}
 let lavaMat=null;
 (function(){
   const g=new THREE.PlaneGeometry(172,172,176,176);g.rotateX(-Math.PI/2);
@@ -39,6 +70,7 @@ let lavaMat=null;
   for(let i=0;i<p.count;i++){
     const x=p.getX(i),z=p.getZ(i),h=hgtRaw(x,z);p.setY(i,h);
     let c;
+    if(URBAN){c=urbanColor(x,z);c.offsetHSL(0,0,(srand()-.5)*0.03);cols.push(c.r,c.g,c.b);continue;}
     if(MOUNTAIN||VOLCANO){c=MOUNTAIN?mountainColor(x,z,h):volcanoColor(x,z,h);c.offsetHSL(0,0,(srand()-.5)*0.04);cols.push(c.r,c.g,c.b);continue;}
     if(h<-0.9)c=cS.clone().lerp(cD,clamp((-h-1.4)/1.8,0,1));
     else{
@@ -62,6 +94,7 @@ let lavaMat=null;
       .replace('#include <beginnormal_vertex>','vec3 objectNormal=normalize(vec3(-cos(position.x*0.15+uTime)*0.11,sin(position.y*0.2+uTime*1.3)*0.12,1.0));')
       .replace('#include <begin_vertex>','vec3 transformed=vec3(position);transformed.z+=sin(position.x*0.15+uTime)*0.12+cos(position.y*0.2+uTime*1.3)*0.1;');
   };
+  if(URBAN)return;   // no sea, no river: js/urban.js builds the rest
   if(MOUNTAIN){
     // clouds drifting below the edges make the drop visible
     const cm=new THREE.MeshLambertMaterial({color:0xf2f5fa,emissive:0x8090a0,transparent:true,opacity:.55,depthWrite:false});
@@ -111,13 +144,13 @@ let lavaMat=null;
     sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\nfloat sway=sin(uTime*1.8+instanceMatrix[3].x*0.35+instanceMatrix[3].z*0.22);transformed.x+=sway*0.09*position.y;transformed.z+=cos(uTime*1.3+instanceMatrix[3].x*0.2)*0.05*position.y;');
   };
-  const N=MOUNTAIN?2200:VOLCANO?1500:6500,NF=MOUNTAIN||VOLCANO?0:760,im=new THREE.InstancedMesh(g,mat,N),fl=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075,0),new THREE.MeshLambertMaterial({color:0xffffff}),NF);
+  const N=URBAN?(CITY?900:600):MOUNTAIN?2200:VOLCANO?1500:6500,NF=MOUNTAIN||VOLCANO||AIRPORT?0:CITY?160:760,im=new THREE.InstancedMesh(g,mat,N),fl=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075,0),new THREE.MeshLambertMaterial({color:0xffffff}),NF);
   im.name='kkGrass';fl.name='kkFlowers';
   const d=new THREE.Object3D(),c=new THREE.Color();let n=0,f=0,tries=0;
   const FLC=[0xfff7e0,0xffd84a,0xff8fb1,0xb9a7ff];
   while((n<N||f<NF)&&tries<70000){
     tries++;const x=(srand()*2-1)*53,z=(srand()*2-1)*53,h=hgtRaw(x,z);
-    if(h<-0.7||onBridge(x,z)||(VOLCANO&&Math.abs(z)<BANK+1.5))continue;
+    if(h<-0.7||onBridge(x,z)||(VOLCANO&&Math.abs(z)<BANK+1.5)||(URBAN&&!urbanGrass(x,z)))continue;
     if(BASES.some(b=>Math.hypot(x-b.x,z-b.z)<7.5))continue;
     if(pathDist(x,z)<1.4)continue;
     if(n<N){
@@ -132,7 +165,7 @@ let lavaMat=null;
 })();
 
 /* Distant islands out at sea; colours are pre-hazed toward the horizon instead of using fog */
-if(!MOUNTAIN)(function(){
+if(!MOUNTAIN&&!URBAN)(function(){
   const hz=new THREE.Color(HORIZON);
   const haze=(c,k)=>new THREE.Color(c).lerp(hz,k);
   const spots=[[0.3,120,1],[1.1,150,1.4],[1.75,135,0.8],[2.5,175,1.8],[3.2,128,1.1],[3.9,160,1.5],[4.6,118,0.7],[5.35,190,2.1],[5.9,140,1.0],[2.05,200,1.2]];
@@ -288,6 +321,7 @@ function addBags(x0,z,x1){
   }
 }
 (function(){
+  if(URBAN)return;   // trees, sandbags, the river wall and the bridges belong to the band maps
   const placed=[];let tries=0,trees=0,rocks=0;
   while((trees<62||rocks<28)&&tries<5000){
     tries++;
@@ -346,7 +380,7 @@ function addBags(x0,z,x1){
 
 /* Crate islands: blue crates parachute onto the island under the left bridge, yellow onto the right one */
 const dropFx=[];
-for(const D of DROPS){
+for(const D of (URBAN?[]:DROPS)){
   const blue=D.sort==='blau',col=blue?0x3a76d2:0xecb228,out=D.x<0?-1:1,fx=D.x+out*5.1,g=new THREE.Group();
   const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.13,6,8),M.metal);mast.position.set(fx,hgtRaw(fx,0)+3,0);g.add(mast);
   const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.95),new THREE.MeshPhongMaterial({color:col,side:THREE.DoubleSide,shininess:10}));flag.position.set(fx+out*0.78,hgtRaw(fx,0)+5.4,0);g.add(flag);
@@ -362,6 +396,7 @@ for(const D of DROPS){
 }
 /* Bushes and pebbles scattered over the meadows */
 (function(){
+  if(URBAN)return;
   const bush=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.7,1),leafPal[1],220);
   const peb=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.16,0),rockMat,900);
   const d=new THREE.Object3D(),c=new THREE.Color();let nb=0,np=0,tries=0;

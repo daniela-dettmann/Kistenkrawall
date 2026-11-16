@@ -1,14 +1,14 @@
 # Kistenkrawall – Übergabe
 
-Stand: 15. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
+Stand: 16. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
 
 ## Wo wir stehen
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `8a06327` (PR #32) |
-| `main` | `8a06327` |
-| Offener Pull Request | #33: Testregel in CLAUDE.md. Offen bei Daniela: GitHub-Einstellung „Require status checks“ für `main` |
+| Live auf GitHub Pages | `f737e1a` (PR #33) |
+| `main` | `f737e1a` |
+| Offener Pull Request | #34: Karten Flughafen und Stadt (Drive: `Kistenkrawall-Auftrag-Flughafen-Stadt.md`). Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 

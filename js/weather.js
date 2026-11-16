@@ -71,6 +71,7 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
       const jx=x+(((x*7+z*3)%5+5)%5)*0.3,jz=z+(((x*3+z*11)%5+5)%5)*0.3,h=hgtRaw(jx,jz);
       if(h<-0.4||h>2.5||Math.abs(jx)>LIM-2||Math.abs(jz)>LIM-2||onBridge(jx,jz)||onPlatform(jx,jz))continue;
       if(VOLCANO&&Math.abs(jz)<BANK+4)continue;
+      if(!urbanFree(jx,jz,2.4))continue;
       let flat=true;for(const [dx,dz] of [[1.6,0],[-1.6,0],[0,1.6],[0,-1.6],[1.1,1.1],[-1.1,-1.1]])if(Math.abs(hgtRaw(jx+dx,jz+dz)-h)>0.07){flat=false;break;}
       if(!flat)continue;
       if(obstacles.some(o=>Math.hypot(o.x-jx,o.z-jz)<o.r+1.6)||pads.some(p=>Math.hypot(p.x-jx,p.z-jz)<3.4)||hqs.some(q=>Math.hypot(q.x-jx,q.z-jz)<5))continue;
@@ -161,7 +162,7 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
     // drift a little with the wind, at most about one unit, and never towards the water
     c.drift=c.drift||0;if(c.drift>1.2)return;
     const v=0.32*WX.wind*dt,nx=c.x+Math.cos(WX.dir)*v,nz=c.z+Math.sin(WX.dir)*v;
-    if(Math.abs(nx)>LIM-1||Math.abs(nz)>LIM-1||hgtRaw(nx,nz)<-0.6||(Math.abs(nz)<BANK+1.6&&!onPlatform(nx,nz))||(VOLCANO&&Math.abs(nz)<BANK+3))return;
+    if(Math.abs(nx)>LIM-1||Math.abs(nz)>LIM-1||hgtRaw(nx,nz)<-0.6||(Math.abs(nz)<BANK+1.6&&!onPlatform(nx,nz))||(VOLCANO&&Math.abs(nz)<BANK+3)||!urbanFree(nx,nz,1.2))return;   // never onto a roof
     c.x=nx;c.z=nz;c.drift+=v;if(c.ring)c.ring.position.set(c.x,hgt(c.x,c.z)+0.05,c.z);
   };
 

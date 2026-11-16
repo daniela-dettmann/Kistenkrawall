@@ -7,14 +7,7 @@
    - Die beim Laden gebaute Welt (Bäume, Gelände, Wasser, Brücken, Hauptquartiere) wird nachträglich dekoriert.
    Viele gleiche Kleinteile (Christbaumkugeln, Schneehauben, Lichter) sind InstancedMeshes: ein Zeichenaufruf statt hunderte. */
 'use strict';
-const XMAS=(function(){
-  const q=location.search+location.hash;
-  if(/weihnachten/i.test(q))return true;
-  if(/\bnormal\b/i.test(q))return false;
-  try{if(localStorage.getItem('kk-xmas')==='off')return false;}catch(e){}
-  return xmasSeason();
-})();
-function xmasSeason(d){d=d||new Date();const m=d.getMonth(),day=d.getDate();return m===10||m===11||(m===0&&day<=10);}
+// XMAS and xmasSeason() are decided in core.js, so every file built before this one knows them too
 const XMAS_FORCED=/weihnachten/i.test(location.search+location.hash);
 /* How much snow lies at a spot, 0 (a thin dusting, grass shows through) to 1 (deep, fresh snow). Smooth value noise
    in two sizes, so there are wide deep fields, thin patches and everything in between. Used for the ground, the grass
@@ -123,7 +116,7 @@ if(XMAS)(function(){
   {const capMat=snowMat.clone();capMat.userData.sway=true;instanced(new THREE.IcosahedronGeometry(1,0),capMat,caps);}   // snow on the crowns sways with them (look.js)
 
   /* ---------- Lichterketten an den Brücken ---------- */
-  {const lights=[];for(const bx of BRIDGES){if((MOUNTAIN&&bx>0)||VOLCANO)continue;const cw=crossW(bx)-0.05;for(const sx of [-cw,cw])for(const side of [-1,1])for(let k=0;k<9;k++)
+  {const lights=[];for(const bx of BRIDGES){if((MOUNTAIN&&bx>0)||VOLCANO||URBAN)continue;const cw=crossW(bx)-0.05;for(const sx of [-cw,cw])for(const side of [-1,1])for(let k=0;k<9;k++)
      lights.push({p:V(bx+sx,1.12,side*(2.9+k*0.79)),c:[RED,GOLD,0x3fa0ff,0x3fd46a][(k+(sx>0?1:0))%4]});}
    const lm=instanced(new THREE.SphereGeometry(0.085,6,4),new THREE.MeshBasicMaterial({color:0xffffff}),lights);if(lm)lm.castShadow=false;}
 
@@ -301,7 +294,7 @@ if(XMAS)(function(){
   flakes.frustumCulled=false;scene.add(flakes);
 
   const floes=[];
-  for(let i=0;i<(MOUNTAIN||VOLCANO?0:16);i++){
+  for(let i=0;i<(MOUNTAIN||VOLCANO||URBAN?0:16);i++){
     const m=new THREE.Mesh(new THREE.CylinderGeometry(rand(0.6,1.4),rand(0.7,1.5),0.16,7),snowMat);
     m.position.set(rand(-60,60),-1.58,rand(-5.5,5.5));m.rotation.y=rand(0,3);m.receiveShadow=true;scene.add(m);floes.push({m,v:rand(0.5,1.1)});
   }
