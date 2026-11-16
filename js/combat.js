@@ -100,7 +100,7 @@ function fire(u,ang,cdMul,tgt){
     u.cd=W.cd*(cdMul||1);u.h=ang;u.lastFire=gameT;
     const sx=u.x+Math.sin(ang)*off,sz=u.z+Math.cos(ang)*off,m=new THREE.Mesh(G.bomb,M.dark);m.castShadow=true;scene.add(m);
     const D2=Math.hypot(tx-sx,tz-sz),T=Math.max(0.9,D2/W.speed);
-    shots.push({m,arc:true,x0:sx,z0:sz,y0:hgt(sx,sz)+2,x1:tx,z1:tz,T,t:0,peak:5+D2*0.22,x:sx,z:sz,team:u.team,dmg:W.dmg*(u.weaponMul||1)*(u.dmgMul||1),splash:W.splash,owner:u,trail:0});
+    shots.push({m,arc:true,x0:sx,z0:sz,y0:hgt(sx,sz)+2,x1:tx,z1:tz,T,t:0,peak:Math.max(URBAN?10:0,5+D2*0.22),x:sx,z:sz,team:u.team,dmg:W.dmg*(u.weaponMul||1)*(u.dmgMul||1),splash:W.splash,owner:u,trail:0});
     sfx('moerser',u.x,u.z);puffs(sx,hgt(sx,sz)+2,sz,3,0xdedad0,{size:.6});
     return true;
   }
@@ -208,6 +208,7 @@ function resolve(u){
     else if(islandE(u.x,u.z)<1.25){const bx=islCx(u.x);const dx=(u.x-bx)/ISL_RX,dz=u.z/ISL_RZ,e=Math.hypot(dx,dz),lim=0.9-ur/ISL_RZ;if(e>lim){u.x=bx+dx/e*lim*ISL_RX;u.z=dz/e*lim*ISL_RZ;}}
     else u.z=(u.z>=0?1:-1)*BANK;
   }
+  if(URBAN)urbanPush(u,ur);   // buildings on the airport and in the city
   u.x=clamp(u.x,-LIM,LIM);u.z=clamp(u.z,-LIM,LIM);
 }
 /* Route around sandbag walls: if the straight line to the goal crosses a wall, head for its nearer end first */
@@ -305,7 +306,7 @@ function volcanoWaypoint(u,gx,gz){
 function moveToward(u,gx,gz,dt,P,arrive){
   const dx=gx-u.x,dz=gz-u.z,d=Math.hypot(dx,dz);
   if(d<arrive)return true;
-  const wp=(VOLCANO?volcanoWaypoint(u,gx,gz):bandWaypoint(u,gx,gz))||wallWaypoint(u,gx,gz);
+  const wp=URBAN?navWaypoint(u,gx,gz):(VOLCANO?volcanoWaypoint(u,gx,gz):bandWaypoint(u,gx,gz))||wallWaypoint(u,gx,gz);
   const tx=wp?wp.x:gx,tz=wp?wp.z:gz,ex=tx-u.x,ez=tz-u.z,el=Math.hypot(ex,ez)||1;
   aiMove(u,ex/el,ez/el,dt,P.speed);return false;
 }

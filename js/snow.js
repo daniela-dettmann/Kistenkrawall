@@ -85,7 +85,7 @@ if(SNOW.on)(function(){
   domeG.computeVertexNormals();
   const snowMat2=new THREE.MeshPhongMaterial({color:snowCol,map:TX.ground,specular:0x111111,shininess:8});
   const domes=[],add=(x,y,z,sx,sy,sz,ry,drift)=>{domes.push({x,y,z,sx,sy,sz,ry});if(drift)SNOW.drifts.push({x,z,r:Math.max(sx,sz)*0.85});};
-  const ok=(x,z)=>Math.abs(x)<LIM&&Math.abs(z)<LIM&&hgtRaw(x,z)>-0.6&&!onBridge(x,z)&&!onPlatform(x,z)&&pathDist(x,z)>1.6&&!pads.some(p=>Math.hypot(p.x-x,p.z-z)<2.6);
+  const ok=(x,z)=>Math.abs(x)<LIM&&Math.abs(z)<LIM&&hgtRaw(x,z)>-0.6&&urbanFree(x,z,2)&&!onBridge(x,z)&&!onPlatform(x,z)&&pathDist(x,z)>1.6&&!pads.some(p=>Math.hypot(p.x-x,p.z-z)<2.6);
   for(const b of obstacles){
     if(b.low){
       // sandbags: a cap on top, every second bag a drift on the lee side

@@ -74,18 +74,19 @@ function defendSpot(u){
     if(bx<0)wL+=w;else wR+=w;
   }
   if(wL+wR===0)return null;
+  if(CITY){const g=URB.defend[((u.id*0.618)%1)<wL/(wL+wR)?0:1],k=t?-1:1;return {x:k*g.x+((u.id%3)-1)*2,z:k*g.z+((u.id%3)-1)*1.5};}
   const side=((u.id*0.618)%1)<wL/(wL+wR)?-BX:BX;
   return {x:side+((u.id%3)-1)*2.6,z:s*(13.5+ZS+(u.id%3)*1.4)};
 }
-function homeGoal(t){return {x:rand(-24,24),z:BASES[t].z+(t?1:-1)*rand(7,24)};}
+function homeGoal(t){if(URBAN){const b=BASES[t];return {x:b.x+rand(-10,10),z:b.z+rand(-10,10)};}return {x:rand(-24,24),z:BASES[t].z+(t?1:-1)*rand(7,24)};}
 /* Fixed patrol routes (for team 0; mirrored for Petrol): west bridgehead, east bridgehead, ring around the base */
-const ROUTES=[[[-BX,12+ZS],[-BX-7,20+ZS],[-BX+5,25+ZS]],[[BX,12+ZS],[BX+7,20+ZS],[BX-5,25+ZS]],[[-9,31+ZS*0.4],[9,31+ZS*0.4],[12,40],[-12,40]]];
+const ROUTES=URBAN?URB.routes:[[[-BX,12+ZS],[-BX-7,20+ZS],[-BX+5,25+ZS]],[[BX,12+ZS],[BX+7,20+ZS],[BX-5,25+ZS]],[[-9,31+ZS*0.4],[9,31+ZS*0.4],[12,40],[-12,40]]];
 function setPatrol(u){
   if(u.routeId===undefined)u.routeId=u.id%3;
   const rid=inPeace()&&u.role!=='sammler'?2:u.routeId,r=ROUTES[rid];
   u.routeIdx=(u.routeIdx||0)%r.length;
   const pt=r[u.routeIdx],s=u.team?-1:1;
-  u.plan='patrol';u.waitT=0;u.goal={x:pt[0]+rand(-1.5,1.5),z:s*pt[1]+rand(-1.5,1.5)};
+  u.plan='patrol';u.waitT=0;u.goal={x:(CITY&&u.team?-1:1)*pt[0]+rand(-1.5,1.5),z:s*pt[1]+rand(-1.5,1.5)};   // the city is point-symmetric
 }
 /* Prey for the hunter on hard: the vehicle you drive, any other vehicle, otherwise you */
 function huntTarget(u){
@@ -239,7 +240,7 @@ function aiUpdate(u,dt){
       // 4) everybody else storms the HQ and fans out around it
       const W=WEAPONS[u.weapon],d=dist(u,h)-h.r,a=sl*0.5+(bx<0?-0.4:0.4);
       const R=Math.min(W.range*0.6,11)+h.r,gx=h.x+Math.sin(a)*R,gz=h.z-s*Math.cos(a)*R;
-      if(d>W.range*0.75)moveToward(u,gx,gz,dt,P,1.5);
+      if(d>W.range*0.75||(URBAN&&!W.arc&&urbanBlocked(u.x,u.z,h.x,h.z)))moveToward(u,gx,gz,dt,P,1.5);
       else if(aiAim(u,h,P,dt))fire(u,u.h+(Math.random()*2-1)*P.jitter*0.5,P.cdMul,h);
       break;}
     case 'defend':{const g=u.goal;if(!g){u.thinkT=0;break;}if(moveToward(u,g.x,g.z,dt,P,1.8))u.h+=clamp(angDiff(u.team?0:Math.PI,u.h),-3*dt,3*dt);break;}
@@ -256,12 +257,14 @@ function aiUpdate(u,dt){
       const W=WEAPONS[u.weapon],dx=e.x-u.x,dz=e.z-u.z,d=Math.hypot(dx,dz)||0.01,want=W.range*0.6,sf=P.strafe===undefined?0.7:P.strafe;
       u.strafeT-=dt;if(u.strafeT<=0){u.strafeT=rand(.8,2);u.strafe*=-1;}
       let mx=0,mz=0;
-      const wp=d>want?wallWaypoint(u,e.x,e.z):null;
+      // airport and city: no line of sight means going round the building, not shooting into it
+      const seen=!URBAN||!urbanBlocked(u.x,u.z,e.x,e.z);
+      const wp=URBAN?(d>want||!seen?navWaypoint(u,e.x,e.z):null):d>want?wallWaypoint(u,e.x,e.z):null;
       if(wp){const wx=wp.x-u.x,wz=wp.z-u.z,wl=Math.hypot(wx,wz)||1;mx=wx/wl*1.5;mz=wz/wl*1.5;}
-      else if(d>want){mx=dx/d;mz=dz/d;}else if(d<want*0.45){mx=-dx/d;mz=-dz/d;}
+      else if(d>want&&seen){mx=dx/d;mz=dz/d;}else if(d<want*0.45&&seen){mx=-dx/d;mz=-dz/d;}
       mx+=-dz/d*u.strafe*sf;mz+=dx/d*u.strafe*sf;
       const len=Math.hypot(mx,mz)||1;aiMove(u,mx/len,mz/len,dt,P.speed*0.85);
-      if(aiAim(u,e,P,dt)&&d<W.range*0.95)fire(u,u.h+(Math.random()*2-1)*P.jitter,P.cdMul,e);
+      if(aiAim(u,e,P,dt)&&d<W.range*0.95&&(seen||W.arc))fire(u,u.h+(Math.random()*2-1)*P.jitter,P.cdMul,e);
       if(d>P.aggro*1.6)u.thinkT=0;
       break;}
     case 'siege':{
