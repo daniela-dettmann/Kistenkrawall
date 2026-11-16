@@ -100,7 +100,7 @@ function fire(u,ang,cdMul,tgt){
     u.cd=W.cd*(cdMul||1);u.h=ang;u.lastFire=gameT;
     const sx=u.x+Math.sin(ang)*off,sz=u.z+Math.cos(ang)*off,m=new THREE.Mesh(G.bomb,M.dark);m.castShadow=true;scene.add(m);
     const D2=Math.hypot(tx-sx,tz-sz),T=Math.max(0.9,D2/W.speed);
-    shots.push({m,arc:true,x0:sx,z0:sz,y0:hgt(sx,sz)+2,x1:tx,z1:tz,T,t:0,peak:Math.max(URBAN?10:0,5+D2*0.22),x:sx,z:sz,team:u.team,dmg:W.dmg*(u.weaponMul||1)*(u.dmgMul||1),splash:W.splash,owner:u,trail:0});
+    shots.push({m,arc:true,x0:sx,z0:sz,y0:hgt(sx,sz)+2,x1:tx,z1:tz,T,t:0,peak:Math.max(DESERT?14:URBAN?10:0,5+D2*0.22),x:sx,z:sz,team:u.team,dmg:W.dmg*(u.weaponMul||1)*(u.dmgMul||1),splash:W.splash,owner:u,trail:0});
     sfx('moerser',u.x,u.z);puffs(sx,hgt(sx,sz)+2,sz,3,0xdedad0,{size:.6});
     return true;
   }

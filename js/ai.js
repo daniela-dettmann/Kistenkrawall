@@ -1,6 +1,9 @@
 /* Kistenkrawall: Gegner- und Mitstreiter-KI */
 'use strict';
 /* ---------- AI ---------- */
+// how strong a sandstorm is right now (0 to 1): bots see less far, wait with their attack, move on carefully and
+// patrols take cover behind rocks, ruins and the pyramid
+function sandK(){const W=typeof DN!=='undefined'&&DN.wx;return W&&W.kind==='sand'&&W.want==='sand'&&W.storm?W.s:0;}
 function nearestFoe(u,range){
   if(inPeace())return null;
   let best=null,bd=range;
@@ -104,7 +107,8 @@ function decide(u,P){
     if(u.hp>=u.maxHp*0.85)u.retreating=false;else{u.retreating=true;u.plan='retreat';return;}
   }
   const tank=isVeh(u),weak=u.weapon==='knipser',raid=u.team===1&&u.attacker&&u.go;
-  let range=u.kind==='moerser'?WEAPONS.moerser.range:tank?P.aggro*1.4:(u.role==='kaempfer'||u.attacker?P.aggro:P.aggro*0.7);
+  const sk=sandK();
+  let range=(u.kind==='moerser'?WEAPONS.moerser.range:tank?P.aggro*1.4:(u.role==='kaempfer'||u.attacker?P.aggro:P.aggro*0.7))*(1-0.45*sk);
   // flankers slip past distant fights and only answer what gets close; the hunter goes for its prey
   if(raid&&u.wrole==='flanke')range=Math.min(range,9);
   if(raid&&u.wrole==='jaeger'){const h=huntTarget(u);if(h&&dist(u,h)<P.aggro*1.6){setFight(u,h);return;}range=Math.min(range,8);}
@@ -117,7 +121,7 @@ function decide(u,P){
     if(!u.go){u.plan='rally';return;}
     if(u.go&&!ehq.dead){u.plan='assault';return;}
   }
-  const threat=threatAt(u.team,26);
+  const threat=threatAt(u.team,26*(1-0.35*sk));
   if(threat&&(tank||u.role!=='sammler'||!weak)){setFight(u,threat);return;}
   // in the rest phase everybody on foot helps building; during a wave only the collectors keep at it
   if(!tank&&(inPeace()||u.role==='sammler'||(weak&&Math.random()<.5))&&!((u.team===0||MP)&&n>=8)){
@@ -129,6 +133,11 @@ function decide(u,P){
   {const pl=pilotOf(u.team),s=u.team?-1:1;if((u.team===0||MP)&&!inPeace()&&pl&&pl.alive&&pl!==u&&s*pl.z<-2&&(tank||!weak||u.role==='kaempfer')){u.plan='escort';return;}}
   // during a wave the fighters take position at the bridgehead that is under pressure
   if(!inPeace()&&(tank||u.role!=='sammler'||!weak)){const g=defendSpot(u);if(g){u.plan='defend';u.goal=g;return;}}
+  if(sk>0.5&&URB.cover&&!tank){   // sandstorm: wait it out in cover on the own side
+    if(u.plan!=='cover'){const c=URB.cover[u.id%URB.cover.length],s=u.team?-1:1;u.plan='cover';u.goal={x:c.x*s+rand(-1,1),z:c.z*s+rand(-1,1)};}
+    return;
+  }
+  if(u.plan==='cover')u.goal=null;
   if(u.plan!=='patrol'||!u.goal)setPatrol(u);
 }
 /* Petrol attack waves. plan: pick attackers, find the weaker flank, hand out roles. gather: walk to the rally points.
@@ -158,7 +167,7 @@ function planWave(W){
     });
     W.groups.push({bx:g.bx,role:g.role,ids:g.units.map(u=>u.id),go:false});
   });
-  W.phase='gather';W.t=D.gatherT;W.goT=-99;
+  W.phase='gather';W.t=D.gatherT;W.goT=-99;W.stormHold=0;
   if(state==='play'&&D.warn){
     const side=b=>b<0?'linken':'rechten';
     toast(W.groups.length>1?'Petrol sammelt sich an beiden Brücken':`Petrol sammelt sich vor der ${side(W.groups[0].bx)} Brücke`,2.2);
@@ -183,8 +192,11 @@ function updateWaves(dt){
   if(W.phase==='plan'){if(W.t<=0){W.announced=false;planWave(W);}return;}
   if(W.phase==='done')return;
   const at=u=>u.rally&&Math.hypot(u.x-u.rally.x,u.z-u.rally.z)<4.5;
+  // a strong sandstorm: the gathered groups wait for it to pass (at most 25 s longer)
+  const hold=W.phase==='gather'&&sandK()>0.6&&(W.stormHold||0)<25;
+  if(hold){W.stormHold=(W.stormHold||0)+dt;W.t=Math.max(W.t,3);}
   const pending=W.groups.filter(g=>!g.go),timeUp=W.t<=0;
-  if(pending.length){
+  if(pending.length&&!hold){
     if(!D.roles){ // easy: each bot runs off as soon as it reaches its spot, so they arrive one by one
       for(const u of att)if(!u.go&&(at(u)||timeUp)){u.go=true;u.thinkT=0;u.holdUntil=0;announceWave(W);}
       if(att.length&&att.every(u=>u.go))for(const g of pending)g.go=true;
@@ -217,6 +229,7 @@ function aiUpdate(u,dt){
   // easy bots dither now and then on their way to the front
   if(u.pauseT>0){u.pauseT-=dt;u.h+=Math.sin(gameT*1.7+u.id)*dt*1.2;if(u.plan!=='fight')return;}
   else if(P.hesitate&&u.attacker&&(u.plan==='assault'||u.plan==='rally')&&Math.random()<P.hesitate*dt*0.4)u.pauseT=rand(1.2,2.8);
+  else if(u.plan==='assault'&&sandK()>0.5&&Math.random()<dt*0.35)u.pauseT=rand(0.6,1.4);   // careful steps in the sandstorm
   if(u.thinkT<=0){u.thinkT=rand(.25,.45);decide(u,P);}
   const pad=pads[u.team],ep=pads[1-u.team];
   switch(u.plan){
@@ -243,6 +256,7 @@ function aiUpdate(u,dt){
       if(d>W.range*0.75||(URBAN&&!W.arc&&urbanBlocked(u.x,u.z,h.x,h.z)))moveToward(u,gx,gz,dt,P,1.5);
       else if(aiAim(u,h,P,dt))fire(u,u.h+(Math.random()*2-1)*P.jitter*0.5,P.cdMul,h);
       break;}
+    case 'cover':{const g=u.goal;if(!g){u.thinkT=0;break;}if(moveToward(u,g.x,g.z,dt,P,1.2))u.h+=clamp(angDiff(u.team?0:Math.PI,u.h),-2*dt,2*dt);break;}
     case 'defend':{const g=u.goal;if(!g){u.thinkT=0;break;}if(moveToward(u,g.x,g.z,dt,P,1.8))u.h+=clamp(angDiff(u.team?0:Math.PI,u.h),-3*dt,3*dt);break;}
     case 'retreat':{
       const h=hqs[u.team];if(h.dead){u.retreating=false;u.thinkT=0;break;}

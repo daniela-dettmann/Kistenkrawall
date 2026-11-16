@@ -9,7 +9,7 @@
      wird leicht gebremst (auf 82 %), und es staubt.
    - Schneehauben auf Kisten, Felsen und Sandsäcken. Leichter Schneestaub an den Füßen beim Laufen. */
 'use strict';
-const SNOW={on:MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO),drifts:[],stamps:0,slow:0.82};
+const SNOW={on:MOUNTAIN||XSNOW,drifts:[],stamps:0,slow:0.82};
 // settings › Grafik › „Spuren im Schnee“ (also the ash prints on the volcano, look.js)
 SNOW.trails=(function(){try{return localStorage.getItem('kk-trails')!=='0';}catch(e){return true;}})();
 if(SNOW.on)(function(){

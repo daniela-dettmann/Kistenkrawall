@@ -9,22 +9,28 @@
      brennt und danach angekohlt ist.
    - Schneesturm: waagerecht treibende Streifen, dichter Nebel (daynight.js), Spuren schneien schneller zu (snow.js).
    - Wind: Fallschirmkisten schwanken und landen etwas versetzt (höchstens gut eine Einheit, nie im Wasser).
+   - Sandsturm (Wüste): erst eine Vorwarnung (Himmel wird gelblich, Wind frischt auf, Meldung), etwa 8 s später der
+     volle Sturm: Sandschleier, kaum Sicht, heulender Wind; herumliegende Kisten werden ein Stück verweht, aber nie in
+     die Pyramide, ins Wasser oder an eine Wand. Bei „Schneesturm“ in den Einstellungen gibt es in der Wüste Sandsturm.
    Auf „Grafik: Niedrig“ weniger als halb so viele Streifen, keine Tropfenringe. */
 'use strict';
 const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,ringsLive:0,streaks:0,plan:null};
 (function(){
   const FARS=[];scene.traverse(o=>{if(o.userData.kkFar)FARS.push(o);});
-  const W=DN.wx,snowy=MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO);
+  const W=DN.wx,snowy=MOUNTAIN||XSNOW;
 
   /* ---------- Plan ---------- */
   // Zufall: clear and weather take turns at random, the same in the building phase and during a wave and in
   // multiplayer. A clear spell lasts 60 to 150 s (the first one only 40 to 80 s, so every round gets weather early),
   // then 40 to 90 s of weather: a shower or snowfall (60 %) or a storm (40 %), and it clears up again.
-  const R={next:rand(40,80),on:false,lastT:0,had:false};
+  const R={next:rand(40,80),on:false,lastT:0,had:false,warn:0};
   WX.plan=R;
-  function storm(){if(snowy)DN.setWeather('schnee',true,1);else if(VOLCANO&&Math.random()<0.4)DN.setWeather('asche',true,1);else DN.setWeather('regen',Math.random()<0.75,1);}
-  function shower(){if(snowy)DN.setWeather('schnee',false,0.6);else if(VOLCANO)DN.setWeather('asche',false,0.7);else DN.setWeather('regen',false,0.7);}
-  const SEL={regen:['regen',false,0.85],gewitter:['regen',true,1],schnee:['schnee',true,1]};
+  // the desert: a warning first (a light haze, the wind picks up), the full storm about 8 s later
+  function sandStorm(){DN.setWeather('sand',true,0.3);R.warn=8;}
+  WX.sandStorm=sandStorm;
+  function storm(){if(DESERT){sandStorm();return;}if(snowy)DN.setWeather('schnee',true,1);else if(VOLCANO&&Math.random()<0.4)DN.setWeather('asche',true,1);else DN.setWeather('regen',Math.random()<0.75,1);}
+  function shower(){if(DESERT)DN.setWeather('sand',false,0.5);else if(snowy)DN.setWeather('schnee',false,0.6);else if(VOLCANO)DN.setWeather('asche',false,0.7);else DN.setWeather('regen',false,0.7);}
+  const SEL={regen:['regen',false,0.85],gewitter:['regen',true,1],schnee:DESERT?['sand',true,1]:['schnee',true,1]};
   // a fixed choice from the settings: applied at once, also in the menu and the pause
   function applySel(){
     const s=DN.wsel;
@@ -36,10 +42,11 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
   DN.roll=function(dt,playing){
     if(gameT<R.lastT){R.next=rand(40,80);R.on=false;R.had=false;WX.dir=Math.random()*TAU;}   // a new round
     R.lastT=gameT;
+    if(R.warn>0){R.warn-=dt;if(R.warn<=0&&W.want==='sand')W.lvl=1;}
     if(DN.wsel!=='zufall'){applySel();return;}
     if(!playing)return;
     R.next-=dt;if(R.next>0)return;
-    if(!R.on){if(Math.random()<0.4)storm();else shower();R.on=true;R.had=true;R.next=rand(40,90);}
+    if(!R.on){if(Math.random()<(DESERT?0.65:0.4))storm();else shower();R.on=true;R.had=true;R.next=rand(40,90);}
     else{DN.setWeather('klar',false);R.on=false;R.next=rand(60,150);}
   };
   applySel();
@@ -162,17 +169,43 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
     // drift a little with the wind, at most about one unit, and never towards the water
     c.drift=c.drift||0;if(c.drift>1.2)return;
     const v=0.32*WX.wind*dt,nx=c.x+Math.cos(WX.dir)*v,nz=c.z+Math.sin(WX.dir)*v;
-    if(Math.abs(nx)>LIM-1||Math.abs(nz)>LIM-1||hgtRaw(nx,nz)<-0.6||(Math.abs(nz)<BANK+1.6&&!onPlatform(nx,nz))||(VOLCANO&&Math.abs(nz)<BANK+3)||!urbanFree(nx,nz,1.2))return;   // never onto a roof
+    if(Math.abs(nx)>LIM-1||Math.abs(nz)>LIM-1||hgtRaw(nx,nz)<-0.6||(Math.abs(nz)<BANK+1.6&&!onPlatform(nx,nz))||(VOLCANO&&Math.abs(nz)<BANK+3)||!urbanFree(nx,nz,1.2)||inPyramid(nx,nz,1))return;   // never onto a roof, never into the pyramid
     c.x=nx;c.z=nz;c.drift+=v;if(c.ring)c.ring.position.set(c.x,hgt(c.x,c.z)+0.05,c.z);
   };
+
+  /* ---------- Sandstorm: big soft veils of sand drifting past the camera ---------- */
+  const VN=14,veils=[];
+  if(DESERT){
+    const vt=(function(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,2,32,32,32);
+      r.addColorStop(0,'rgba(255,255,255,.9)');r.addColorStop(0.5,'rgba(255,255,255,.4)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+    for(let i=0;i<VN;i++){const m=new THREE.Sprite(new THREE.SpriteMaterial({map:vt,color:0xc9a067,transparent:true,opacity:0,depthWrite:false,fog:false}));
+      m.visible=false;m.renderOrder=4;scene.add(m);veils.push({m,x:rand(-30,30),y:rand(0,9),z:rand(-30,30),s:rand(14,24),ph:Math.random()*TAU});}
+  }
+  WX.veils=veils;
+  // loose crates on the ground slide a little with the storm: at most about 3 units each, only over open sand,
+  // never into the pyramid, the water, a wall, onto a stacking pad or off the field
+  function sandOk(x,z){
+    return Math.abs(x)<LIM-2&&Math.abs(z)<LIM-2&&urbanFree(x,z,1.2)&&!inPyramid(x,z,1)&&!obstacles.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+0.9)&&!pads.some(p=>Math.hypot(p.x-x,p.z-z)<3.2)&&!hqs.some(q=>Math.hypot(q.x-x,q.z-z)<q.r+1.2);
+  }
+  WX.sandOk=sandOk;
+  function blowCrates(dt){
+    if(MP==='guest'||WX.wind<0.5||state!=='play')return;
+    const v=0.42*WX.wind*dt,dx=Math.cos(WX.dir)*v,dz=Math.sin(WX.dir)*v;
+    for(const c of crates){
+      if(c.state!=='ground'||(c.blown||0)>3)continue;
+      const nx=c.x+dx,nz=c.z+dz;if(!sandOk(nx,nz))continue;
+      c.x=nx;c.z=nz;c.blown=(c.blown||0)+v;c.y=hgt(nx,nz)+0.5;c.m.position.set(c.x,c.y,c.z);WX.blown=(WX.blown||0)+v;
+    }
+  }
 
   /* ---------- Every frame ---------- */
   let splashT=0,acc=0;
   function step(dt){
-    const s=W.s,kind=W.kind,fine=gfxFine(),rain=kind==='regen'&&s>0.02,blizzard=kind==='schnee'&&W.storm&&s>0.02;
+    const s=W.s,kind=W.kind,fine=gfxFine(),rain=kind==='regen'&&s>0.02,sand=kind==='sand'&&s>0.02,blizzard=(kind==='schnee'&&W.storm||sand)&&s>0.02;
     // far islands and horizon mountains have no fog of their own; in thick weather they would float in the haze
     {const far=scene.fog.far>115;if(far!==WX.farShown){WX.farShown=far;for(const r of FARS)r.visible=far;}}
-    WX.wind=(kind==='regen'||kind==='schnee'||kind==='asche')?s*(W.storm?1:0.45):0;
+    WX.wind=(kind==='regen'||kind==='schnee'||kind==='asche'||kind==='sand')?s*(W.storm?1:0.45)*(kind==='sand'?1.3:1):0;
+    if(DESERT)blowCrates(dt);
     // wet: rises with the rain, dries off slowly afterwards
     const wantWet=kind==='regen'?s:0;WX.wet+=(wantWet-WX.wet)*Math.min(1,dt*(wantWet>WX.wet?0.25:0.035));if(WX.wet<0.003)WX.wet=0;
     for(const o of shiny){o.m.shininess=o.sh+WX.wet*70;o.m.specular.copy(o.sp).lerp(WET_SP,WX.wet*0.75);}
@@ -184,10 +217,10 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
     if(streaks.visible){
       const n=Math.floor((fine?SN:SN*0.42)*(blizzard?1:Math.min(1,0.45+s*0.6))),cx=camera.position.x,cz=camera.position.z,cy=Math.min(camera.position.y,22);
       const ux=Math.cos(WX.dir),uz=Math.sin(WX.dir);
-      sMat.color.setHex(blizzard?0xffffff:0xc9d8ea);sMat.opacity=(blizzard?0.85:0.55)*Math.min(1,s*1.2);
+      sMat.color.setHex(sand?0xe0bd82:blizzard?0xffffff:0xc9d8ea);sMat.opacity=(sand?0.7:blizzard?0.85:0.55)*Math.min(1,s*1.2);
       for(let i=0;i<n;i++){
         let vx,vy,vz,L;
-        if(blizzard){const v=15+(i%6)*2.2;vx=ux*v;vz=uz*v+Math.sin(gameT*2+i)*1.5;vy=-2.5-(i%4)*0.6;L=0.05;}
+        if(blizzard){const v=(sand?21:15)+(i%6)*2.2;vx=ux*v;vz=uz*v+Math.sin(gameT*2+i)*1.5;vy=-2.5-(i%4)*0.6;L=0.05;}
         else{const v=24+(i%7);vx=ux*(2+WX.wind*7);vz=uz*(2+WX.wind*7);vy=-v;L=0.03;}
         let x=sp[i*3]+vx*dt,y=sp[i*3+1]+vy*dt,z=sp[i*3+2]+vz*dt;
         if(y<-3||Math.abs(x-cx)>27||Math.abs(z-cz)>27){
@@ -201,6 +234,13 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
       }
       sGeo.setDrawRange(0,n*2);sGeo.attributes.position.needsUpdate=true;WX.streaks=n;
     }
+    // sand veils
+    {const on=sand&&W.storm,n=fine?VN:6,cx=camera.position.x,cz=camera.position.z,cy=camera.position.y,ux=Math.cos(WX.dir),uz=Math.sin(WX.dir);
+     for(let i=0;i<veils.length;i++){const q=veils[i],vis=on&&i<n;q.m.visible=vis;if(!vis)continue;
+       q.x+=ux*12*dt;q.z+=uz*12*dt;
+       if(Math.abs(q.x-cx)>32||Math.abs(q.z-cz)>32){q.x=cx-ux*28+rand(-20,20);q.z=cz-uz*28+rand(-20,20);}
+       q.m.position.set(q.x,Math.min(cy-2,hgt(q.x,q.z)+2+q.y),q.z);q.m.scale.set(q.s*1.6,q.s*0.8,1);
+       q.m.material.opacity=Math.min(1,s*1.2)*(0.22+0.1*Math.sin(gameT*0.8+q.ph));}}
     // rings on water and in puddles
     let live=0;
     if(rain&&fine&&player){
@@ -247,17 +287,21 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
     const len=AC.sampleRate*3,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
     for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
     const mk=(type,f,q)=>{const src=AC.createBufferSource();src.buffer=buf;src.loop=true;const fl=AC.createBiquadFilter();fl.type=type;fl.frequency.value=f;fl.Q.value=q;
-      const g=AC.createGain();g.gain.value=0;src.connect(fl);fl.connect(g);g.connect(natureOut||master);src.start(AC.currentTime,Math.random()*2.5);return g;};
-    return {hiss:mk('bandpass',2400,0.3),patter:mk('lowpass',800,0.4),wind:mk('lowpass',380,0.9)};
+      const g=AC.createGain();g.gain.value=0;src.connect(fl);fl.connect(g);g.connect(natureOut||master);src.start(AC.currentTime,Math.random()*2.5);g._f=fl;return g;};
+    const b={hiss:mk('bandpass',2400,0.3),patter:mk('lowpass',800,0.4),wind:mk('lowpass',380,0.9)};
+    if(DESERT){b.howl=mk('bandpass',620,7);b.howlF=b.howl._f;}
+    return b;
   }
   function sounds(dt){
     if(typeof AC==='undefined'||!AC||!master||AC.state!=='running')return;
     if(!bed)bed=mkBed();
     bedT-=dt;if(bedT>0)return;bedT=0.25;
     const on=(state==='play'||state==='pause')&&soundOn,k=state==='pause'?0.4:1,s=W.s,t=AC.currentTime;
-    const rain=on&&W.kind==='regen'?s*k:0,blow=on&&(W.kind==='schnee'||W.storm)?s*k*(W.kind==='schnee'?(W.storm?1:0.4):0.5):0;
+    const rain=on&&W.kind==='regen'?s*k:0,blow=on&&(W.kind==='schnee'||W.kind==='sand'||W.storm)?s*k*(W.kind==='schnee'||W.kind==='sand'?(W.storm?1:0.45):0.5):0;
     const gust=0.7+0.3*Math.sin(gameT*0.9)*Math.sin(gameT*0.37+1);
     bed.hiss.gain.setTargetAtTime(rain*0.05,t,0.6);bed.patter.gain.setTargetAtTime(rain*0.07,t,0.6);bed.wind.gain.setTargetAtTime(blow*0.13*gust,t,0.8);
+    // the sandstorm howls: a narrow band of wind noise that slides up and down with the gusts
+    if(bed.howl){const h=on&&W.kind==='sand'?s*k:0;bed.howl.gain.setTargetAtTime(h*0.11*gust,t,0.7);bed.howlF.frequency.setTargetAtTime(480+320*gust+120*Math.sin(gameT*0.23),t,0.6);}
     // a thunderstorm grumbles in the distance now and then, not all the time
     if(state==='play'&&soundOn&&W.storm&&W.kind==='regen'&&s>0.5){rumbleT-=0.25;
       if(rumbleT<=0){rumbleT=rand(12,30);try{playSound(AC,noiseBuf,'grummeln',rand(0.35,0.6),natureOut||master);}catch(e){}WX.rumbles=(WX.rumbles||0)+1;}}

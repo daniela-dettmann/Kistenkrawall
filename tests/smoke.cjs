@@ -91,6 +91,54 @@ async function main() {
   // the new menu: „Spielen“ opens the start screen, „Los geht's“ starts the round
   const startRound = async p => { if (await p.isVisible('#playBtn')) await p.click('#playBtn', { force: true }); await p.click('#startBtn', { force: true }); };
   const openPlay = async p => { await p.waitForSelector('#playBtn', { state: 'visible' }); await p.click('#playBtn', { force: true }); };
+  // shared checks for the maps with buildings (Stadt, Flughafen, Wüste): map choice, no crate on a roof, routes, round, shots
+  async function urbanMapChecks(page, m, name) {
+    await page.goto(base + '?normal');
+    await openPlay(page);
+    await Promise.all([page.waitForNavigation(), page.click('#mapSeg [data-m="' + m + '"]', { force: true })]);
+    await page.waitForSelector('#startBtn', { state: 'visible' });
+    check(await page.evaluate(m => MAP === m && URBAN && URB.boxes.length >= 17 && localStorage.getItem('kk-map') === m, m), name + ': Kartenwahl, Gebäude stehen');
+    check(await page.evaluate(() => {
+      // crates never land on a roof: 600 drop spots, and a crate the wind pushes towards a house stays on the ground
+      for (let i = 0; i < 600; i++) { const sp = dropSpot(DROPS[i % 2], i % 3 ? 1 : -1, i % 7 === 0); if (!urbanFree(sp.x, sp.z, 1)) return false; }
+      DN.setWeather('regen', true, 1); DN.wx.s = 1; updateMood(0.05); const b = URB.boxes[0];
+      const c = spawnCrate(b.x0 - 1.4, (b.z0 + b.z1) / 2, true, false, 'blau'); WX.dir = 0;
+      for (let i = 0; i < 200; i++) wxCrate(c, 0.1);
+      const ok = urbanFree(c.x, c.z, 1); removeCrate(c); DN.setWeather('klar', false); DN.wx.s = 0; return ok;
+    }), name + ': Kisten landen nie auf Dächern, auch nicht durch Wind');
+    check(await page.evaluate(() => {
+      // every unit, on foot and in a tank, from both bases to every drop zone, the gold spot, the pads and the enemy HQ: arrives, never inside a building
+      const goals = [];
+      for (const zs of URB.zones.concat([URB.gold])) for (const z of zs) goals.push({ x: (z.x0 + z.x1) / 2, z: (z.z0 + z.z1) / 2 });
+      goals.push({ x: hqs[1].x, z: hqs[1].z + 4 }, { x: pads[0].x, z: pads[0].z }, { x: pads[1].x, z: pads[1].z });
+      for (const kind of [undefined, 'tank']) for (const team of [0, 1]) for (const g of goals) {
+        const B = BASES[team], u = spawnUnit(team, B.x + 2, B.z + (team ? 3 : -3), 'kaempfer', kind); let i = 0, inside = 0;
+        const gg = navNearest(navGrid(kind ? 1 : 0), navCell(g.x), navCell(g.z)), gx = NAV.O + gg[0] + 0.5, gz = NAV.O + gg[1] + 0.5;
+        for (; i < 4000; i++) { if (moveToward(u, gx, gz, 0.05, ALLY, 1.6)) break; resolve(u); if (!urbanFree(u.x, u.z, (u.r || 0.45) - 0.05)) inside++; }
+        u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
+        if (i >= 4000 || inside) return false;
+      }
+      return true;
+    }), name + ': Wegfindung: Blechling und Panzer beider Teams kommen überall hin, durch Gassen, Tore und um Gebäude');
+    await startRound(page);
+    await page.waitForTimeout(1500);
+    check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && renderer.info.render.calls < 500), name + ': Runde läuft, unter 500 Zeichenvorgänge pro Bild');
+    check(await page.evaluate(() => {
+      // a house stops direct shots; the mortar lobs over it (the shots themselves are followed, other units may join the fight)
+      peaceT = 0; const b = URB.boxes.find(b => ['house', 'hangar', 'gate', 'pyr'].includes(b.k) && b.x0 > -40 && b.x1 < 40), cz = (b.z0 + b.z1) / 2;
+      const a = spawnUnit(0, b.x0 - 2, cz, 'kaempfer'), e = spawnUnit(1, b.x1 + 2, cz, 'kaempfer');
+      const pin = () => { a.x = b.x0 - 2; a.z = cz; e.x = b.x1 + 2; e.z = cz; };
+      pin(); a.cd = 0; const before = new Set(shots); fire(a, Math.PI / 2); const mine = shots.filter(s => !before.has(s)); let maxX = -99;
+      for (let i = 0; i < 60; i++) { update(0.02); pin(); for (const s of mine) if (shots.includes(s)) maxX = Math.max(maxX, s.x); }
+      const direct = mine.length > 0 && mine.every(s => !shots.includes(s)) && maxX < b.x1 && urbanBlocked(a.x, a.z, e.x, e.z);
+      a.alive = false; const mo = spawnUnit(0, b.x0 - 2, cz, 'fahrzeug', 'moerser'); e.hp = e.maxHp; const hp2 = e.hp;
+      mo.cd = 0; mo.h = mo.hull = Math.PI / 2; const b2 = new Set(shots); fire(mo, Math.PI / 2, 1, e); const shell = shots.find(s => !b2.has(s));
+      for (let i = 0; i < 200; i++) { update(0.02); mo.x = b.x0 - 2; mo.z = cz; e.x = b.x1 + 2; e.z = cz; }
+      const lob = !!shell && shell.arc && shell.x1 > b.x1 && !shots.includes(shell) && e.hp < hp2;
+      for (const u of [a, e, mo]) { u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1); }
+      return direct && lob;
+    }), name + ': Gebäude halten Schüsse auf, nur der Mörser schießt darüber');
+  }
   const clickHidden = (p, sel) => p.evaluate(sel => document.querySelector(sel).click(), sel);
   if (part(1)) {   // Spiel
   console.log('Spiel');
@@ -439,53 +487,7 @@ async function main() {
 
   if (part(3)) {   // Flughafen und Stadt
   console.log('Flughafen und Stadt');
-  for (const [m, name] of [['stadt', 'Stadt'], ['flughafen', 'Flughafen']]) {
-    await page.goto(base + '?normal');
-    await openPlay(page);
-    await Promise.all([page.waitForNavigation(), page.click('#mapSeg [data-m="' + m + '"]', { force: true })]);
-    await page.waitForSelector('#startBtn', { state: 'visible' });
-    check(await page.evaluate(m => MAP === m && URBAN && URB.boxes.length >= 17 && localStorage.getItem('kk-map') === m, m), name + ': Kartenwahl, Gebäude stehen');
-    check(await page.evaluate(() => {
-      // crates never land on a roof: 600 drop spots, and a crate the wind pushes towards a house stays on the ground
-      for (let i = 0; i < 600; i++) { const sp = dropSpot(DROPS[i % 2], i % 3 ? 1 : -1, i % 7 === 0); if (!urbanFree(sp.x, sp.z, 1)) return false; }
-      DN.setWeather('regen', true, 1); DN.wx.s = 1; updateMood(0.05); const b = URB.boxes[0];
-      const c = spawnCrate(b.x0 - 1.4, (b.z0 + b.z1) / 2, true, false, 'blau'); WX.dir = 0;
-      for (let i = 0; i < 200; i++) wxCrate(c, 0.1);
-      const ok = urbanFree(c.x, c.z, 1); removeCrate(c); DN.setWeather('klar', false); DN.wx.s = 0; return ok;
-    }), name + ': Kisten landen nie auf Dächern, auch nicht durch Wind');
-    check(await page.evaluate(() => {
-      // every unit, on foot and in a tank, from both bases to every drop zone, the gold spot, the pads and the enemy HQ: arrives, never inside a building
-      const goals = [];
-      for (const zs of URB.zones.concat([URB.gold])) for (const z of zs) goals.push({ x: (z.x0 + z.x1) / 2, z: (z.z0 + z.z1) / 2 });
-      goals.push({ x: hqs[1].x, z: hqs[1].z + 4 }, { x: pads[0].x, z: pads[0].z }, { x: pads[1].x, z: pads[1].z });
-      for (const kind of [undefined, 'tank']) for (const team of [0, 1]) for (const g of goals) {
-        const B = BASES[team], u = spawnUnit(team, B.x + 2, B.z + (team ? 3 : -3), 'kaempfer', kind); let i = 0, inside = 0;
-        const gg = navNearest(navGrid(kind ? 1 : 0), navCell(g.x), navCell(g.z)), gx = NAV.O + gg[0] + 0.5, gz = NAV.O + gg[1] + 0.5;
-        for (; i < 4000; i++) { if (moveToward(u, gx, gz, 0.05, ALLY, 1.6)) break; resolve(u); if (!urbanFree(u.x, u.z, (u.r || 0.45) - 0.05)) inside++; }
-        u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
-        if (i >= 4000 || inside) return false;
-      }
-      return true;
-    }), name + ': Wegfindung: Blechling und Panzer beider Teams kommen überall hin, durch Gassen, Tore und um Gebäude');
-    await startRound(page);
-    await page.waitForTimeout(1500);
-    check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && renderer.info.render.calls < 500), name + ': Runde läuft, unter 500 Zeichenvorgänge pro Bild');
-    check(await page.evaluate(() => {
-      // a house stops direct shots; the mortar lobs over it (the shots themselves are followed, other units may join the fight)
-      peaceT = 0; const b = URB.boxes.find(b => ['house', 'hangar', 'gate'].includes(b.k) && b.x0 > -40 && b.x1 < 40), cz = (b.z0 + b.z1) / 2;
-      const a = spawnUnit(0, b.x0 - 2, cz, 'kaempfer'), e = spawnUnit(1, b.x1 + 2, cz, 'kaempfer');
-      const pin = () => { a.x = b.x0 - 2; a.z = cz; e.x = b.x1 + 2; e.z = cz; };
-      pin(); a.cd = 0; const before = new Set(shots); fire(a, Math.PI / 2); const mine = shots.filter(s => !before.has(s)); let maxX = -99;
-      for (let i = 0; i < 60; i++) { update(0.02); pin(); for (const s of mine) if (shots.includes(s)) maxX = Math.max(maxX, s.x); }
-      const direct = mine.length > 0 && mine.every(s => !shots.includes(s)) && maxX < b.x1 && urbanBlocked(a.x, a.z, e.x, e.z);
-      a.alive = false; const mo = spawnUnit(0, b.x0 - 2, cz, 'fahrzeug', 'moerser'); e.hp = e.maxHp; const hp2 = e.hp;
-      mo.cd = 0; mo.h = mo.hull = Math.PI / 2; const b2 = new Set(shots); fire(mo, Math.PI / 2, 1, e); const shell = shots.find(s => !b2.has(s));
-      for (let i = 0; i < 200; i++) { update(0.02); mo.x = b.x0 - 2; mo.z = cz; e.x = b.x1 + 2; e.z = cz; }
-      const lob = !!shell && shell.arc && shell.x1 > b.x1 && !shots.includes(shell) && e.hp < hp2;
-      for (const u of [a, e, mo]) { u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1); }
-      return direct && lob;
-    }), name + ': Gebäude halten Schüsse auf, nur der Mörser schießt darüber');
-  }
+  for (const [m, name] of [['stadt', 'Stadt'], ['flughafen', 'Flughafen']]) await urbanMapChecks(page, m, name);
   check(await page.evaluate(() => URB.flyer && URB.boxes.filter(b => b.k === 'plane').length === 2 && URB.boxes.some(b => b.k === 'tower')), 'Flughafen: Flugzeuge, Tower, Flugzeug am Himmel');
   await page.evaluate(() => pause(true));
   await page.goto(base + '?normal&karte=insel');
@@ -504,6 +506,68 @@ async function main() {
     check(await page.evaluate(m => XMAS && MAP === m && state === 'play' && !!URB.lights && URB.lights.count > 60 && crates.every(c => c.bow) && (m !== 'stadt' || obstacles.some(o => o.x === 0 && o.z === 0)), m), 'Weihnachtsedition: ' + (m === 'stadt' ? 'Stadt mit Baum auf dem Marktplatz' : 'Flughafen') + ', Lichterketten, Geschenkkisten');
     await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
   }
+  }
+  if (part(4)) {   // Wüste
+  console.log('Wüste');
+  await urbanMapChecks(page, 'wueste', 'Wüste');
+  check(await page.evaluate(() => {
+    // the pyramid: four blocks, a cross-shaped passage straight through it, for Blechlinge and tanks alike
+    const P = URB.pyr, g0 = navGrid(0), g1 = navGrid(1);
+    const through = navLine(g0, 0, 18, 0, -18) && navLine(g0, 18, 0, -18, 0) && navLine(g1, 0, 18, 0, -18) && navLine(g1, 18, 0, -18, 0);
+    const blocks = URB.boxes.filter(b => b.k === 'pyr').length === 4 && !urbanFree(8, 8) && urbanFree(0, 8) && urbanFree(8, 0) && urbanFree(0, 0);
+    return through && blocks && P.r === 14 && URB.boxes.filter(b => b.k === 'obelisk').length === 4 && !!URB.sphinx && URB.camels.length === 4 && birds.every(b => !b.g.visible);
+  }), 'Wüste: Pyramide mit Kreuzgang (auch für Panzer), Ruinen, Obelisken, Sphinx, Kamele statt Möwen');
+  check(await page.evaluate(() => {
+    // crates never land in the pyramid, not on a chute in the wind and not blown over the sand in a sandstorm
+    for (let i = 0; i < 800; i++) { const sp = dropSpot(DROPS[i % 2], i % 3 ? 1 : -1, i % 5 === 0); if (inPyramid(sp.x, sp.z) || !urbanFree(sp.x, sp.z, 1)) return false; }
+    DN.wsel = 'schnee'; DN.applySel(); DN.wx.s = 1; updateMood(0.05);   // „Schneesturm“ is a steady sandstorm in the desert
+    const out = [];
+    for (const [x, z, dir] of [[0, 17, -Math.PI / 2], [17, 0, Math.PI], [-17, 5, 0], [-10, -17, Math.PI / 2]]) {
+      WX.dir = dir;   // the wind blows straight at the pyramid
+      const c = spawnCrate(x, z, true, false, 'blau'); for (let i = 0; i < 200; i++) wxCrate(c, 0.1);
+      const g = spawnCrate(x, z, true, false, 'gelb'); g.state = 'ground'; g.y = hgt(x, z) + 0.5; const g0 = { x: g.x, z: g.z };
+      const was = state; state = 'play'; for (let i = 0; i < 300; i++) updateMood(0.05); state = was;
+      out.push(!inPyramid(c.x, c.z) && !inPyramid(g.x, g.z) && urbanFree(g.x, g.z, 1) && Math.hypot(g.x - g0.x, g.z - g0.z) < 3.4);
+      removeCrate(c); removeCrate(g);
+    }
+    // and in the open the storm really moves a crate
+    WX.dir = 0; const f = spawnCrate(-30, -36, true, false, 'blau'); f.state = 'ground'; const fx = f.x;
+    const was = state; state = 'play'; for (let i = 0; i < 300; i++) updateMood(0.05); state = was;
+    const moved = f.x - fx > 1; removeCrate(f);
+    DN.wsel = 'zufall'; DN.setWeather('klar', false); DN.wx.s = 0;
+    return out.every(Boolean) && moved;
+  }), 'Wüste: Kisten landen und verwehen nie in die Pyramide, der Sandsturm verweht sie ein Stück');
+  check(await page.evaluate(() => {
+    // the sandstorm comes with a warning: a light haze and wind first, the full storm about 8 s later
+    DN.wsel = 'zufall'; const far0 = scene.fog.far; WX.sandStorm();
+    const warn = DN.wx.want === 'sand' && DN.wx.storm && DN.wx.lvl < 0.5 && /Sandsturm/.test(document.querySelector('#toast') ? document.querySelector('#toast').textContent : 'Sandsturm');
+    for (let i = 0; i < 100; i++) DN.roll(0.1, true);
+    const full = DN.wx.lvl === 1;
+    DN.wx.s = 1; updateMood(0.05);
+    const look = scene.fog.far < far0 * 0.5 && WX.streakMesh.visible && WX.veils.some(v => v.m.visible) && WX.wind > 1;
+    // the bots: shorter sight, patrols wait in cover
+    const u = spawnUnit(0, 10, 30, 'kaempfer'); u.weapon = 'krachrohr'; u.role = 'kaempfer'; peaceT = 0; decide(u, aiParams(0));
+    const cover = sandK() > 0.9 && (u.plan === 'cover' || u.plan === 'fight' || u.plan === 'defend');
+    u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
+    DN.setWeather('klar', false); DN.wx.s = 0; updateMood(0.05);
+    return warn && full && look && cover && document.querySelector('#wxSeg [data-w="schnee"]').textContent === 'Sandsturm';
+  }), 'Wüste: Sandsturm mit Vorwarnung, Sandschleier, kaum Sicht, KI sucht Deckung');
+  await page.evaluate(() => pause(true));
+  await page.goto(base + '?normal&karte=insel');
+  await openPlay(page);
+  await page.waitForSelector('#continueBtn', { state: 'visible' });
+  check((await page.textContent('#continueInfo')).startsWith('Wüste · '), 'Spielstand merkt die Wüste');
+  await Promise.all([page.waitForNavigation(), page.click('#continueBtn', { force: true })]);
+  await page.waitForFunction(() => typeof state !== 'undefined' && state === 'pause', null, { timeout: 60000 }).catch(() => {});
+  { const r = await page.evaluate(() => [MAP, state, units.length]); check(r[0] === 'wueste' && r[1] === 'pause' && r[2] >= 3, 'Weiterspielen lädt die Wüste und setzt fort (' + r.join(', ') + ')'); }
+  await page.evaluate(() => { endGame(false, 'Test.'); });
+  await page.goto(base + '?weihnachten&karte=wueste');
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  await startRound(page);
+  await page.waitForTimeout(1200);
+  check(await page.evaluate(() => XMAS && !XSNOW && !SNOW.on && MAP === 'wueste' && state === 'play' && !!URB.lights && URB.lights.count > 150 && crates.every(c => c.bow)
+    && URB.camels.every(c => c.g.children.length > 9) && DN.kind === 'sand'), 'Weihnachtsedition: Wüste ohne Schnee, Lichterketten an Pyramide, Palmen und Obelisken, Geschenkkisten, Kamele mit Mützen');
+  await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
   }
   if (part(4)) {   // Vulkan
   console.log('Vulkan');

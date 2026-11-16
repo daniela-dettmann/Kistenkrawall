@@ -265,7 +265,7 @@ function update(dt){
     const y=hgt(s.x,s.z)+1.1;s.m.position.set(s.x,y,s.z);
     if(s.rocket){s.trail-=dt;if(s.trail<=0){s.trail=.04;puffs(s.x,y,s.z,1,0xdedad0);}}
     let hit=s.life<=0||Math.abs(s.x)>LIM+2||Math.abs(s.z)>LIM+2;
-    if(!hit)for(const o of obstacles){if(Math.hypot(o.x-s.x,o.z-s.z)<o.r*0.8){hit=true;break;}}
+    if(!hit)for(const o of obstacles){if(!o.pond&&Math.hypot(o.x-s.x,o.z-s.z)<o.r*0.8){hit=true;break;}}   // shots fly over the oasis ponds
     if(!hit&&URBAN&&!urbanFree(s.x,s.z))hit=true;   // walls of houses, hangars, planes
     if(!hit)for(const u of units){if(!u.alive||u.team===s.team)continue;if(Math.hypot(u.x-s.x,u.z-s.z)<u.r+0.17){hit=true;if(!s.rocket){damageUnit(u,s.dmg,s.owner);sparks(s.x,y,s.z,u.shield>0?3:5,u.shield>0?0x9fe6ff:null);s.sparked=true;}break;}}
     if(!hit){const h=hqs[1-s.team];if(!h.dead&&Math.hypot(h.x-s.x,h.z-s.z)<h.r){hit=true;if(!s.rocket){damageHQ(h,s.dmg);sparks(s.x,y+0.4,s.z,5);s.sparked=true;}}}
