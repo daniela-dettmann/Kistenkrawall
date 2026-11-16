@@ -108,8 +108,10 @@ const URB={boxes:[],zones:[[],[]],gold:[],routes:null,kind:MAP};
     URB.craters=[{x:0,z:0,r:11,d:1.5},{x:-30,z:16,r:6,d:1.1},{x:-30,z:-16,r:6,d:1.1}];
     URB.domes=[];for(const s of [1,-1])URB.domes.push({x:-16,z:s*45,r:5.5,main:true},{x:-27,z:s*37,r:3.2});
     const sq=(x,z,r,w)=>({x0:x-r,x1:x+r,z0:z-r,z1:z+r,w});
-    URB.zones[0]=[sq(0,20,1.5,2),sq(-30,16,2,1.5),sq(17.5,23.5,1.3,1.5)];
-    URB.zones[1]=[sq(0,-20,1.5,2),sq(-30,-16,2,1.5),sq(17.5,-23.5,1.3,1.5)];
+    // blue on the west side (small craters), yellow on the east side (boulders), both on both halves of the field,
+    // so each colour is as close to one base as to the other; the spots between base and crater are shared
+    URB.zones[0]=[{x0:-1.6,x1:-0.2,z0:18.5,z1:21.5,w:1},{x0:-1.6,x1:-0.2,z0:-21.5,z1:-18.5,w:1},sq(-30,16,2,1.5),sq(-30,-16,2,1.5)];
+    URB.zones[1]=[{x0:0.2,x1:1.6,z0:18.5,z1:21.5,w:1},{x0:0.2,x1:1.6,z0:-21.5,z1:-18.5,w:1},sq(17.5,23.5,1.3,1.5),sq(17.5,-23.5,1.3,1.5)];
     URB.gold=[sq(0,0,3,1)];   // the big crater: the hotspot
     URB.routes=[[[-14,26],[-24,20],[-30,10]],[[14,28],[24,27],[44,22],[44,6]],[[-8,32],[8,32],[6,46],[-4,47]]];
   }else{
@@ -131,8 +133,10 @@ const URB={boxes:[],zones:[[],[]],gold:[],routes:null,kind:MAP};
       B(x-1.6,x+1.6,z-sz*3.6-0.6,z-sz*3.6+0.6,1.4,'rock');   // towards the middle line
       B(x-sx*4.6-0.6,x-sx*4.6+0.6,z-1.2,z+1.2,1.4,'rock');}   // towards the pyramid
     const sq=(x,z,r,w)=>({x0:x-r,x1:x+r,z0:z-r,z1:z+r,w});
-    URB.zones[0]=[{x0:-2.5,x1:2.5,z0:17,z1:21,w:2},sq(-30,25,1.3,1),sq(-30,-25,1.3,1)];
-    URB.zones[1]=[{x0:-2.5,x1:2.5,z0:-21,z1:-17,w:2},sq(30,25,1.3,1),sq(30,-25,1.3,1)];
+    // blue on the west side, yellow on the east side, each on both halves (as on the other maps): the two dunes of its
+    // side and its half of both entrances
+    URB.zones[0]=[{x0:-2.5,x1:-0.3,z0:17,z1:21,w:1},{x0:-2.5,x1:-0.3,z0:-21,z1:-17,w:1},sq(-30,25,1.3,1),sq(-30,-25,1.3,1)];
+    URB.zones[1]=[{x0:0.3,x1:2.5,z0:17,z1:21,w:1},{x0:0.3,x1:2.5,z0:-21,z1:-17,w:1},sq(30,25,1.3,1),sq(30,-25,1.3,1)];
     URB.gold=[{x0:-32,x1:-28,z0:-3,z1:3,w:1},{x0:28,x1:32,z0:-3,z1:3,w:1}];   // in front of the ruins, as far from one oasis as from the other
     URB.routes=[[[-14,30],[-22,18],[-30,8]],[[14,30],[22,18],[30,8]],[[-8,32],[8,32],[10,44],[-10,44]]];
     URB.ponds=[];for(const s of [1,-1])URB.ponds.push({x:13,z:s*45,r:4.2},{x:-15,z:s*44,r:3.2});   // oasis ponds behind each base
