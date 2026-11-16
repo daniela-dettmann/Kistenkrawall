@@ -56,7 +56,7 @@ if(XMAS)(function(){
   const V=(x,y,z)=>new THREE.Vector3(x,y,z);
 
   // Winter light: nearly white sun, bluish sky light and blue shadows, so the snow reads as snow and not as sand
-  if(!MOUNTAIN&&!VOLCANO){
+  if(XSNOW&&!MOUNTAIN){
     MOOD.sun=[new THREE.Color(0xfff6ec),new THREE.Color(0xffd6c2)];
     MOOD.sky=[new THREE.Color(0xdfeaff),new THREE.Color(0xd9d4ee)];
     MOOD.hor=[new THREE.Color(0xe6edf5),new THREE.Color(0xe9c4b4)];
@@ -66,7 +66,7 @@ if(XMAS)(function(){
   /* ---------- Gelände, Wasser, Gras, Schneewälle ---------- */
   scene.traverse(o=>{
     if(!o.isMesh)return;
-    if(!MOUNTAIN&&!VOLCANO&&o.material&&o.material.map===TX.ground&&o.geometry.attributes.color){
+    if(XSNOW&&!MOUNTAIN&&o.material&&o.material.map===TX.ground&&o.geometry.attributes.color){
       const p=o.geometry.attributes.position,col=o.geometry.attributes.color,snow=new THREE.Color(0xffffff),dirt=new THREE.Color(0xa99a86),deep=new THREE.Color(0xf4f8ff),c=new THREE.Color();
       for(let i=0;i<p.count;i++){
         const x=p.getX(i),z=p.getZ(i),h=p.getY(i);if(h<-1.05)continue;   // keep beach sand under water
@@ -286,7 +286,7 @@ if(XMAS)(function(){
   };
 
   /* ---------- Schneefall, Eisschollen, Weihnachtsmann am Himmel ---------- */
-  const SN=MOUNTAIN?0:1400,   // the mountain already has its own snow drift
+  const SN=MOUNTAIN||DESERT?0:1400,   // the mountain already has its own snow drift, the desert stays dry
   snowGeo=new THREE.BufferGeometry(),sp=new Float32Array(SN*3);
   for(let i=0;i<SN;i++){sp[i*3]=rand(-40,40);sp[i*3+1]=rand(0,30);sp[i*3+2]=rand(-40,40);}
   snowGeo.setAttribute('position',new THREE.BufferAttribute(sp,3));

@@ -71,7 +71,7 @@ function validEvent(e){
   if(!Array.isArray(e)||!str(e[0],6))return false;
   switch(e[0]){
     case 'b':return e.length===4&&num(e[1],-90,90)&&num(e[2],-90,90)&&num(e[3],0,10);
-    case 'wx':return e.length===3&&int(e[1],0,4)&&int(e[2],0,1);
+    case 'wx':return e.length===3&&int(e[1],0,5)&&int(e[2],0,1);
     case 'vp':return e.length===4&&int(e[1],0,2)&&num(e[2],-90,90)&&int(e[3],-1,1);
     case 'vb':return e.length===3&&num(e[1],-90,90)&&num(e[2],-90,90);
     case 'f':return e.length===4&&str(e[1],12,/^[a-z]+$/)&&typeof SND[e[1]]==='function'&&num(e[2],-200,200)&&num(e[3],-200,200);

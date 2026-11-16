@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 16. November 2026 · Live-Version auf `main`: `f737e1a` (PR #33: Testregel, Wetter-Zufall, vier Lautstärkeregler)
+Stand: 16. November 2026 · Live-Version auf `main`: `26879f2` (PR #34: Karten Flughafen und Stadt)
 
 ## Links
 
@@ -48,6 +48,7 @@ Stand: 16. November 2026 · Live-Version auf `main`: `f737e1a` (PR #33: Testrege
 | #32 | Browser-Test nur noch im Pull Request, in vier Teilen gleichzeitig, Testbrowser im Cache; Deploy ohne erneuten Test. Gewitter-Ton neu: Regenrauschen statt „tsch, tsch“, Donner nach Blitzkanal-Modell, leises Grummeln, Wind im Schneesturm; Vulkan-Grollen wieder eigenständig | gemergt |
 | #33 | CLAUDE.md: Umfang des lokalen Tests (voll vor dem ersten Push, bei Korrekturen nur betroffene Teile, außer bei Spielcode für mehrere Teile), erst mergen, wenn alle vier Testteile grün sind. Wetter „Zufall“ unabhängig von Bauruhe und Welle. Ton in vier Reglern: Gesamt, Musik, Effekte, Natur und Wetter | gemergt |
 | #34 | Auftrag „Zwei neue Karten“: Flughafen (Terminal mit drei Fluggastbrücken gegen vier Hangars mit drei Toren, Vorfeld mit zwei Flugzeugen, Rollfeld hinter Zaun über eine Rollbahn, Goldkisten meist dort) und Stadt (3 × 3 Häuserblöcke, Basen in gegenüberliegenden Ecken, Marktplatz, Park, Gasse); eckige Gebäude blockieren Laufen, Sicht und Schüsse, nur der Mörser schießt darüber; Wegfindung mit Raster und A*; Kisten nie auf Dächern; Häuser zwischen Kamera und Figur werden durchscheinend; Weihnachtsedition mit Lichterketten und Baum auf dem Marktplatz; Mehrspieler: Verbindung schließt erst, wenn die Abschiedsnachricht gesendet ist (der Gast blieb sonst manchmal im Spiel) | gemergt |
+| #35 | Auftrag „Wüste“: neue Karte mit zwei Oasen (Teiche, Palmen), großer Pyramide mit kreuzförmigem Tunnel (auch für Panzer), Ruinen, vier Dünen mit Felsen, Obelisken an den Eingängen, Sphinx und ferne Pyramiden am Rand, Kamele statt Möwen; Sandsturm mit Vorwarnung, Sandschleier, Heulen und verwehten Kisten (nie in die Pyramide); KI sieht im Sturm weniger weit, wartet mit dem Angriff und sucht Deckung; Weihnachtsedition ohne Schnee mit Lichterketten an Pyramide, Obelisken und Palmen, Kamele und Sphinx mit Mützen | gemergt |
 
 ## Was umgesetzt ist
 
@@ -172,15 +173,24 @@ Stand: 16. November 2026 · Live-Version auf `main`: `f737e1a` (PR #33: Testrege
 - FPS vorher und nachher für alle drei Schritte: nur auf dem iPhone messbar, Werte stehen noch aus.
 
 ### Karten: Flughafen und Stadt (`js/urban.js`, Grundrisse als Daten in `js/core.js`)
-- Kartenwahl im Spielstart mit Bildkarten für alle fünf Karten. Die Karte wird gemerkt und im Spielstand gespeichert; „Weiterspielen“ lädt sie.
+- Kartenwahl im Spielstart mit Bildkarten für alle Karten (seit #35 sechs). Die Karte wird gemerkt und im Spielstand gespeichert; „Weiterspielen“ lädt sie.
 - **Flughafen** (spiegelgleich, Team A oben, Team B unten): Terminal hinter der Basis von Team A, davor ein Gate-Gebäude mit drei Fluggastbrücken als 5 breite, überdachte Laufwege. Gegenüber vier Hangars mit Bogendach, zwischen ihnen drei gleich breite Tore. In der Mitte das Vorfeld mit zwei geparkten Flugzeugen (Rumpf und Tragflächen sind Deckung), Gepäckwagen, Tower am Westrand. Rechts das Rollfeld hinter einem Zaun, nur über die Rollbahn in der Mitte erreichbar; dort landen die meisten Goldkisten. Ab und zu startet ein Flugzeug am Himmel. Abweichung von der Skizze (mit Daniela abgestimmt): Terminal und Hangars liegen gegenüber statt nebeneinander, wie im Text des Auftrags.
 - **Stadt** (punktsymmetrisch): 3 × 3 Blöcke aus je bis zu vier aneinandergebauten Häusern (5 bis 8 m hoch, Fenster, Dachkanten, Schornsteine) mit 8 breiten Straßen und einer Ringstraße. Basis A oben links, Basis B unten rechts, Marktplatz mit Brunnen und vier Marktständen in der Mitte, Park mit Bäumen oben rechts, gegenüber unten links zwei Häuser mit einer 6 breiten Gasse dazwischen, Skyline außerhalb. Kisten landen auf dem Marktplatz, an zwei Straßenstellen, im Park und in der Gasse.
 - Gebäude blockieren Laufen, Sicht und direkte Schüsse vollständig; der Mörser schießt in hohem Bogen darüber. Die KI schießt nur bei freier Sicht und geht sonst um das Gebäude herum, auch der Turm am Hauptquartier zielt nur auf Sichtbares.
 - Wegfindung: ein Raster aus 1-Meter-Feldern, eines für Blechlinge und eines mit mehr Abstand für Fahrzeuge; A* mit Glättung, neu gerechnet, wenn sich das Ziel bewegt oder nach 3 Sekunden. Ziele in Gebäuden werden auf das nächste freie Feld gelegt. Geprüft: Blechling und Panzer beider Teams erreichen jede Abwurfstelle, das Rollfeld, die Stapelplätze und das gegnerische Hauptquartier, ohne je in ein Gebäude zu geraten; in simulierten 7,5 Minuten hing niemand fest.
 - Kisten landen nie auf Dächern; treibt der Wind eine Fallschirmkiste auf ein Gebäude zu, bleibt sie davor. Geschütztürme lassen sich nicht an Gebäuden, in Toren, Fluggastbrücken oder der Gasse bauen.
 - Ein Haus zwischen Kamera und eigener Figur wird durchscheinend.
-- Tageszeit und Wetter wie überall (Regen und Gewitter; in der Weihnachtsedition Schnee). Pfützen und Schneeverwehungen liegen nur auf freiem Boden.
+- Tageszeit und Wetter wie überall (Regen und Gewitter; in der Weihnachtsedition Schnee; in der Wüste Sandsturm). Pfützen und Schneeverwehungen liegen nur auf freiem Boden.
 - Weihnachtsedition: Lichterketten an allen Dachkanten, ein großer geschmückter Baum statt des Brunnens auf dem Marktplatz, Schnee auf Straßen und Vorfeld, weiße Dächer; Lebkuchen-Hauptquartiere und Geschenkkisten wie auf allen Karten.
+
+### Karte Wüste (Auftrag „Wüste“; Grundriss in `js/core.js`, Modelle in `js/urban.js`)
+- Kartenwahl „Wüste“ im Spielstart, gemerkt und im Spielstand gespeichert. Technisch wie Flughafen und Stadt: Hindernisse als Kästen, Wegfindung mit Raster und A*, Hindernisse halten Sicht und direkte Schüsse auf, der Mörser schießt darüber.
+- Aufbau (spiegelgleich, Oase A oben, Oase B unten; die Skizze ist um 90° gedreht, damit die Basen wie auf den anderen Karten liegen): zwei Oasen mit je zwei Teichen, Palmen, Schilf und grünem Rand hinter den Basen. In der Mitte eine Pyramide (28 × 28, 13 hoch, goldene Spitze), durch die ein kreuzförmiger Tunnel führt (6 breit, Nord–Süd und Ost–West, mit Eingängen, Sturz und Pfeilern); auch Panzer passen hindurch. Links und rechts Ruinen aus Mauerresten, Säulen und einer umgestürzten Säule, vier flache Dünen mit Felsen als Deckung, vor den Eingängen zu den Oasen je zwei Obelisken mit Hieroglyphen und Goldspitze.
+- Deko (auf Danielas Wunsch, damit es weniger leer wirkt): Sphinx außerhalb des Spielfelds im Westen, die zur Pyramide schaut, drei ferne Pyramiden, Kakteen, lose Steinblöcke, trockene Büsche, eine Kamelkarawane am Horizont statt der Möwen.
+- Kisten: vor den beiden Pyramideneingängen zu den Oasen, in allen vier Dünen, Goldkisten vor den Ruinen. Nie in der Pyramide oder ihrem Tunnel, auch nicht durch Wind oder Sturm. Jede Oase ist von ihren Stellen gleich weit entfernt wie die andere.
+- Sandsturm (`js/weather.js`): Bei „Zufall“ kommt in der Wüste statt Regen meist ein Sandsturm, sonst leichter Flugsand. Vorwarnung: Meldung „Ein Sandsturm zieht auf – such Deckung!“, der Himmel wird gelblich, der Wind frischt auf; etwa 8 Sekunden später der volle Sturm mit gelbbraunem Nebel (Sicht stark eingeschränkt), waagerecht treibenden Sandstreifen, großen Sandschleiern vor der Kamera und heulendem Wind. Herumliegende Kisten werden bis etwa 3 Einheiten verweht, aber nur über freien Sand: nie in die Pyramide, ins Wasser, an eine Wand, auf einen Stapelplatz oder vom Feld. Der Wetterknopf „Schneesturm“ heißt in der Wüste „Sandsturm“.
+- KI im Sturm: sieht nur noch gut halb so weit, Petrol wartet mit dem Angriff, solange der Sturm stark ist (höchstens 25 Sekunden länger), Angreifer rücken mit kurzen Pausen vor, Patrouillen warten hinter Felsen, Ruinen und der Pyramide.
+- Weihnachtsedition: kein Schnee (die Wüste bleibt sandig), Lichterketten an den Kanten der Pyramide, an Obelisken, Säulen und Palmen, Weihnachtsmützen auf Kamelen und Sphinx, Lebkuchen-Hauptquartiere, Geschenkkisten und Schlitten wie überall.
 
 ### Tag, Nacht und Wetter (alle Karten)
 - Ein Tag dauert 8 Minuten. Die Runde beginnt am Vormittag, nach gut dreieinhalb Minuten kommt das Abendrot, dann etwa drei Minuten Nacht, dann der Morgen. Die erste Welle fällt bei sechs Minuten Bauruhe in die Nacht.
@@ -238,6 +248,7 @@ Bei jedem Pull Request startet GitHub das Spiel in einem echten Browser (vier Te
 - Grafik: Standard „Schön“, Bild wird mit Bildeffekten gezeichnet (nicht schwarz), Uferschaum und Schattenflecken vorhanden, Explosion mit Druckwelle und Funken, Umschalten auf „Schnell“ wird gemerkt
 - Tag, Nacht und Wetter: Beginn am Tag, Nacht folgt der Spielzeit (Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht), Regen und Gewitter, Aufklaren, Tageszeit „Tag“ und „Nacht“
 - Flughafen und Stadt: Kartenwahl, Kisten nie auf Dächern (600 Abwurfstellen und Wind), Wegfindung für Blechling und Panzer beider Teams zu allen wichtigen Stellen, Runde läuft unter 500 Zeichenvorgängen, Gebäude halten direkte Schüsse auf und der Mörser schießt darüber, Flugzeuge und Tower, Spielstand mit Flughafen, Weihnachtsedition auf beiden Karten
+- Wüste: Kartenwahl, Kisten nie in der Pyramide (800 Abwurfstellen, Wind an Fallschirmkisten, Sandsturm auf liegende Kisten von allen vier Seiten), Sandsturm verweht Kisten im Freien, Wegfindung für Blechling und Panzer beider Teams, Tunnel durch die Pyramide in beide Richtungen auch für Panzer, Pyramide hält Schüsse auf und der Mörser schießt darüber, Obelisken, Sphinx, Kamele, Sandsturm mit Vorwarnung, Sandschleier und KI in Deckung, Spielstand mit Wüste, Weihnachtsedition ohne Schnee mit Lichterketten und Mützen
 - Wetter: Wetterwahl Regen (Streifen, nass, Pfützen), Gewitter mit Blitzeinschlag (Baum angekohlt), Schneesturm (waagerecht, Nebel, Wind), Klar; Zufall: Wetter kommt und geht zufällig, in der Bauruhe wie in der Welle; Wind versetzt Fallschirmkisten etwas, nie ins Wasser
 - Tonstudio und Update-Hinweis
 
@@ -256,8 +267,8 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 | `js/mountain.js` | Gebirge: Licht, Berge am Horizont, Schneetreiben, Adler (Höhenprofil in `js/core.js`) |
 | `js/gfx.js` | Grafik-Paket: Qualitätsschalter, Bildeffekte, Uferschaum, Lavaglut, Bodendetails, Effekte |
 | `js/daynight.js` | Tag, Nacht und Wetter |
-| `js/urban.js` | Flughafen und Stadt: Wegfindung (Raster, A*), Gebäude, Flugzeuge, Deko, Durchsicht, Lichterketten |
-| `js/weather.js` | Wetter: Plan bei „Zufall“, Regenstreifen, Tropfenringe, nasser Glanz, Pfützen, Blitzeinschläge, Schneesturm, Wind an den Fallschirmkisten |
+| `js/urban.js` | Flughafen, Stadt und Wüste: Wegfindung (Raster, A*), Gebäude, Flugzeuge, Pyramide mit Tunnel, Ruinen, Oasen, Sphinx, Kamele, Deko, Durchsicht, Lichterketten |
+| `js/weather.js` | Wetter: Plan bei „Zufall“, Regenstreifen, Tropfenringe, nasser Glanz, Pfützen, Blitzeinschläge, Schneesturm, Sandsturm (Vorwarnung, Schleier, Heulen, verwehte Kisten), Wind an den Fallschirmkisten |
 | `js/menu.js` | Menü: Hauptmenü, Spielstart, Einstellungen mit vier Bereichen, Pause, Mehrspieler-Pause als Ebene, Schalter für Tipps, Spuren, Kamera umkehren, Vibration |
 | `js/snow.js` | Schnee: Spurenkarte, Verwehungen mit Bremsen, Schneehauben, Schneestaub |
 | `js/water.js` | Wasser: Tiefenfarbe, Uferschaum, Wellen, Himmelsspiegelung, Sonnenglitzern, Spritzer |
@@ -283,6 +294,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 - Tag, Nacht und Wetter: nur im Browser ohne Grafikkarte geprüft. Ob die Nacht auf einem Handy-Bildschirm im Hellen noch gut lesbar ist, ist offen. Der Regen besteht aus Punkten statt Strichen. Im Mehrspieler-Test wird die Wettermeldung an den Gast nicht eigens geprüft.
 - Vulkan: Auf echten Handys nicht gemessen. Das Gleichgewicht (Brücken näher beieinander, Ausbrüche) ist nur in simulierten Runden geprüft, nicht von Menschen gespielt.
 - Flughafen und Stadt: nur im Browser ohne Grafikkarte und in simulierten Runden geprüft, nicht auf dem iPhone und nicht von Menschen gespielt. Die Ausgewogenheit (Wege, Kistenstellen, Wellen) kann Feinschliff brauchen. Die KI denkt bei Wellen und Verteidigung weiter in zwei „Spuren“ (x = −18 und +18); Ziele werden auf freie Felder gelegt. Im Mehrspieler nicht getestet.
+- Wüste: nur im Browser ohne Grafikkarte und in simulierten Situationen geprüft, nicht auf dem iPhone und nicht von Menschen gespielt. Der Sandsturm zeichnet bis zu 14 große, halb durchsichtige Schleier (auf „Niedrig“ 6); ob das auf dem iPhone flüssig bleibt, zeigt erst die FPS-Anzeige dort. Den Wind konnte ich nicht anhören. Im Tunnel ist man von oben nicht zu sehen; die Pyramide wird durchscheinend, wenn sie zwischen Kamera und eigener Figur steht, gegnerische Blechlinge im Tunnel sieht man aber nicht (gewollt: geschützte Abkürzung). Im Mehrspieler nicht getestet.
 - Wetter: nur im Browser ohne Grafikkarte geprüft (dort 1 bis 2 Bilder pro Sekunde mit und ohne Unwetter, also kein Maß). FPS auf dem iPhone mit und ohne Unwetter stehen noch aus. Pfützen gibt es nicht auf Schnee (Gebirge, Weihnachtsedition).
 - Ein eigenes Bauruhe-Stück fürs Gebirge (im Auftrag optional) gibt es noch nicht.
 - Bildfehler aus Danielas Screenshots vom 15. November: Die grünlich gesprenkelte Fläche mit gerader Kante war der Morgennebel (eine flache Ebene, die Hänge hart anschnitt und auf dem iPhone flimmerte); er dünnt jetzt über dem Boden aus. Im Testbrowser trat die Kante nicht auf, ob sie auf dem iPhone weg ist, zeigt erst Danielas Test. Der helle Halbkreis am Stapelplatz ist noch ungeklärt.

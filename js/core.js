@@ -19,10 +19,11 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
    'flughafen' and 'stadt' have no band at all: flat paved ground with buildings (URB.boxes) that block movement,
    sight and direct shots; units find their way with a grid search (js/urban.js). BANK is set far out of reach there,
    so every band rule (bridges, islands, the river as a wall) simply never applies.
+   'wueste' works like them: a pyramid with a cross-shaped passage in the middle, ruins, dunes and two oases.
    The world is built once at load, so changing the map reloads the page. ?karte=gebirge|insel overrides. */
-const MAPS={insel:'Insel',gebirge:'Gebirge',vulkan:'Vulkan',flughafen:'Flughafen',stadt:'Stadt'};
+const MAPS={insel:'Insel',gebirge:'Gebirge',vulkan:'Vulkan',flughafen:'Flughafen',stadt:'Stadt',wueste:'Wüste'};
 const MAP=(function(){
-  const q=/[?&#]karte=(insel|gebirge|vulkan|flughafen|stadt)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase();
+  const q=/[?&#]karte=(insel|gebirge|vulkan|flughafen|stadt|wueste)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase();
   try{const m=localStorage.getItem('kk-map');if(MAPS[m])return m;}catch(e){}
   return 'insel';
 })();
@@ -35,9 +36,11 @@ const XMAS=(function(){
   try{if(localStorage.getItem('kk-xmas')==='off')return false;}catch(e){}
   return xmasSeason();
 })();
-const MOUNTAIN=MAP==='gebirge',VOLCANO=MAP==='vulkan',AIRPORT=MAP==='flughafen',CITY=MAP==='stadt',URBAN=AIRPORT||CITY;
+const MOUNTAIN=MAP==='gebirge',VOLCANO=MAP==='vulkan',AIRPORT=MAP==='flughafen',CITY=MAP==='stadt',DESERT=MAP==='wueste',URBAN=AIRPORT||CITY||DESERT;
+// winter in the Christmas edition: snow on the ground and snow as weather (not on the volcano and not in the desert)
+const XSNOW=XMAS&&!VOLCANO&&!DESERT;
 // the city is point-symmetric (bases in opposite corners), all other maps mirror along z
-const BASES=CITY?[{x:-34,z:34},{x:34,z:-34}]:AIRPORT?[{x:0,z:38},{x:0,z:-38}]:[{x:0,z:44},{x:0,z:-44}];
+const BASES=CITY?[{x:-34,z:34},{x:34,z:-34}]:AIRPORT||DESERT?[{x:0,z:38},{x:0,z:-38}]:[{x:0,z:44},{x:0,z:-44}];
 const LIM=52;
 // BX: the two lanes the waves and defenders think in (bridges on the band maps, streets and gates on the new ones)
 const BX=VOLCANO?8:18,BRIDGES=[-BX,BX],BANK=URBAN?-100:VOLCANO?12:6.2,ISL_RX=VOLCANO?15:6.2,ISL_RZ=VOLCANO?7:3.4;
@@ -71,7 +74,7 @@ const URB={boxes:[],zones:[[],[]],gold:[],routes:null,kind:MAP};
     // patrol routes for team A (team B: mirrored through the centre)
     URB.routes=[[[-18,40],[-18,26],[-18,10]],[[-40,18],[-26,18],[-10,18]],[[-28,28],[-40,40],[-28,40],[-40,28]]];
     URB.defend=[{x:-18,z:12},{x:-12,z:18}];
-  }else{
+  }else if(AIRPORT){
     // Team A (z>0): terminal at the back, the gate building with three jet bridges (5 wide walkways) in front.
     // Team B (z<0): four hangars with three gates of the same width between them. Apron in the middle with two
     // parked planes, the runway behind a fence on the east side, reached over one taxiway.
@@ -89,9 +92,36 @@ const URB={boxes:[],zones:[[],[]],gold:[],routes:null,kind:MAP};
     URB.zones[1]=[{x0:3,x1:9,z0:-12,z1:12,w:2},{x0:22,x1:32,z0:-14,z1:14,w:2},{x0:42,x1:50,z0:-18,z1:-4,w:1}];
     URB.gold=[{x0:42,x1:50,z0:-14,z1:14,w:3},{x0:-2,x1:2,z0:-10,z1:10,w:1}];   // valuable crates mostly on the runway
     URB.routes=[[[-18,32],[-18,24],[-24,14]],[[18,32],[18,24],[24,14]],[[-8,34],[8,34],[10,42],[-10,42]]];
+  }else{
+    // Desert. Oasis A (z>0) and oasis B (z<0) face each other across a pyramid (28 x 28, apex in the middle) that
+    // a cross-shaped passage, 6 wide, cuts into four blocks: a sheltered short cut, wide enough for vehicles too.
+    // Ruins left and right (x = -40 and +40, point-symmetric), four low dunes with a few rocks for cover.
+    const P=URB.pyr={r:14,w:3,h:13};
+    for(const sx of [-1,1])for(const sz of [-1,1]){const a=sx*P.w,b=sx*P.r,c=sz*P.w,d=sz*P.r;B(Math.min(a,b),Math.max(a,b),Math.min(c,d),Math.max(c,d),10,'pyr');}
+    // ruins: wall remnants, standing columns, a fallen column; mirrored through the centre (S sorts the corners)
+    const S=(x0,x1,z0,z1,h,k)=>B(Math.min(x0,x1),Math.max(x0,x1),Math.min(z0,z1),Math.max(z0,z1),h,k);
+    for(const s of [1,-1]){
+      S(s*37,s*38,s*-9,s*-3,2.4,'wall');S(s*41,s*46,s*3,s*4,1.9,'wall');
+      S(s*34.8,s*36,s*4.8,s*6,4.6,'col');S(s*34.8,s*36,s*9.4,s*10.6,4.6,'col');S(s*44.9,s*46.1,s*-8.6,s*-7.4,3.2,'col');
+      S(s*42.4,s*43.6,s*-7,s*-2,1.2,'fallen');
+    }
+    for(const s of [1,-1])for(const x of [-6,6])B(x-0.7,x+0.7,s*17.5-0.7,s*17.5+0.7,7.5,'obelisk');   // two obelisks before each oasis-side entrance
+    URB.dunes=[];
+    for(const sx of [-1,1])for(const sz of [-1,1]){const x=sx*30,z=sz*25;URB.dunes.push({x,z});
+      B(x-1.6,x+1.6,z-sz*3.6-0.6,z-sz*3.6+0.6,1.4,'rock');   // towards the middle line
+      B(x-sx*4.6-0.6,x-sx*4.6+0.6,z-1.2,z+1.2,1.4,'rock');}   // towards the pyramid
+    const sq=(x,z,r,w)=>({x0:x-r,x1:x+r,z0:z-r,z1:z+r,w});
+    URB.zones[0]=[{x0:-2.5,x1:2.5,z0:17,z1:21,w:2},sq(-30,25,1.3,1),sq(-30,-25,1.3,1)];
+    URB.zones[1]=[{x0:-2.5,x1:2.5,z0:-21,z1:-17,w:2},sq(30,25,1.3,1),sq(30,-25,1.3,1)];
+    URB.gold=[{x0:-32,x1:-28,z0:-3,z1:3,w:1},{x0:28,x1:32,z0:-3,z1:3,w:1}];   // in front of the ruins, as far from one oasis as from the other
+    URB.routes=[[[-14,30],[-22,18],[-30,8]],[[14,30],[22,18],[30,8]],[[-8,32],[8,32],[10,44],[-10,44]]];
+    URB.ponds=[];for(const s of [1,-1])URB.ponds.push({x:13,z:s*45,r:4.2},{x:-15,z:s*44,r:3.2});   // oasis ponds behind each base
+    URB.cover=[{x:-30,z:19},{x:30,z:19},{x:-7,z:17},{x:7,z:17},{x:-33,z:7},{x:33,z:7}];   // behind rocks, the pyramid and the ruins (team A; B mirrored)
   }
 })();
 // is (x, z) on open ground, at least m away from every building?
+// inside the pyramid's footprint (passages included): crates never land or drift there
+function inPyramid(x,z,m){return DESERT&&Math.abs(x)<URB.pyr.r+(m||0)&&Math.abs(z)<URB.pyr.r+(m||0);}
 function urbanFree(x,z,m){m=m||0;for(const b of URB.boxes)if(x>b.x0-m&&x<b.x1+m&&z>b.z0-m&&z<b.z1+m)return false;return true;}
 // push a circle of radius r out of the buildings (the shortest way out)
 function urbanPush(u,r){
@@ -125,6 +155,7 @@ const CW=MOUNTAIN?[3.1,2.4]:VOLCANO?[2.5,2.5]:[2.3,2.3];
 const crossW=x=>CW[x<0?0:1];
 function islandE(x,z){if(URBAN)return 9;if(VOLCANO)return Math.hypot(x/ISL_RX,z/ISL_RZ);let e=9;for(const bx of BRIDGES)e=Math.min(e,Math.hypot((x-bx)/ISL_RX,z/ISL_RZ));return e;}
 function hgtRaw(x,z){
+  if(DESERT)return hgtDesert(x,z);
   if(URBAN)return 0.32;   // paved and flat
   if(MOUNTAIN)return hgtMountain(x,z);
   if(VOLCANO)return hgtVolcano(x,z);
@@ -141,6 +172,15 @@ function hgtRaw(x,z){
   // the banks rise to deck height where the bridges land, then slope gently back into the meadow
   for(const bx of BRIDGES){const w=smooth((3.4-Math.abs(x-bx))/1.4)*smooth((Math.abs(z)-7.6)/1.0)*smooth((18-Math.abs(z))/6);h=h*(1-w)+0.3*w;}
   return h;
+}
+// sand: gentle ripples, four low dunes; flat at the oases, under the pyramid and the ruins
+function hgtDesert(x,z){
+  let h=0.32+0.14*Math.sin(x*0.21+z*0.07)*Math.cos(z*0.17-x*0.05);
+  for(const b of BASES)h=0.32+(h-0.32)*smooth((Math.hypot(x-b.x,z-b.z)-9)/6);
+  if(Math.abs(x)<17&&Math.abs(z)<17)h=0.32+(h-0.32)*smooth((Math.max(Math.abs(x),Math.abs(z))-14.5)/2.5);
+  for(const d of URB.dunes){const e=Math.hypot((x-d.x)/7.5,(z-d.z)/5);h+=1.5*smooth((1-e)/0.75);}
+  const e=smooth((Math.max(Math.abs(x),Math.abs(z))-55)/8);
+  return h+e*(1.6+1.2*Math.sin(x*0.13)*Math.cos(z*0.11));
 }
 function hgtMountain(x,z){
   const raw=Math.sin(x*0.11+1.3)*Math.cos(z*0.09)*1.8+Math.sin(x*0.045-z*0.06+0.5)*1.5+Math.cos(z*0.19+x*0.03)*0.5;
@@ -201,7 +241,7 @@ function urbanSpot(zs){
   for(let k=0;k<60;k++){
     let q=Math.random()*tot,r=zs[0];for(const z of zs){q-=z.w;if(q<=0){r=z;break;}}
     const x=rand(r.x0,r.x1),z=rand(r.z0,r.z1);
-    if(urbanFree(x,z,1.2)&&!(typeof obstacles!=='undefined'&&obstacles.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+1.2)))return {x,z};
+    if(urbanFree(x,z,1.2)&&!inPyramid(x,z,1)&&!(typeof obstacles!=='undefined'&&obstacles.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+1.2)))return {x,z};
   }
   const r=zs[0];return {x:(r.x0+r.x1)/2,z:(r.z0+r.z1)/2};
 }

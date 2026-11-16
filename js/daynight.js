@@ -27,7 +27,7 @@ const DN={
   const C=h=>new THREE.Color(h);
   const N_HOR=C(0x1b2743),N_TOP=C(0x050a1c),N_SUN=C(0x93b2ff),N_HEMI=C(VOLCANO?0x7a4a3c:0x3a4a78);   // the lava lights the volcano's night from below
   const D_HOR=C(0xff9c5e),D_TOP=C(0x54508f),D_SUN=C(0xff8748);
-  const GREY=C(0x8b929a),STORM=C(0x4a515b),ASH=C(0x5a4a44),tmp=C(0);
+  const GREY=C(0x8b929a),STORM=C(0x4a515b),ASH=C(0x5a4a44),SAND=C(0xb98a50),tmp=C(0);
 
   /* ----- Stars ----- */
   const starG=new THREE.BufferGeometry(),sp=[];
@@ -52,7 +52,7 @@ const DN={
   /* ----- Weather particles: one cloud of points that follows the camera ----- */
   // the map's own weather: snow on the mountain and in the Christmas edition, ash on the volcano, rain elsewhere.
   // Rain and driving snow are streaks drawn by weather.js; this cloud of points is only the ash.
-  const KIND=VOLCANO?'asche':MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS)?'schnee':'regen';
+  const KIND=VOLCANO?'asche':DESERT?'sand':MOUNTAIN||XSNOW?'schnee':'regen';
   const WN=KIND==='asche'?500:0,wGeo=new THREE.BufferGeometry(),wp=new Float32Array(WN*3);
   for(let i=0;i<WN;i++){wp[i*3]=rand(-30,30);wp[i*3+1]=rand(0,26);wp[i*3+2]=rand(-30,30);}
   wGeo.setAttribute('position',new THREE.BufferAttribute(wp,3));
@@ -71,9 +71,9 @@ const DN={
     const W=DN.wx,was=W.want+(W.storm?'!':'');W.want=kind;W.storm=!!storm;W.lvl=lvl||(storm?1:0.65);
     if(kind!=='klar')W.kind=kind;
     if(DN.on&&state==='play'&&kind!=='klar'&&was!==kind+(storm?'!':''))
-      toast(kind==='regen'?(storm?'Ein Gewitter zieht auf':'Es fängt an zu regnen'):kind==='schnee'?(storm?'Ein Schneesturm zieht auf':'Es fängt an zu schneien'):kind==='asche'?'Asche regnet vom Himmel':'Nebel zieht auf',2.4);
+      toast(kind==='regen'?(storm?'Ein Gewitter zieht auf':'Es fängt an zu regnen'):kind==='schnee'?(storm?'Ein Schneesturm zieht auf':'Es fängt an zu schneien'):kind==='asche'?'Asche regnet vom Himmel':kind==='sand'?(storm?'Ein Sandsturm zieht auf – such Deckung!':'Der Wind wirbelt Sand auf'):'Nebel zieht auf',2.6);
   }
-  window.dayNightEvent=e=>{if(e[0]==='wx'){const k=['klar','regen','schnee','asche','dunst'][e[1]]||'klar';if(DN.wx.want!==k||DN.wx.storm!==!!e[2])setWeather(k,!!e[2]);}};
+  window.dayNightEvent=e=>{if(e[0]==='wx'){const k=['klar','regen','schnee','asche','dunst','sand'][e[1]]||'klar';if(DN.wx.want!==k||DN.wx.storm!==!!e[2])setWeather(k,!!e[2]);}};
 
   let lastNight=false,sendT=0,rainT=0,lastT=0;
   function step(dt){
@@ -92,7 +92,7 @@ const DN={
     lastT=gameT;
     if(sim&&DN.fixed===null&&DN.roll)DN.roll(dt,playing);
     if(sim&&playing&&DN.fixed===null){
-      sendT-=dt;if(MP==='host'&&sendT<=0){sendT=4;NET.pendingEv.push(['wx',Math.max(0,['klar','regen','schnee','asche','dunst'].indexOf(W.want)),W.storm?1:0]);}
+      sendT-=dt;if(MP==='host'&&sendT<=0){sendT=4;NET.pendingEv.push(['wx',Math.max(0,['klar','regen','schnee','asche','dunst','sand'].indexOf(W.want)),W.storm?1:0]);}
     }
     const target=DN.on&&W.want!=='klar'?W.lvl:0;
     W.s+=(target-W.s)*Math.min(1,dt*0.22);if(W.s<0.01&&target===0)W.s=0;
@@ -117,14 +117,14 @@ const DN={
     hemi.color.lerp(N_HEMI,night*0.85);hemi.intensity=hemi.intensity*(day+night*(VOLCANO?0.8:0.6))*dim+W.flash*0.9;
     /* sky and haze */
     tmp.copy(scene.fog.color).lerp(D_HOR,dusk*0.6).lerp(N_HOR,night);
-    if(s>0)tmp.lerp(kind==='asche'?ASH:W.storm&&kind==='regen'?STORM:GREY,s*(W.storm?0.75:0.55)*(1-night*0.5));
+    if(s>0)tmp.lerp(kind==='sand'?SAND:kind==='asche'?ASH:W.storm&&kind==='regen'?STORM:GREY,s*(W.storm?0.75:0.55)*(1-night*0.5));
     if(W.flash>0)tmp.lerp(C(0xdfe8ff),W.flash*0.7);
     scene.fog.color.copy(tmp);scene.background.copy(tmp);sky.material.uniforms.hor.value.copy(tmp);
-    const top=sky.material.uniforms.top.value;top.lerp(D_TOP,dusk*0.55).lerp(N_TOP,night);if(s>0)top.lerp(kind==='asche'?ASH:W.storm&&kind==='regen'?STORM:GREY,s*(W.storm?0.85:0.6)*(1-night*0.6));
-    const fogK=kind==='schnee'?(W.storm?0.84:0.6):kind==='dunst'?0.72:kind==='asche'?0.5:W.storm?0.52:0.4;
+    const top=sky.material.uniforms.top.value;top.lerp(D_TOP,dusk*0.55).lerp(N_TOP,night);if(s>0)top.lerp(kind==='sand'?SAND:kind==='asche'?ASH:W.storm&&kind==='regen'?STORM:GREY,s*(W.storm?0.85:0.6)*(1-night*0.6));
+    const fogK=kind==='sand'?(W.storm?0.9:0.55):kind==='schnee'?(W.storm?0.84:0.6):kind==='dunst'?0.72:kind==='asche'?0.5:W.storm?0.52:0.4;
     scene.fog.near=baseFog.near*(1-s*fogK);scene.fog.far=baseFog.far*(1-s*fogK*0.75);
     stars.visible=night>0.02;stars.material.opacity=night*(1-s*0.8);
-    window.wxWind=1+(kind==='schnee'?s*(W.storm?3.4:1.2):s*0.8);   // mountain.js and xmas.js blow their snow harder
+    window.wxWind=1+(kind==='sand'?s*2.4:kind==='schnee'?s*(W.storm?3.4:1.2):s*0.8);   // mountain.js and xmas.js blow their snow harder
 
     /* weather particles */
     wPts.visible=s>0.02&&WN>0&&kind==='asche';
@@ -142,7 +142,7 @@ const DN={
 
     /* night lights */
     const lit=night>0.05&&state!=='menu';
-    lantern.intensity=lit&&player&&player.alive?night*(MOUNTAIN||(typeof XMAS!=='undefined'&&XMAS&&!VOLCANO)?0.5:0.85):0;   // snow reflects far more light than grass
+    lantern.intensity=lit&&player&&player.alive?night*(MOUNTAIN||XSNOW?0.5:0.85):0;   // snow reflects far more light than grass
     if(lit&&player)lantern.position.set(player.x,hgt(player.x,player.z)+2.4,player.z);
     let bi=0,ci=0;
     if(lit){
@@ -167,6 +167,7 @@ const DN={
     for(const b of document.querySelectorAll('#todSeg button'))b.setAttribute('aria-pressed',b.dataset.t===DN.tod?'true':'false');};
   for(const b of document.querySelectorAll('#wxSeg button'))b.addEventListener('click',()=>{DN.wsel=b.dataset.w;try{localStorage.setItem('kk-wx',DN.wsel);}catch(e){}label();if(DN.applySel)DN.applySel();});
   for(const b of document.querySelectorAll('#todSeg button'))b.addEventListener('click',()=>{DN.tod=b.dataset.t;try{localStorage.setItem('kk-tod',DN.tod);}catch(e){}label();});
+  if(DESERT){const b=document.querySelector('#wxSeg button[data-w="schnee"]');if(b)b.textContent='Sandsturm';}   // in the desert the storm is sand
   label();
   DN.step=step;DN.setWeather=setWeather;DN.lights={lantern,beams,crateGlow,hqGlow,stars,wPts};DN.kind=KIND;
 })();
