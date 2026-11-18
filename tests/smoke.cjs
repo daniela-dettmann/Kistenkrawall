@@ -536,6 +536,11 @@ async function main() {
   await page.waitForTimeout(1200);
   check(await page.evaluate(() => XMAS && !XSNOW && !SNOW.on && MAP === 'mond' && state === 'play' && !!URB.lights && URB.lights.count > 150 && crates.every(c => c.bow) && !!MOONFX.sleigh),
     'Weihnachtsedition: Mond ohne Schnee, Lebkuchenkuppeln, Lichterketten am Schlauchgang, Geschenkkisten, Schlitten vor der Erde');
+  check(await page.evaluate(() => {
+    // meteor shower: glowing rocks and grey dust only; no pollen motes in a vacuum
+    const was = state; state = 'play'; MOONFX.shower(); for (let i = 0; i < 120; i++) updateMood(0.05); state = was;
+    return !motes.visible && MOONFX.impacts > 0;
+  }), 'Meteoritenschauer: keine Pollenpunkte auf dem Mond');
   await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
   }
   if (part(3)) {   // Flughafen und Stadt
@@ -620,6 +625,15 @@ async function main() {
   await page.waitForTimeout(1200);
   check(await page.evaluate(() => XMAS && !XSNOW && !SNOW.on && MAP === 'wueste' && state === 'play' && !!URB.lights && URB.lights.count > 150 && crates.every(c => c.bow)
     && URB.camels.every(c => c.g.children.length > 9) && DN.kind === 'sand'), 'Weihnachtsedition: Wüste ohne Schnee, Lichterketten an Pyramide, Palmen und Obelisken, Geschenkkisten, Kamele mit Mützen');
+  check(await page.evaluate(() => {
+    // no loose coloured dots in the sandstorm: the Christmas lights fade into the haze with the pyramid, the pollen motes go
+    const clear = URB.lights.material.color.getHex() === 0xffffff && motes.visible;
+    DN.wsel = 'schnee'; DN.applySel(); DN.wx.s = 1; updateMood(0.05);
+    const c = URB.lights.material.color, f = scene.fog.color, near = Math.abs(c.r - f.r) + Math.abs(c.g - f.g) + Math.abs(c.b - f.b) < 0.5;
+    const storm = near && c.r < 0.95 && URB.lights.material.opacity < 0.3 && !motes.visible;
+    DN.wsel = 'zufall'; DN.setWeather('klar', false); DN.wx.s = 0; updateMood(0.05);
+    return clear && storm && URB.lights.material.color.getHex() === 0xffffff && URB.lights.material.opacity === 1 && motes.visible;
+  }), 'Sandsturm: keine bunten Punkte, Lichterketten verschwinden im Dunst, keine Pollen');
   await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
   }
   if (part(4)) {   // Vulkan
