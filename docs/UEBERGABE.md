@@ -6,9 +6,9 @@ Stand: 19. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `6823635` (PR #38, Grafik-Auftrag Schritt 1) |
-| `main` | `6823635` |
-| Offener Pull Request | #39: Grafik-Auftrag Schritt 2, Lichtstrahlen. Danach Tiefe, Gras, Metall, dann Karten Dschungel und Weihnachtsmarkt (Drive: `Kistenkrawall-Auftrag-Grafik-Atmosphaere.md`, `Kistenkrawall-Auftrag-Dschungel-Weihnachtsmarkt.md`). Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone |
+| Live auf GitHub Pages | `7b36cad` (PR #39, Lichtstrahlen) |
+| `main` | `7b36cad` |
+| Offener Pull Request | #40: Grafik-Auftrag Schritt 3, Tiefe in der Ferne (Luftperspektive). Danach Gras, Metall, dann Karten Dschungel und Weihnachtsmarkt (Drive: `Kistenkrawall-Auftrag-Grafik-Atmosphaere.md`, `Kistenkrawall-Auftrag-Dschungel-Weihnachtsmarkt.md`). Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
