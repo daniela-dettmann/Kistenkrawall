@@ -437,13 +437,16 @@ async function main() {
   await mood(60);
   const dayI = await page.evaluate(() => sun.intensity);
   check(await page.evaluate(() => DN.night === 0 && !DN.lights.stars.visible && DN.lights.lantern.intensity === 0 && DN.lights.beams.every(b => !b.visible)), 'Rundenbeginn am Tag: keine Sterne, keine Lampen');
+  check(await page.evaluate(() => { const on = RAYS.mesh.visible && RAYS.sky + RAYS.tree > 0 && RAYS.k > 0.5;
+    const m = GFX.mode; GFX.mode = 'schnell'; updateMood(0.05); const low = !RAYS.mesh.visible && !RAYS.treeMesh.visible; GFX.mode = m; updateMood(0.05);
+    return on && low; }), 'Lichtstrahlen am Tag durch Wolkenlücken und Bäume, auf „Niedrig“ aus');
   await page.evaluate(() => { gameT = 290; });   // the clock follows the game time: 290 s after the start it is night
   await mood(200);
   check(await page.evaluate(d => DN.night > 0.9 && DN.lights.stars.visible && DN.lights.lantern.intensity > 0.5 && DN.lights.beams.some(b => b.visible) && DN.lights.crateGlow.some(g => g.visible)
-    && DN.lights.hqGlow.every(g => g.visible) && sun.intensity < d * 0.5 && sun.intensity > 0.2, dayI), 'Nacht folgt der Spielzeit: Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht');
+    && DN.lights.hqGlow.every(g => g.visible) && sun.intensity < d * 0.5 && sun.intensity > 0.2 && !RAYS.mesh.visible, dayI), 'Nacht folgt der Spielzeit: Sterne, Laterne, Lichtkegel, leuchtende Kisten und Hauptquartiere, Mondlicht, keine Lichtstrahlen');
   await page.evaluate(() => { DN.fixed = 0.5; DN.setWeather('regen', true); });
   await mood(400);
-  check(await page.evaluate(() => DN.night === 0 && DN.wx.s > 0.8 && WX.streakMesh.visible && WX.streaks > 300 && WX.wet > 0.5 && WX.puddleMesh.visible && WX.puddles > 10 && scene.fog.far < 150 && DN.wx.storm), 'Regen und Gewitter: Regenstreifen, nasser Glanz, Pfützen, dichterer Dunst');
+  check(await page.evaluate(() => DN.night === 0 && DN.wx.s > 0.8 && WX.streakMesh.visible && WX.streaks > 300 && WX.wet > 0.5 && WX.puddleMesh.visible && WX.puddles > 10 && scene.fog.far < 150 && DN.wx.storm && !RAYS.mesh.visible), 'Regen und Gewitter (ohne Lichtstrahlen): Regenstreifen, nasser Glanz, Pfützen, dichterer Dunst');
   await page.evaluate(() => DN.setWeather('klar', false));
   await mood(700);
   check(await page.evaluate(() => DN.wx.s === 0 && !WX.streakMesh.visible && Math.abs(scene.fog.far - 170) < 1), 'Wetter klart wieder auf (Pfützen trocknen langsam)');
@@ -539,8 +542,8 @@ async function main() {
   check(await page.evaluate(() => {
     // meteor shower: glowing rocks and grey dust only; no pollen motes in a vacuum
     const was = state; state = 'play'; MOONFX.shower(); for (let i = 0; i < 120; i++) updateMood(0.05); state = was;
-    return !motes.visible && MOONFX.impacts > 0;
-  }), 'Meteoritenschauer: keine Pollenpunkte auf dem Mond');
+    return !motes.visible && MOONFX.impacts > 0 && RAYS.mesh === null;
+  }), 'Meteoritenschauer: keine Pollenpunkte und keine Lichtstrahlen auf dem Mond');
   await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
   }
   if (part(3)) {   // Flughafen und Stadt
