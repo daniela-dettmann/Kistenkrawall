@@ -185,7 +185,8 @@ function hostAccept(conn){
         // the room is taken while the guest's connection is open and was heard from in the last 20 s; only that same
         // guest (with its token) may come back. (Before: 5 s, and a guest whose device was busy for a moment lost
         // its place to a stranger.)
-        const other=m.tok!==NET.tok,busy=NET.conn&&NET.conn!==conn&&NET.conn.open&&performance.now()-NET.lastHeard<20000;
+        // a second attempt of the same device (same peer id) is that device, not a stranger
+        const other=m.tok!==NET.tok&&!(NET.conn&&NET.conn.peer===conn.peer),busy=NET.conn&&NET.conn!==conn&&NET.conn.open&&performance.now()-NET.lastHeard<20000;
         if(other&&(busy||NET.started)){NET.stats.rejected++;sendThenClose(conn,{t:'full'});return;}
         if(m.v!==appVersion()){NET.stats.rejected++;sendThenClose(conn,{t:'version',v:appVersion()});netStatus('Dein Gegner hat eine andere Spielversion. Ihr braucht beide die neueste.');return;}
         if(NET.conn&&NET.conn!==conn)try{NET.conn.close();}catch(e){}
@@ -289,15 +290,15 @@ function joinRoom(raw){
   });
   peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{peer.reconnect();}catch(e){}},2000);});
   // a join that gets lost on the way (busy device, bad network) used to leave „Verbinde …“ on screen for ever:
-  // without an answer from the room after 12 s the guest tries again, four times, then says so
+  // without an answer from the room after 15 s the guest tries again, four times, then says so. Earlier attempts
+  // stay open: a busy host may answer late, and that answer is taken from whichever attempt it arrives on.
   let tries=0;
   const watch=setInterval(()=>{
     if(NET.peer!==peer||NET.role!=='guest'||NET.joined||peer.destroyed){clearInterval(watch);return;}
     if(++tries>4){clearInterval(watch);netStatus('Keine Antwort vom Raum. Prüfe den Code und versuch es noch einmal.');return;}
     if(!peer.open){try{peer.reconnect();}catch(e){}return;}
-    if(NET.conn)try{const c=NET.conn;NET.conn=null;c.close();}catch(e){}
     guestConnect();
-  },12000);
+  },15000);
 }
 function guestConnect(){
   if(!NET.peer||NET.peer.destroyed)return;
@@ -306,7 +307,10 @@ function guestConnect(){
     NET.conn=conn;NET.gate=makeGate(120000,60);NET.lastHeard=performance.now();
     conn.send(NET.tok?{t:'hello',v:appVersion(),tok:NET.tok}:{t:'hello',v:appVersion()});
   });
-  conn.on('data',m=>{if(conn===NET.conn)guestReceive(m);});
+  conn.on('data',m=>{
+    if(conn!==NET.conn&&!(NET.role==='guest'&&!NET.joined&&NET.peer&&conn.provider===NET.peer))return;
+    NET.conn=conn;guestReceive(m);   // before the welcome: the first answer counts, on whichever attempt it comes
+  });
   conn.on('close',()=>{if(conn===NET.conn)connectionLost();});
   conn.on('error',()=>{if(conn===NET.conn)connectionLost();});
 }
