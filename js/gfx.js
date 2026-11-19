@@ -28,10 +28,10 @@ const gfxFine=()=>GFX.mode==='schoen';
 /* ---------- Depth in the distance (Auftrag „Grafik und Atmosphäre“, Schritt 3): aerial perspective ----------
    Far things lose colour and contrast and take on the tone of the haze, a little before the fog itself sets in, like
    hills on a summer day. It is part of the fog step every material already does, so no extra pass and no blur.
-   The strength is fixed when the shaders are built: „Hoch“ stronger, „Niedrig“ lighter (a switch takes effect
-   after the next start). */
-GFX.aerial=GFX.mode==='schoen'?0.42:0.24;
-THREE.ShaderChunk.fog_fragment=THREE.ShaderChunk.fog_fragment.replace('gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );',
+   Only on „Hoch“; „Niedrig“ keeps the plain fog and saves the work on weaker phones. It is fixed when the shaders
+   are built, so switching the quality takes effect after the next start. */
+GFX.aerial=GFX.mode==='schoen'?0.42:0;
+if(GFX.aerial>0)THREE.ShaderChunk.fog_fragment=THREE.ShaderChunk.fog_fragment.replace('gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );',
   'float kkAir = smoothstep( fogNear * 0.3, fogFar, fogDepth ) * '+GFX.aerial.toFixed(2)+';\n'+
   '\tfloat kkLum = dot( gl_FragColor.rgb, vec3( 0.299, 0.587, 0.114 ) );\n'+
   '\tgl_FragColor.rgb = mix( gl_FragColor.rgb, mix( vec3( kkLum ), fogColor, 0.6 ), kkAir );\n'+
