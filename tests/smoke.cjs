@@ -413,6 +413,12 @@ async function main() {
     return diff > 300 && low;
   }), 'Gras biegt sich, wo Blechlinge laufen, auf „Niedrig“ aus');
   check(await page.evaluate(() => {
+    // shinier metal: arms, feet and plates mirror more, the head too, the paint gets a clear coat; the lower half of the reflection is the map's ground
+    const u = units.find(o => o.bot && o.bot.paint && o.kind !== 'turm');
+    return M.metal.reflectivity >= 0.45 && M.metal.shininess >= 130 && !!u && u.bot.head.reflectivity > 0.25 && (u.bot.paint.userData.kkTags || []).includes('coat')
+      && !!LOOK.envGround && LOOK.envScene.children.length >= 2;
+  }), 'Blechlinge: glänzenderes Metall, Klarlack, Spiegelung mit dem Boden der Karte');
+  check(await page.evaluate(() => {
     const u = spawnUnit(0, 0, 30, 'kaempfer'); let n = 0; u.bot.g.traverse(o => { if (o.isMesh && o.visible) n++; });
     u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
     return n <= 17 && renderer.shadowMap.autoUpdate === false;
@@ -559,7 +565,7 @@ async function main() {
   check(await page.evaluate(() => {
     // meteor shower: glowing rocks and grey dust only; no pollen motes in a vacuum
     const was = state; state = 'play'; MOONFX.shower(); for (let i = 0; i < 120; i++) updateMood(0.05); state = was;
-    return !motes.visible && MOONFX.impacts > 0 && RAYS.mesh === null;
+    return !motes.visible && MOONFX.impacts > 0 && RAYS.mesh === null && LOOK.envScene.children.length >= 3;   // the Earth is mirrored in the metal too
   }), 'Meteoritenschauer: keine Pollenpunkte und keine Lichtstrahlen auf dem Mond');
   await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
   }

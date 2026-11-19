@@ -25,6 +25,8 @@ if(MOON)(function(){
   const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowT,transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}));glow.scale.setScalar(R*2.6);E.add(glow);
   const dir=new THREE.Vector3(-0.38,0.36,-0.85).normalize();E.position.copy(dir).multiplyScalar(255);earth.rotation.z=0.4;
   earth.renderOrder=-1;scene.add(E);MOONFX.earth=E;
+  // the Blechlinge's metal mirrors the black sky and the Earth too (look.js builds that reflection)
+  if(typeof LOOK!=='undefined'&&LOOK.envScene){const e2=new THREE.Mesh(new THREE.SphereGeometry(R,24,16),new THREE.MeshBasicMaterial({map:tex,fog:false}));e2.position.copy(E.position);LOOK.envScene.add(e2);}
 
   /* ---------- Christmas: the sleigh with its reindeer crosses in front of the Earth ---------- */
   let sleigh=null,sT=6;
