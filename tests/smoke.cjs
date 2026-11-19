@@ -746,7 +746,7 @@ async function main() {
     await join(third, code);
     await third.waitForFunction(() => /Version/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
     { const st = await third.textContent('#netStatus');
-      const why = /aktualisier/.test(st) ? '' : ' (angezeigt: ' + st + '; ' + await third.evaluate(() => JSON.stringify({ peerOpen: !!(NET.peer && NET.peer.open), id: NET.peer && NET.peer.id, disc: !!(NET.peer && NET.peer.disconnected), conn: !!NET.conn, connOpen: !!(NET.conn && NET.conn.open), role: NET.role })) + '; Host: ' + await host.evaluate(() => JSON.stringify({ peerOpen: !!(NET.peer && NET.peer.open), disc: !!(NET.peer && NET.peer.disconnected), id: NET.peer && NET.peer.id })) + ')';
+      const why = /aktualisier/.test(st) ? '' : ' (angezeigt: ' + st + '; ' + await third.evaluate(() => JSON.stringify({ peerOpen: !!(NET.peer && NET.peer.open), id: NET.peer && NET.peer.id, disc: !!(NET.peer && NET.peer.disconnected), conn: !!NET.conn, connOpen: !!(NET.conn && NET.conn.open), role: NET.role, stats: NET.stats })) + '; Host: ' + await host.evaluate(() => JSON.stringify({ peerOpen: !!(NET.peer && NET.peer.open), disc: !!(NET.peer && NET.peer.disconnected), id: NET.peer && NET.peer.id, stats: NET.stats })) + ')';
       check(/aktualisier/.test(st), 'andere Spielversion: Hinweis „bitte aktualisieren“' + why); }
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'aaa111');
     await join(guest, code);

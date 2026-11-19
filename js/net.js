@@ -115,7 +115,7 @@ function makeGate(maxBytes,maxPerSec){
 
 /* ---------- Connection state ---------- */
 const NET={peer:null,conn:null,role:null,code:null,tok:null,lastHeard:0,lostAt:0,joined:false,started:false,
-  expireTimer:null,stats:{invalid:0,dropped:0},gate:null,pendingEv:[],input:{mx:0,mz:0,a:null,f:false,t:0},
+  expireTimer:null,stats:{invalid:0,dropped:0,conns:0,opened:0,hellos:0,rejected:0,got:0},gate:null,pendingEv:[],input:{mx:0,mz:0,a:null,f:false,t:0},
   sendT:0,inT:0,lastIn:'',seq:0,crateSeq:0,shotSeq:0,guestDownT:0};
 window.NET=NET;   // for tests
 const peerOpts=()=>Object.assign({},NET_CFG.peer,{debug:0,config:{iceServers:NET_CFG.stun.concat(NET_CFG.turn)}});
@@ -171,12 +171,14 @@ function sendThenClose(conn,msg){
   setTimeout(fin,300);
 }
 function hostAccept(conn){
+  NET.stats.conns++;
   // only one guest: a second device is turned away; after a drop the same guest may come back with its token
   let greeted=false;
   conn.on('open',()=>{
+    NET.stats.opened++;
     const t=setTimeout(()=>{if(!greeted)try{conn.close();}catch(e){}},5000);
     conn.on('data',m=>{
-      if(!greeted){
+      if(!greeted){NET.stats.hellos++;
         clearTimeout(t);
         if(!m||m.t!=='hello'||!validFromGuest(m)){try{conn.close();}catch(e){}return;}
         greeted=true;
@@ -184,8 +186,8 @@ function hostAccept(conn){
         // guest (with its token) may come back. (Before: 5 s, and a guest whose device was busy for a moment lost
         // its place to a stranger.)
         const other=m.tok!==NET.tok,busy=NET.conn&&NET.conn!==conn&&NET.conn.open&&performance.now()-NET.lastHeard<20000;
-        if(other&&(busy||NET.started)){sendThenClose(conn,{t:'full'});return;}
-        if(m.v!==appVersion()){sendThenClose(conn,{t:'version',v:appVersion()});netStatus('Dein Gegner hat eine andere Spielversion. Ihr braucht beide die neueste.');return;}
+        if(other&&(busy||NET.started)){NET.stats.rejected++;sendThenClose(conn,{t:'full'});return;}
+        if(m.v!==appVersion()){NET.stats.rejected++;sendThenClose(conn,{t:'version',v:appVersion()});netStatus('Dein Gegner hat eine andere Spielversion. Ihr braucht beide die neueste.');return;}
         if(NET.conn&&NET.conn!==conn)try{NET.conn.close();}catch(e){}
         NET.conn=conn;NET.joined=true;NET.lastHeard=performance.now();NET.gate=makeGate(300,80);clearTimeout(NET.expireTimer);
         conn.send({t:'welcome',v:appVersion(),map:MAP,tok:NET.tok,peace:peaceMin});
@@ -309,6 +311,7 @@ function guestConnect(){
   conn.on('error',()=>{if(conn===NET.conn)connectionLost();});
 }
 function guestReceive(m){
+  NET.stats.got++;
   NET.lastHeard=performance.now();
   if(!NET.gate.check(m)){NET.stats.dropped++;return;}
   if(!validFromHost(m)){NET.stats.invalid++;if(NET.stats.invalid>200)leaveMultiplayer('Die Verbindung wurde wegen fehlerhafter Daten beendet.');return;}
