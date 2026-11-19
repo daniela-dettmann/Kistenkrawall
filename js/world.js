@@ -415,7 +415,7 @@ for(const D of (URBAN?[]:DROPS)){
 /* Bushes and pebbles scattered over the meadows */
 (function(){
   if(URBAN)return;
-  const bush=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.7,1),leafPal[1],220);
+  const bush=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.7,1),leafPal[1],220);bush.name='kkBush';
   const peb=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.16,0),rockMat,900);
   const d=new THREE.Object3D(),c=new THREE.Color();let nb=0,np=0,tries=0;
   while((nb<220||np<900)&&tries<30000){

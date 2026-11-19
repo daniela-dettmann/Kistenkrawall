@@ -307,6 +307,48 @@ scene.traverse(o=>{
   },'fade');
 });
 
+/* ---------- Grass and bushes give way (Auftrag „Grafik und Atmosphäre“, Schritt 4) ----------
+   Blades bend away from Blechlinge and vehicles walking through and stand up again over about three seconds.
+   The GPU gets a short list (up to 24) of pushers near the camera: where units stand now and where they stood a
+   moment ago (a fading trail). No texture to update every frame. Bushes lean a little at the top.
+   Only on „Hoch“; on „Niedrig“ the list stays empty. */
+GFX.bend={u:{value:[...Array(24)].map(()=>new THREE.Vector4())},n:{value:0},active:0};
+{const BEND_GLSL='uniform vec4 uBend[24];uniform int uBendN;\n'+
+  'vec2 kkBendOff(vec2 p){vec2 o=vec2(0.0);for(int i=0;i<24;i++){if(i>=uBendN)break;vec4 b=uBend[i];vec2 d=p-b.xy;float l=length(d);'+
+  'float k=b.w*(1.0-smoothstep(b.z*0.45,b.z,l));if(l>0.001)o+=d/l*k;}float m=length(o);return m>1.0?o/m:o;}\n';
+ const hook=(mat,lean,top)=>gfxChain(mat,sh=>{
+   sh.uniforms.uBend=GFX.bend.u;sh.uniforms.uBendN=GFX.bend.n;
+   sh.vertexShader=BEND_GLSL+sh.vertexShader.replace('#include <project_vertex>',
+     '#ifdef USE_INSTANCING\n'+
+     'vec4 kkW=modelMatrix*instanceMatrix*vec4(transformed,1.0);vec4 kkB=modelMatrix*instanceMatrix*vec4(0.0,0.0,0.0,1.0);'+
+     'vec2 kkO=kkBendOff(kkB.xz);float kkH=max(kkW.y-kkB.y+'+top+',0.0);kkW.xz+=kkO*kkH*'+lean+';kkW.y-=length(kkO)*kkH*'+(0.45*lean).toFixed(2)+';'+
+     'vec4 mvPosition=viewMatrix*kkW;gl_Position=projectionMatrix*mvPosition;\n'+
+     '#else\n#include <project_vertex>\n#endif');
+ },'bend');
+ scene.traverse(o=>{if(!o.isInstancedMesh)return;
+   if(o.name==='kkGrass'||o.name==='kkFlowers')hook(o.material,'0.75','0.0');
+   else if(o.name==='kkBush')hook(o.material,'0.22','0.2');});
+ // pushers: where units are now (full strength) and a trail of where they were (fading over about 3 s)
+ const trail=[],near=[];let trailT=0;
+ const _mood=updateMood;
+ updateMood=function(dt){_mood(dt);
+   try{
+     const L=GFX.bend.u.value;
+     if(!gfxFine()||MOON||state==='menu'&&!units.length){GFX.bend.n.value=0;GFX.bend.active=0;return;}
+     for(let i=trail.length-1;i>=0;i--){trail[i].w-=dt*0.34;if(trail[i].w<=0)trail.splice(i,1);}
+     trailT-=dt;const cx=camLook.x,cz=camLook.z;near.length=0;
+     for(const u of units){if(!u.alive||u.kind==='turm'||Math.abs(u.x-cx)>34||Math.abs(u.z-cz)>34)continue;
+       const r=isVeh(u)?2.6:1.35;near.push({x:u.x,z:u.z,r,w:1,d:Math.hypot(u.x-cx,u.z-cz)});
+       if(trailT<=0){const lx=u._bx,lz=u._bz;if(lx!==undefined&&Math.hypot(u.x-lx,u.z-lz)>0.25)trail.push({x:lx,z:lz,r,w:0.9});u._bx=u.x;u._bz=u.z;}}
+     if(trailT<=0)trailT=0.22;
+     if(trail.length>160)trail.splice(0,trail.length-160);
+     for(const t of trail)near.push({x:t.x,z:t.z,r:t.r,w:t.w,d:Math.hypot(t.x-cx,t.z-cz)+(1-t.w)*6});
+     near.sort((a,b)=>a.d-b.d);
+     const n=Math.min(24,near.length);for(let i=0;i<n;i++){const p=near[i];L[i].set(p.x,p.z,p.r,smooth(p.w));}
+     GFX.bend.n.value=n;GFX.bend.active=n;
+   }catch(e){console.warn(e);}
+ };}
+
 /* ---------- FPS display: frames per second, time per frame, draw calls ---------- */
 (function(){
   const el=document.createElement('div');el.id='fps';el.hidden=true;

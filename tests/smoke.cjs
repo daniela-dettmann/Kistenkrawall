@@ -403,6 +403,16 @@ async function main() {
     return GFX.aerialOn && GFX.aerial > 0.3 && /kkAir/.test(THREE.ShaderChunk.fog_fragment) && prog;
   }), 'Tiefe in der Ferne: Luftperspektive im Nebel, ohne zusätzlichen Bilddurchgang');
   check(await page.evaluate(() => {
+    // grass gives way: a pusher next to the camera bends the blades (the picture changes); on „Niedrig“ no pushers
+    const keep = updateMood, cam = updateCamera, cx = -20, cz = 30; updateMood = () => {}; updateCamera = () => { camera.position.set(cx, 14, cz + 0.1); camera.lookAt(cx, 0, cz); }; updateCamera();
+    const shot = () => { gfxRender(); const gl = renderer.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(w * h * 4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };
+    const n0 = GFX.bend.n.value; GFX.bend.n.value = 0; const a = shot(); GFX.bend.u.value[0].set(cx, cz, 8, 1); GFX.bend.n.value = 1; const b = shot();
+    let diff = 0; for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) > 40) diff++;
+    GFX.bend.n.value = n0; updateMood = keep; updateCamera = cam;
+    const m = GFX.mode; GFX.mode = 'schnell'; updateMood(0.05); const low = GFX.bend.n.value === 0; GFX.mode = m; updateMood(0.05);
+    return diff > 300 && low;
+  }), 'Gras biegt sich, wo Blechlinge laufen, auf „Niedrig“ aus');
+  check(await page.evaluate(() => {
     const u = spawnUnit(0, 0, 30, 'kaempfer'); let n = 0; u.bot.g.traverse(o => { if (o.isMesh && o.visible) n++; });
     u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
     return n <= 17 && renderer.shadowMap.autoUpdate === false;
