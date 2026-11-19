@@ -729,7 +729,7 @@ async function main() {
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'andere-version');
     await join(third, code);
     await third.waitForFunction(() => /Version/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
-    check(/aktualisier/.test(await third.textContent('#netStatus')), 'andere Spielversion: Hinweis „bitte aktualisieren“');
+    { const st = await third.textContent('#netStatus'); check(/aktualisier/.test(st), 'andere Spielversion: Hinweis „bitte aktualisieren“' + (/aktualisier/.test(st) ? '' : ' (angezeigt: ' + st + ')')); }
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'aaa111');
     await join(guest, code);
     await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled);
