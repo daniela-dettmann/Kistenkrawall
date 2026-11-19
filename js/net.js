@@ -124,20 +124,22 @@ function send(m){try{if(NET.conn&&NET.conn.open)NET.conn.send(m);}catch(e){}}
 function netStatus(t){const el=$('#netStatus');if(el)el.textContent=t;}
 function netOverlay(text,showLeave){const o=$('#netOverlay');if(!o)return;if(!text){o.hidden=true;return;}$('#netOverlayText').textContent=text;$('#netLeave').hidden=!showLeave;o.hidden=false;}
 
-function closeNet(){
+function closeNet(later){
   clearTimeout(NET.expireTimer);
   // forget the connection before closing it, so its close event is not taken for a drop
   const c=NET.conn,p=NET.peer;NET.conn=null;NET.peer=null;
-  try{if(c)c.close();}catch(e){}
-  try{if(p)p.destroy();}catch(e){}
+  // later: the state is reset at once, the connection itself only goes after a few seconds, so a last message
+  // still reaches a busy device (closing tears down the whole peer connection, including what is on its way)
+  const shut=()=>{try{if(c)c.close();}catch(e){}try{if(p)p.destroy();}catch(e){}};
+  if(later)setTimeout(shut,later);else shut();
   Object.assign(NET,{peer:null,conn:null,role:null,code:null,tok:null,joined:false,started:false,lostAt:0,pendingEv:[]});
 }
 // leave multiplayer completely and go back to the single-player menu
 function leaveMultiplayer(msg){
   if(NET.conn&&NET.conn.open){send(NET.role==='host'?{t:'end',c:'left'}:{t:'bye'});}
-  // close only once the goodbye has left the send buffer (at most about 4 s): on a busy device a fixed second was
-  // sometimes too short, the message was lost and the other side only noticed much later
-  {const dc=NET.conn&&NET.conn.dataChannel;let n=0;const fin=()=>{if(dc&&dc.readyState==='open'&&dc.bufferedAmount>0&&n++<14){setTimeout(fin,250);return;}setTimeout(closeNet,700);};setTimeout(fin,300);}
+  // the goodbye needs time to arrive: on a busy device even waiting for the send buffer was not always enough, so the
+  // other side reads it and leaves by itself; this side forgets the connection now and closes it after 8 s
+  closeNet(8000);
   MP=null;player2=null;TAC_YAW=Math.PI;document.documentElement.classList.remove('mp');
   netOverlay(null);toMenu();
   if(msg)toast(msg,3);
@@ -162,13 +164,13 @@ function hostRoom(){
   clearTimeout(NET.expireTimer);
   NET.expireTimer=setTimeout(()=>{if(!NET.joined&&NET.role==='host'){closeNet();netStatus('Der Raum ist abgelaufen. Erstelle einen neuen.');$('#netCode').textContent='–';}},NET_CFG.roomTTL);
 }
-// send a last message and only then close: closing a fixed 0.2 s later sometimes lost the message on a busy device,
-// and the other side only saw the connection drop instead of „room full“ or „other version“ (same as the goodbye, #34)
+// send a last message („room full“, „other version“) and leave the closing to the other side, which closes as soon
+// as it has read it. Closing ourselves shortly after sending tore down the whole connection (PeerJS closes the peer
+// connection) while the message could still be on its way to a busy device; it then only saw „Verbinde …“.
+// After 10 s the host tidies up anyway.
 function sendThenClose(conn,msg){
   try{conn.send(msg);}catch(e){}
-  const dc=conn.dataChannel;let n=0;
-  const fin=()=>{if(dc&&dc.readyState==='open'&&dc.bufferedAmount>0&&n++<14){setTimeout(fin,250);return;}setTimeout(()=>{try{conn.close();}catch(e){}},1200);};
-  setTimeout(fin,300);
+  setTimeout(()=>{try{if(conn.open)conn.close();}catch(e){}},10000);
 }
 function hostAccept(conn){
   NET.stats.conns++;
