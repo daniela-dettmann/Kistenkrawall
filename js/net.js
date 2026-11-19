@@ -169,12 +169,13 @@ function hostRoom(){
 // still be on its way; on a busy device it sometimes did not arrive at all. So it is sent again after 1.5, 3, 5 and
 // 8 s (the other side acts on the first one), and after 10 s the host tidies up anyway.
 function sendThenClose(conn,msg){
-  const tell=()=>{try{if(conn.open)conn.send(msg);}catch(e){}};
+  const tell=()=>{try{if(conn.open){conn.send(msg);NET.stats.sent=(NET.stats.sent||0)+1;}else NET.stats.notOpen=(NET.stats.notOpen||0)+1;}catch(e){NET.stats.sendErr=String(e&&e.message||e).slice(0,80);}};
   tell();for(const t of [1500,3000,5000,8000])setTimeout(tell,t);
   setTimeout(()=>{try{if(conn.open)conn.close();}catch(e){}},10000);
 }
 function hostAccept(conn){
   NET.stats.conns++;
+  conn.on('error',e=>{NET.stats.connErr=String(e&&(e.type||e.message)||e).slice(0,80);});
   // only one guest: a second device is turned away; after a drop the same guest may come back with its token
   let greeted=false;
   conn.on('open',()=>{
