@@ -470,7 +470,9 @@ async function main() {
     return r.join();
   }) === 'true,true,true,true,true', 'Wetterwahl: Regen, Gewitter mit Blitzeinschlag (Baum angekohlt), Schneesturm, Klar – wirkt sofort, wird gemerkt');
   check(await page.evaluate(() => {
-    // Zufall: weather comes and goes at random, the same in the building phase and during a wave
+    // Zufall: weather comes and goes at random, the same in the building phase and during a wave.
+    // A fixed random sequence: with true chance about 3 % of runs saw no storm in the 30 minutes and failed.
+    const rnd = Math.random; let sd = 7; Math.random = () => { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; };
     document.querySelector('#wxSeg [data-w=zufall]').click(); state = 'play'; const R = WX.plan, r = [];
     for (const [pt, wt] of [[300, 0], [0, 60]]) {
       peaceT = pt; waveT = wt; R.next = rand(40, 80); R.on = false; DN.setWeather('klar', false);
@@ -480,7 +482,7 @@ async function main() {
     }
     R.next = 60; R.on = false; DN.setWeather('klar', false); let first = 0; while (DN.wx.want === 'klar' && first < 200) { DN.roll(1, true); first++; }
     r.push(first <= 61);
-    peaceT = 300; waveT = 0; state = 'menu'; return r.join();
+    peaceT = 300; waveT = 0; state = 'menu'; Math.random = rnd; return r.join();
   }) === 'true,true,true', 'Zufall: Wetter kommt und geht zufällig, in der Bauruhe wie in der Welle');
   check(await page.evaluate(() => {
     // wind: a parachute crate sways and lands a little off, never towards the water
