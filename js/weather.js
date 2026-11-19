@@ -236,6 +236,12 @@ const WX={wet:0,wind:0,dir:Math.random()*TAU,strikes:0,charred:0,puddles:0,rings
       }
       sGeo.setDrawRange(0,n*2);sGeo.attributes.position.needsUpdate=true;WX.streaks=n;
     }
+    // In thick weather the Christmas lights sink into the haze like the buildings they hang on; otherwise they stay
+    // bright while pyramid, obelisks or houses vanish, and float as loose coloured dots between the sand or snow streaks.
+    // The pollen motes around the camera are sunlight dust: gone in a sandstorm or blizzard, and never on the moon.
+    {const haze=(sand||blizzard)?Math.min(1,s*1.15)*(W.storm?1:0.5):0;WX.lightHaze=haze;
+     if(URB.lights){const m=URB.lights.material;m.color.setRGB(1,1,1).lerp(scene.fog.color,haze*0.85);m.transparent=true;m.opacity=1-haze*0.85;m.depthWrite=haze<0.05;}
+     if(typeof motes!=='undefined')motes.visible=!MOON&&haze<0.3;}
     // sand veils
     {const on=sand&&W.storm,n=fine?VN:6,cx=camera.position.x,cz=camera.position.z,cy=camera.position.y,ux=Math.cos(WX.dir),uz=Math.sin(WX.dir);
      for(let i=0;i<veils.length;i++){const q=veils[i],vis=on&&i<n;q.m.visible=vis;if(!vis)continue;

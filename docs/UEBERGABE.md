@@ -1,14 +1,14 @@
 # Kistenkrawall – Übergabe
 
-Stand: 16. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
+Stand: 18. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
 
 ## Wo wir stehen
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `8ce2c0e` (PR #36, Karte Mond) |
-| `main` | `8ce2c0e` |
-| Offener Pull Request | #37: Kistenfarben auf Wüste und Mond auf beide Spielhälften verteilt. Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone (auch Wüste mit und ohne Sandsturm, Mond) |
+| Live auf GitHub Pages | `7a13bd5` (PR #37, Kistenfarben auf Wüste und Mond) |
+| `main` | `7a13bd5` |
+| Offener Pull Request | #38: Grafik-Auftrag Schritt 1, bunte Punkte in Sandsturm und Meteoritenschauer (Drive: `Kistenkrawall-Auftrag-Grafik-Atmosphaere.md`, danach `Kistenkrawall-Auftrag-Dschungel-Weihnachtsmarkt.md`). Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone (auch Wüste mit und ohne Sandsturm, Mond) |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 

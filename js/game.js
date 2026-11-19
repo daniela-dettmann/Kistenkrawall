@@ -430,4 +430,7 @@ function loop(now){
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='play')pause(true);});
 window.addEventListener('pagehide',()=>{if(state==='play')pause(true);});
 newGame(true);
-requestAnimationFrame(loop);
+// start only once every script has run: the scripts after this one (urban.js with the path finding, the Christmas
+// edition, graphics, weather ...) are otherwise sometimes still missing in the first frames, and the menu battle on a
+// map with buildings stopped with „navWaypoint is not defined“
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(loop));else requestAnimationFrame(loop);
