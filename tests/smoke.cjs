@@ -398,6 +398,11 @@ async function main() {
     DN.fixed = null; return hot / (w * h) < 0.02;
   }), 'Grafik „Hoch“ überstrahlt nicht: unter 2 % ganz helle Bildpunkte am Mittag');
   check(await page.evaluate(() => {
+    // depth in the distance: far away colours fade into the haze (aerial perspective inside the fog step, no extra pass)
+    const prog = renderer.info.programs.map(p => p.name).length > 0;
+    return GFX.aerialOn && GFX.aerial > 0.3 && /kkAir/.test(THREE.ShaderChunk.fog_fragment) && prog;
+  }), 'Tiefe in der Ferne: Luftperspektive im Nebel, ohne zusätzlichen Bilddurchgang');
+  check(await page.evaluate(() => {
     const u = spawnUnit(0, 0, 30, 'kaempfer'); let n = 0; u.bot.g.traverse(o => { if (o.isMesh && o.visible) n++; });
     u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1);
     return n <= 17 && renderer.shadowMap.autoUpdate === false;
@@ -724,7 +729,7 @@ async function main() {
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'andere-version');
     await join(third, code);
     await third.waitForFunction(() => /Version/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
-    check(/aktualisier/.test(await third.textContent('#netStatus')), 'andere Spielversion: Hinweis „bitte aktualisieren“');
+    { const st = await third.textContent('#netStatus'); check(/aktualisier/.test(st), 'andere Spielversion: Hinweis „bitte aktualisieren“' + (/aktualisier/.test(st) ? '' : ' (angezeigt: ' + st + ')')); }
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'aaa111');
     await join(guest, code);
     await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled);
