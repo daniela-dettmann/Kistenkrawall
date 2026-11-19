@@ -29,6 +29,7 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `js/input.js` | Touch-, Maus- und Tastatursteuerung |
 | `js/hud.js` | HUD, Sprechblasen, Atmosphäre |
 | `js/game.js` | Spielablauf (Start, Wellen, Pause, Ende) und Hauptschleife |
+| `js/rays.js` | Lichtstrahlen durch Wolkenlücken und Baumkronen (nur „Hoch“) |
 | `js/moon.js` | Mond: Himmel, Erde, Sternschnuppen, Meteoritenschauer |
 | `js/urban.js` | Karten Flughafen, Stadt, Wüste und Mond: Wegfindung, Gebäude, Flugzeuge, Pyramide, Oasen, Sphinx, Deko, Durchsicht |
 | `js/mountain.js`, `js/volcano.js` | Karten Gebirge und Vulkan: Licht, Wetter, Krater und Ausbruch |
