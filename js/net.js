@@ -165,11 +165,12 @@ function hostRoom(){
   NET.expireTimer=setTimeout(()=>{if(!NET.joined&&NET.role==='host'){closeNet();netStatus('Der Raum ist abgelaufen. Erstelle einen neuen.');$('#netCode').textContent='–';}},NET_CFG.roomTTL);
 }
 // send a last message („room full“, „other version“) and leave the closing to the other side, which closes as soon
-// as it has read it. Closing ourselves shortly after sending tore down the whole connection (PeerJS closes the peer
-// connection) while the message could still be on its way to a busy device; it then only saw „Verbinde …“.
-// After 10 s the host tidies up anyway.
+// as it has read it. Closing ourselves shortly after sending tore down the whole connection while the message could
+// still be on its way; on a busy device it sometimes did not arrive at all. So it is sent again after 1.5, 3, 5 and
+// 8 s (the other side acts on the first one), and after 10 s the host tidies up anyway.
 function sendThenClose(conn,msg){
-  try{conn.send(msg);}catch(e){}
+  const tell=()=>{try{if(conn.open)conn.send(msg);}catch(e){}};
+  tell();for(const t of [1500,3000,5000,8000])setTimeout(tell,t);
   setTimeout(()=>{try{if(conn.open)conn.close();}catch(e){}},10000);
 }
 function hostAccept(conn){
