@@ -286,6 +286,16 @@ function joinRoom(raw){
     if(e.type==='network'||e.type==='server-error'||e.type==='socket-error')netStatus('Keine Verbindung zum Vermittlungsserver. Prüfe das Internet.');
   });
   peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{peer.reconnect();}catch(e){}},2000);});
+  // a join that gets lost on the way (busy device, bad network) used to leave „Verbinde …“ on screen for ever:
+  // without an answer from the room after 12 s the guest tries again, four times, then says so
+  let tries=0;
+  const watch=setInterval(()=>{
+    if(NET.peer!==peer||NET.role!=='guest'||NET.joined||peer.destroyed){clearInterval(watch);return;}
+    if(++tries>4){clearInterval(watch);netStatus('Keine Antwort vom Raum. Prüfe den Code und versuch es noch einmal.');return;}
+    if(!peer.open){try{peer.reconnect();}catch(e){}return;}
+    if(NET.conn)try{const c=NET.conn;NET.conn=null;c.close();}catch(e){}
+    guestConnect();
+  },12000);
 }
 function guestConnect(){
   if(!NET.peer||NET.peer.destroyed)return;
