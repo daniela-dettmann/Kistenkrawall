@@ -739,7 +739,9 @@ async function main() {
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'andere-version');
     await join(third, code);
     await third.waitForFunction(() => /Version/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
-    { const st = await third.textContent('#netStatus'); check(/aktualisier/.test(st), 'andere Spielversion: Hinweis „bitte aktualisieren“' + (/aktualisier/.test(st) ? '' : ' (angezeigt: ' + st + ')')); }
+    { const st = await third.textContent('#netStatus');
+      const why = /aktualisier/.test(st) ? '' : ' (angezeigt: ' + st + '; ' + await third.evaluate(() => JSON.stringify({ peerOpen: !!(NET.peer && NET.peer.open), id: NET.peer && NET.peer.id, disc: !!(NET.peer && NET.peer.disconnected), conn: !!NET.conn, connOpen: !!(NET.conn && NET.conn.open), role: NET.role })) + '; Host: ' + await host.evaluate(() => JSON.stringify({ peerOpen: !!(NET.peer && NET.peer.open), disc: !!(NET.peer && NET.peer.disconnected), id: NET.peer && NET.peer.id })) + ')';
+      check(/aktualisier/.test(st), 'andere Spielversion: Hinweis „bitte aktualisieren“' + why); }
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'aaa111');
     await join(guest, code);
     await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled);
