@@ -172,7 +172,6 @@ function sendThenClose(conn,msg){
 }
 function hostAccept(conn){
   // only one guest: a second device is turned away; after a drop the same guest may come back with its token
-  const busy=NET.conn&&NET.conn.open&&performance.now()-NET.lastHeard<5000;
   let greeted=false;
   conn.on('open',()=>{
     const t=setTimeout(()=>{if(!greeted)try{conn.close();}catch(e){}},5000);
@@ -181,7 +180,11 @@ function hostAccept(conn){
         clearTimeout(t);
         if(!m||m.t!=='hello'||!validFromGuest(m)){try{conn.close();}catch(e){}return;}
         greeted=true;
-        if(busy||(NET.started&&m.tok!==NET.tok)){sendThenClose(conn,{t:'full'});return;}
+        // the room is taken while the guest's connection is open and was heard from in the last 20 s; only that same
+        // guest (with its token) may come back. (Before: 5 s, and a guest whose device was busy for a moment lost
+        // its place to a stranger.)
+        const other=m.tok!==NET.tok,busy=NET.conn&&NET.conn!==conn&&NET.conn.open&&performance.now()-NET.lastHeard<20000;
+        if(other&&(busy||NET.started)){sendThenClose(conn,{t:'full'});return;}
         if(m.v!==appVersion()){sendThenClose(conn,{t:'version',v:appVersion()});netStatus('Dein Gegner hat eine andere Spielversion. Ihr braucht beide die neueste.');return;}
         if(NET.conn&&NET.conn!==conn)try{NET.conn.close();}catch(e){}
         NET.conn=conn;NET.joined=true;NET.lastHeard=performance.now();NET.gate=makeGate(300,80);clearTimeout(NET.expireTimer);
