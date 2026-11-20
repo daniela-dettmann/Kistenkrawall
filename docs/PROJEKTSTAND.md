@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 19. November 2026 · Live-Version auf `main`: `6a888c6` (PR #41: Gras biegt sich)
+Stand: 20. November 2026 · Live-Version auf `main`: `bc930db` (PR #42: glänzenderes Metall)
 
 ## Links
 
