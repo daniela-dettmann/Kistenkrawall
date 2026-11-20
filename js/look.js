@@ -4,7 +4,7 @@
    - Spuren in Schnee und Asche, Spritzer im Wasser, Mündungsfeuer, Explosionen mit Feuerball, Rauch und Glut.
    Alles nur Optik; im Mehrspieler zeichnet jedes Gerät die Effekte selbst. */
 'use strict';
-const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:1},day:{value:1},cloud:{value:0.2},prints:0};
+const LOOK={coat:{value:0.4},shiny:[],rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:1},day:{value:1},cloud:{value:0.2},prints:0};
 (function(){
   const glowTex=(function(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,1,32,32,32);
     r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.3,'rgba(255,255,255,.55)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
@@ -16,11 +16,23 @@ const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:
   const envRT=new THREE.WebGLCubeRenderTarget(64,{generateMipmaps:true,minFilter:THREE.LinearMipmapLinearFilter});
   const cubeCam=new THREE.CubeCamera(1,1000,envRT),envScene=new THREE.Scene();
   envScene.add(new THREE.Mesh(sky.geometry,sky.material));
+  // the lower half of the reflection is the map's own ground (grass, snow, sand, asphalt, moon dust), so the
+  // Blechlinge mirror where they stand (Auftrag „Grafik und Atmosphäre“, Schritt 5)
+  const GROUND=MOON?0x8f8d89:DESERT?0xd9b97f:XSNOW||MOUNTAIN?0xe6ecf3:VOLCANO?0x4c4644:URBAN?0x8a8c8a:0x6f9a4a;
+  const envGround=new THREE.Mesh(new THREE.SphereGeometry(400,24,8,0,TAU,Math.PI*0.5,Math.PI*0.5),new THREE.MeshBasicMaterial({color:GROUND,side:THREE.BackSide,fog:false}));
+  envGround.material.color.lerp(new THREE.Color(0x9aa0a6),0.45);   // a hint of the ground, not its full colour
+  envScene.add(envGround);LOOK.envGround=envGround;LOOK.envScene=envScene;
   let envT=0;const envUpdate=()=>{try{cubeCam.update(renderer,envScene);}catch(e){}};envUpdate();
   const shine=(m,how)=>{
     if(!m||!m.isMeshPhongMaterial||m.userData.kkEnv)return;m.userData.kkEnv=true;
     m.envMap=envRT.texture;
-    if(how==='metal'){m.combine=THREE.MixOperation;m.reflectivity=0.3;}else{m.combine=THREE.AddOperation;m.reflectivity=0.1;}
+    if(how==='metal'||how==='head'){m.combine=THREE.MixOperation;m.reflectivity=how==='head'?0.32:0.5;m.shininess=Math.max(m.shininess,130);m.specular.set(0xffffff);}
+    else{m.combine=THREE.AddOperation;m.reflectivity=0.12;
+      // clear coat: at grazing angles the paint mirrors much more of the surroundings, like varnish
+      gfxChain(m,sh=>{sh.uniforms.uCoat=LOOK.coat;
+        sh.fragmentShader='uniform float uCoat;\n'+sh.fragmentShader.replace('#include <tonemapping_fragment>',
+          '#ifdef USE_ENVMAP\n{float kkF=pow(1.0-clamp(dot(normalize(normal),normalize(vViewPosition)),0.0,1.0),3.0);gl_FragColor.rgb+=envColor.rgb*kkF*uCoat;}\n#endif\n#include <tonemapping_fragment>');},'coat');}
+    if(m===M.metal)LOOK.shiny.push({m,how});else if(!gfxFine())m.reflectivity*=0.6;   // a unit's own materials: set once when it is built
     m.needsUpdate=true;
   };
   shine(M.metal,'metal');
@@ -36,7 +48,7 @@ const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:
   };
   const dress=u=>{
     if(!u||!u.bot||!u.bot.g)return;
-    shine(u.bot.paint,'paint');shine(u.bot.head,'paint');
+    shine(u.bot.paint,'paint');shine(u.bot.head,'head');
     u.bot.g.traverse(o=>{if(o.isMesh&&!Array.isArray(o.material))rim(o.material);});
   };
   {const _spawn=spawnUnit;spawnUnit=function(){const u=_spawn.apply(this,arguments);try{dress(u);}catch(e){console.warn(e);}return u;};}
@@ -192,6 +204,9 @@ const LOOK={rim:{value:0.36},rimC:{value:new THREE.Color(0xffd9a8)},wind:{value:
     if(mist){mist.visible=dawn>0.01;mist.material.opacity=dawn*(MOUNTAIN?0.4:0.65);mist.material.color.copy(scene.fog.color);}
     if(dawn>0){scene.fog.near*=1-0.35*dawn;scene.fog.far*=1-0.3*dawn;}
     envT-=dt;if(envT<=0){envT=3;envUpdate();}
+    // metal and paint: full shine on „Hoch“, weaker on „Niedrig“; the ground in the reflection follows the light
+    {const k=fine?1:0.6;LOOK.coat.value=0.4*k;for(const o of LOOK.shiny)o.m.reflectivity=(o.how==='metal'?0.5:0.12)*k;
+     if(LOOK.envGround)LOOK.envGround.material.color.setHex(LOOK.envGroundHex||(LOOK.envGroundHex=LOOK.envGround.material.color.getHex())).multiplyScalar(0.35+0.65*(1-night*0.8));}
     printStep(dt);
     crateShadows();
   };

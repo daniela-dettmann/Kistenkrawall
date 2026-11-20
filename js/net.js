@@ -115,7 +115,7 @@ function makeGate(maxBytes,maxPerSec){
 
 /* ---------- Connection state ---------- */
 const NET={peer:null,conn:null,role:null,code:null,tok:null,lastHeard:0,lostAt:0,joined:false,started:false,
-  expireTimer:null,stats:{invalid:0,dropped:0},gate:null,pendingEv:[],input:{mx:0,mz:0,a:null,f:false,t:0},
+  expireTimer:null,stats:{invalid:0,dropped:0,conns:0,opened:0,hellos:0,rejected:0,got:0},gate:null,pendingEv:[],input:{mx:0,mz:0,a:null,f:false,t:0},
   sendT:0,inT:0,lastIn:'',seq:0,crateSeq:0,shotSeq:0,guestDownT:0};
 window.NET=NET;   // for tests
 const peerOpts=()=>Object.assign({},NET_CFG.peer,{debug:0,config:{iceServers:NET_CFG.stun.concat(NET_CFG.turn)}});
@@ -124,20 +124,22 @@ function send(m){try{if(NET.conn&&NET.conn.open)NET.conn.send(m);}catch(e){}}
 function netStatus(t){const el=$('#netStatus');if(el)el.textContent=t;}
 function netOverlay(text,showLeave){const o=$('#netOverlay');if(!o)return;if(!text){o.hidden=true;return;}$('#netOverlayText').textContent=text;$('#netLeave').hidden=!showLeave;o.hidden=false;}
 
-function closeNet(){
+function closeNet(later){
   clearTimeout(NET.expireTimer);
   // forget the connection before closing it, so its close event is not taken for a drop
   const c=NET.conn,p=NET.peer;NET.conn=null;NET.peer=null;
-  try{if(c)c.close();}catch(e){}
-  try{if(p)p.destroy();}catch(e){}
+  // later: the state is reset at once, the connection itself only goes after a few seconds, so a last message
+  // still reaches a busy device (closing tears down the whole peer connection, including what is on its way)
+  const shut=()=>{try{if(c)c.close();}catch(e){}try{if(p)p.destroy();}catch(e){}};
+  if(later)setTimeout(shut,later);else shut();
   Object.assign(NET,{peer:null,conn:null,role:null,code:null,tok:null,joined:false,started:false,lostAt:0,pendingEv:[]});
 }
 // leave multiplayer completely and go back to the single-player menu
 function leaveMultiplayer(msg){
   if(NET.conn&&NET.conn.open){send(NET.role==='host'?{t:'end',c:'left'}:{t:'bye'});}
-  // close only once the goodbye has left the send buffer (at most about 4 s): on a busy device a fixed second was
-  // sometimes too short, the message was lost and the other side only noticed much later
-  {const dc=NET.conn&&NET.conn.dataChannel;let n=0;const fin=()=>{if(dc&&dc.readyState==='open'&&dc.bufferedAmount>0&&n++<14){setTimeout(fin,250);return;}setTimeout(closeNet,700);};setTimeout(fin,300);}
+  // the goodbye needs time to arrive: on a busy device even waiting for the send buffer was not always enough, so the
+  // other side reads it and leaves by itself; this side forgets the connection now and closes it after 8 s
+  closeNet(8000);
   MP=null;player2=null;TAC_YAW=Math.PI;document.documentElement.classList.remove('mp');
   netOverlay(null);toMenu();
   if(msg)toast(msg,3);
@@ -162,30 +164,35 @@ function hostRoom(){
   clearTimeout(NET.expireTimer);
   NET.expireTimer=setTimeout(()=>{if(!NET.joined&&NET.role==='host'){closeNet();netStatus('Der Raum ist abgelaufen. Erstelle einen neuen.');$('#netCode').textContent='–';}},NET_CFG.roomTTL);
 }
-// send a last message and only then close: closing a fixed 0.2 s later sometimes lost the message on a busy device,
-// and the other side only saw the connection drop instead of „room full“ or „other version“ (same as the goodbye, #34)
+// send a last message („room full“, „other version“) and leave the closing to the other side, which closes as soon
+// as it has read it. Closing ourselves shortly after sending tore down the whole connection while the message could
+// still be on its way; on a busy device it sometimes did not arrive at all. So it is sent again after 1.5, 3, 5 and
+// 8 s (the other side acts on the first one), and after 10 s the host tidies up anyway.
 function sendThenClose(conn,msg){
-  try{conn.send(msg);}catch(e){}
-  const dc=conn.dataChannel;let n=0;
-  const fin=()=>{if(dc&&dc.readyState==='open'&&dc.bufferedAmount>0&&n++<14){setTimeout(fin,250);return;}setTimeout(()=>{try{conn.close();}catch(e){}},1200);};
-  setTimeout(fin,300);
+  const tell=()=>{try{if(conn.open){conn.send(msg);NET.stats.sent=(NET.stats.sent||0)+1;}else NET.stats.notOpen=(NET.stats.notOpen||0)+1;}catch(e){NET.stats.sendErr=String(e&&e.message||e).slice(0,80);}};
+  tell();for(const t of [1500,3000,5000,8000])setTimeout(tell,t);
+  setTimeout(()=>{try{if(conn.open)conn.close();}catch(e){}},10000);
 }
 function hostAccept(conn){
+  NET.stats.conns++;
+  conn.on('error',e=>{NET.stats.connErr=String(e&&(e.type||e.message)||e).slice(0,80);});
   // only one guest: a second device is turned away; after a drop the same guest may come back with its token
   let greeted=false;
   conn.on('open',()=>{
+    NET.stats.opened++;
     const t=setTimeout(()=>{if(!greeted)try{conn.close();}catch(e){}},5000);
     conn.on('data',m=>{
-      if(!greeted){
+      if(!greeted){NET.stats.hellos++;
         clearTimeout(t);
         if(!m||m.t!=='hello'||!validFromGuest(m)){try{conn.close();}catch(e){}return;}
         greeted=true;
         // the room is taken while the guest's connection is open and was heard from in the last 20 s; only that same
         // guest (with its token) may come back. (Before: 5 s, and a guest whose device was busy for a moment lost
         // its place to a stranger.)
-        const other=m.tok!==NET.tok,busy=NET.conn&&NET.conn!==conn&&NET.conn.open&&performance.now()-NET.lastHeard<20000;
-        if(other&&(busy||NET.started)){sendThenClose(conn,{t:'full'});return;}
-        if(m.v!==appVersion()){sendThenClose(conn,{t:'version',v:appVersion()});netStatus('Dein Gegner hat eine andere Spielversion. Ihr braucht beide die neueste.');return;}
+        // a second attempt of the same device (same peer id) is that device, not a stranger
+        const other=m.tok!==NET.tok&&!(NET.conn&&NET.conn.peer===conn.peer),busy=NET.conn&&NET.conn!==conn&&NET.conn.open&&performance.now()-NET.lastHeard<20000;
+        if(other&&(busy||NET.started)){NET.stats.rejected++;sendThenClose(conn,{t:'full'});return;}
+        if(m.v!==appVersion()){NET.stats.rejected++;sendThenClose(conn,{t:'version',v:appVersion()});netStatus('Dein Gegner hat eine andere Spielversion. Ihr braucht beide die neueste.');return;}
         if(NET.conn&&NET.conn!==conn)try{NET.conn.close();}catch(e){}
         NET.conn=conn;NET.joined=true;NET.lastHeard=performance.now();NET.gate=makeGate(300,80);clearTimeout(NET.expireTimer);
         conn.send({t:'welcome',v:appVersion(),map:MAP,tok:NET.tok,peace:peaceMin});
@@ -287,15 +294,15 @@ function joinRoom(raw){
   });
   peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{peer.reconnect();}catch(e){}},2000);});
   // a join that gets lost on the way (busy device, bad network) used to leave „Verbinde …“ on screen for ever:
-  // without an answer from the room after 12 s the guest tries again, four times, then says so
+  // without an answer from the room after 15 s the guest tries again, four times, then says so. Earlier attempts
+  // stay open: a busy host may answer late, and that answer is taken from whichever attempt it arrives on.
   let tries=0;
   const watch=setInterval(()=>{
     if(NET.peer!==peer||NET.role!=='guest'||NET.joined||peer.destroyed){clearInterval(watch);return;}
     if(++tries>4){clearInterval(watch);netStatus('Keine Antwort vom Raum. Prüfe den Code und versuch es noch einmal.');return;}
     if(!peer.open){try{peer.reconnect();}catch(e){}return;}
-    if(NET.conn)try{const c=NET.conn;NET.conn=null;c.close();}catch(e){}
     guestConnect();
-  },12000);
+  },15000);
 }
 function guestConnect(){
   if(!NET.peer||NET.peer.destroyed)return;
@@ -304,11 +311,15 @@ function guestConnect(){
     NET.conn=conn;NET.gate=makeGate(120000,60);NET.lastHeard=performance.now();
     conn.send(NET.tok?{t:'hello',v:appVersion(),tok:NET.tok}:{t:'hello',v:appVersion()});
   });
-  conn.on('data',m=>{if(conn===NET.conn)guestReceive(m);});
+  conn.on('data',m=>{
+    if(conn!==NET.conn&&!(NET.role==='guest'&&!NET.joined&&NET.peer&&conn.provider===NET.peer))return;
+    NET.conn=conn;guestReceive(m);   // before the welcome: the first answer counts, on whichever attempt it comes
+  });
   conn.on('close',()=>{if(conn===NET.conn)connectionLost();});
   conn.on('error',()=>{if(conn===NET.conn)connectionLost();});
 }
 function guestReceive(m){
+  NET.stats.got++;
   NET.lastHeard=performance.now();
   if(!NET.gate.check(m)){NET.stats.dropped++;return;}
   if(!validFromHost(m)){NET.stats.invalid++;if(NET.stats.invalid>200)leaveMultiplayer('Die Verbindung wurde wegen fehlerhafter Daten beendet.');return;}
