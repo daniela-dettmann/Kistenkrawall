@@ -286,7 +286,7 @@ if(XMAS)(function(){
   };
 
   /* ---------- Schneefall, Eisschollen, Weihnachtsmann am Himmel ---------- */
-  const SN=MOUNTAIN||DESERT||MOON?0:1400,   // the mountain already has its own snow drift, the desert stays dry
+  const SN=MOUNTAIN||DESERT||MOON||JUNGLE?0:1400,   // the mountain already has its own snow drift, the desert stays dry
   snowGeo=new THREE.BufferGeometry(),sp=new Float32Array(SN*3);
   for(let i=0;i<SN;i++){sp[i*3]=rand(-40,40);sp[i*3+1]=rand(0,30);sp[i*3+2]=rand(-40,40);}
   snowGeo.setAttribute('position',new THREE.BufferAttribute(sp,3));

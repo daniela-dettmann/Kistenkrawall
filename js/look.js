@@ -18,7 +18,7 @@ const LOOK={coat:{value:0.4},shiny:[],rim:{value:0.36},rimC:{value:new THREE.Col
   envScene.add(new THREE.Mesh(sky.geometry,sky.material));
   // the lower half of the reflection is the map's own ground (grass, snow, sand, asphalt, moon dust), so the
   // Blechlinge mirror where they stand (Auftrag „Grafik und Atmosphäre“, Schritt 5)
-  const GROUND=MOON?0x8f8d89:DESERT?0xd9b97f:XSNOW||MOUNTAIN?0xe6ecf3:VOLCANO?0x4c4644:URBAN?0x8a8c8a:0x6f9a4a;
+  const GROUND=MOON?0x8f8d89:DESERT?0xd9b97f:JUNGLE?0x4c6a34:XSNOW||MOUNTAIN?0xe6ecf3:VOLCANO?0x4c4644:URBAN?0x8a8c8a:0x6f9a4a;
   const envGround=new THREE.Mesh(new THREE.SphereGeometry(400,24,8,0,TAU,Math.PI*0.5,Math.PI*0.5),new THREE.MeshBasicMaterial({color:GROUND,side:THREE.BackSide,fog:false}));
   envGround.material.color.lerp(new THREE.Color(0x9aa0a6),0.45);   // a hint of the ground, not its full colour
   envScene.add(envGround);LOOK.envGround=envGround;LOOK.envScene=envScene;
