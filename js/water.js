@@ -44,8 +44,8 @@ const WATER={q:{value:1},dist:null};
   const xm=typeof XMAS!=='undefined'&&XMAS;
   const U={
     uDist:{value:distTex},uNrm:{value:nrmTex},
-    uDeep:{value:new THREE.Color(VOLCANO?0x0a2234:xm?0x123f66:0x0d3a66)},
-    uShallow:{value:new THREE.Color(VOLCANO?0x24606a:xm?0x5cc4d2:0x34c2b8)},
+    uDeep:{value:new THREE.Color(JUNGLE?0x14302a:VOLCANO?0x0a2234:xm?0x123f66:0x0d3a66)},
+    uShallow:{value:new THREE.Color(JUNGLE?0x3f6e4c:VOLCANO?0x24606a:xm?0x5cc4d2:0x34c2b8)},
     uSkyHor:sky.material.uniforms.hor,uSkyTop:sky.material.uniforms.top,uSunDir:sky.material.uniforms.sunDir,
     uDay:typeof LOOK!=='undefined'?LOOK.day:{value:1},uQ:WATER.q
   };

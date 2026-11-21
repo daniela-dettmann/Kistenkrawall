@@ -3,7 +3,7 @@
    - Durch Wolkenlücken: neben den Wolken in der Nähe fallen breite Lichtbahnen schräg zum Boden, genau in Richtung
      der Sonne; sie wandern mit den Wolken und blenden sanft ein und aus.
    - Durch Bäume: unter den Kronen in Kameranähe schmale Strahlen bis zum Boden (Gebirge: Tannen, Wüste: Palmen,
-     später das Blätterdach im Dschungel).
+     im Dschungel unter dem hohen Blätterdach).
    - Die Richtung folgt der Sonne (Tageszeit), abends werden sie warm und lang, nachts sind sie aus. Bei Regen,
      Schnee- und Sandsturm verschwinden sie, auf dem Mond (keine Luft) gibt es keine.
    - Nur auf „Grafik: Hoch“; auf „Niedrig“ aus. Zwei Zeichenvorgänge (je ein InstancedMesh). */
@@ -72,8 +72,8 @@ const RAYS={sky:0,tree:0,k:0,mesh:null,treeMesh:null};
       for(let i=0;i<TN;i++){const b=treeB[i],t=b.t;
         const want=t?(0.6+0.4*Math.sin(gameT*0.37+b.ph))*0.12:0;b.a+=(want-b.a)*Math.min(1,dt*1.2);
         if(!t||b.a<0.004){tree.setMatrixAt(i,zero);continue;}
-        pos.set(t.x,hgt(t.x,t.z)+(DESERT?4.4:2.6),t.z);
-        const f=nearFade(pos,7.5+dusk*3,1.5,5);place(tree,i,pos,7.5+dusk*3,b.w,b.a*k*f);if(f>0.05)RAYS.tree++;}
+        pos.set(t.x,hgt(t.x,t.z)+(t.h?t.h-1:DESERT?4.4:2.6),t.z);   // jungle trees: from under the high canopy
+        const L=t.h?t.h+dusk*3:7.5+dusk*3,f=nearFade(pos,L,1.5,5);place(tree,i,pos,L,b.w,b.a*k*f);if(f>0.05)RAYS.tree++;}
       sky.instanceMatrix.needsUpdate=tree.instanceMatrix.needsUpdate=true;
       if(sky.instanceColor)sky.instanceColor.needsUpdate=true;if(tree.instanceColor)tree.instanceColor.needsUpdate=true;
       if(warm>0){sky.material.color.setRGB(1,0.86-warm*0.2,0.7-warm*0.3);tree.material.color.copy(sky.material.color);}
