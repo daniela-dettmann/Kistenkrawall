@@ -1,14 +1,14 @@
 # Kistenkrawall – Übergabe
 
-Stand: 19. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
+Stand: 20. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
 
 ## Wo wir stehen
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `6a888c6` (PR #41, Gras biegt sich) |
-| `main` | `6a888c6` |
-| Offener Pull Request | #42: Grafik-Auftrag Schritt 5, glänzenderes Metall (letzter Schritt). Danach Karten Dschungel und Weihnachtsmarkt (Drive: `Kistenkrawall-Auftrag-Dschungel-Weihnachtsmarkt.md`; vorher Basen-Lage und Fluss mit Daniela abstimmen, Weihnachtsmarkt-Spielstand außerhalb der Saison klären). Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone |
+| Live auf GitHub Pages | `bc930db` (PR #42, glänzenderes Metall) |
+| `main` | `bc930db` |
+| Offener Pull Request | keiner. Auftrag „Grafik und Atmosphäre“ ist fertig (#38 bis #42). Als Nächstes Karten Dschungel und Weihnachtsmarkt (Drive: `Kistenkrawall-Auftrag-Dschungel-Weihnachtsmarkt.md`; vorher Basen-Lage und Fluss mit Daniela abstimmen, Weihnachtsmarkt-Spielstand außerhalb der Saison klären). Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 

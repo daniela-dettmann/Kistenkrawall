@@ -28,7 +28,7 @@ const bad = msg => { failed++; console.log('  FAIL ' + msg); };
 const check = (cond, msg) => (cond ? ok(msg) : bad(msg));
 // On GitHub the browser test runs in four parts at the same time (KK_PART=1..4, see .github/workflows/pages.yml).
 // Without KK_PART (locally) everything runs. Part 1: game, offline, save; 2: sound studio, Christmas, mountain;
-// 3: graphics, day/night and weather; 4: volcano, update notice. The multiplayer part only runs locally.
+// 3: graphics, day/night and weather, airport, city, jungle; 4: desert, volcano, update notice. The multiplayer part only runs locally.
 const PART = +process.env.KK_PART || 0;
 const part = n => !PART || PART === n;
 
@@ -106,7 +106,7 @@ async function main() {
       for (let i = 0; i < 200; i++) wxCrate(c, 0.1);
       const ok = urbanFree(c.x, c.z, 1); removeCrate(c); DN.setWeather('klar', false); DN.wx.s = 0; return ok;
     }), name + ': Kisten landen nie auf Dächern, auch nicht durch Wind');
-  if (m === 'wueste' || m === 'mond') check(await page.evaluate(() => URB.zones.every(zs => {
+  if (m === 'wueste' || m === 'mond' || m === 'dschungel') check(await page.evaluate(() => URB.zones.every(zs => {
     // each crate colour lands on both halves of the field: on average as close to one base as to the other
     const d = b => zs.reduce((a, r) => a + r.w * Math.hypot((r.x0 + r.x1) / 2 - b.x, (r.z0 + r.z1) / 2 - b.z), 0);
     return Math.abs(d(BASES[0]) - d(BASES[1])) < 0.5 && zs.some(r => r.z1 > 0) && zs.some(r => r.z0 < 0);
@@ -130,7 +130,7 @@ async function main() {
     check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && renderer.info.render.calls < 500), name + ': Runde läuft, unter 500 Zeichenvorgänge pro Bild');
     check(await page.evaluate(() => {
       // a house stops direct shots; the mortar lobs over it (the shots themselves are followed, other units may join the fight)
-      peaceT = 0; const b = URB.boxes.find(b => ['house', 'hangar', 'gate', 'pyr', 'boulder'].includes(b.k) && b.x0 > -40 && b.x1 < 40), cz = (b.z0 + b.z1) / 2;
+      peaceT = 0; const b = URB.boxes.find(b => ['house', 'hangar', 'gate', 'pyr', 'boulder', 'temple'].includes(b.k) && b.x0 > -40 && b.x1 < 40), cz = (b.z0 + b.z1) / 2;
       const a = spawnUnit(0, b.x0 - 2, cz, 'kaempfer'), e = spawnUnit(1, b.x1 + 2, cz, 'kaempfer');
       const pin = () => { a.x = b.x0 - 2; a.z = cz; e.x = b.x1 + 2; e.z = cz; };
       pin(); a.cd = 0; const before = new Set(shots); fire(a, Math.PI / 2); const mine = shots.filter(s => !before.has(s)); let maxX = -99;
@@ -590,6 +590,48 @@ async function main() {
     check(await page.evaluate(m => XMAS && MAP === m && state === 'play' && !!URB.lights && URB.lights.count > 60 && crates.every(c => c.bow) && (m !== 'stadt' || obstacles.some(o => o.x === 0 && o.z === 0)), m), 'Weihnachtsedition: ' + (m === 'stadt' ? 'Stadt mit Baum auf dem Marktplatz' : 'Flughafen') + ', Lichterketten, Geschenkkisten');
     await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
   }
+  }
+  if (part(3)) {   // Dschungel
+  console.log('Dschungel');
+  await urbanMapChecks(page, 'dschungel', 'Dschungel');
+  check(await page.evaluate(() => {
+    // the river: nobody walks into it, but it stops neither sight nor shots; the bridges and the temple passage are open for tanks too
+    const J = URB.jungle, g0 = navGrid(0), g1 = navGrid(1), rz = J.rz(-22);
+    const water = !urbanFree(-22, rz) && !urbanFree(5, 20) && !urbanFree(20, 0) && urbanFree(0, 20) && urbanFree(-22, rz, 0, 0.5) && !urbanBlocked(-22, 12, -22, -12) && !urbanBlocked(0, 30, 0, 12);
+    const bridges = URB.bridges.length === 4 && navLine(g1, 0, 27, 0, -27) && navLine(g1, 30, 9, 30, -11) && navLine(g1, -30, 11, -30, -9) && navLine(g0, 0, 27, 0, -27);
+    const temple = URB.boxes.filter(b => b.k === 'temple').length === 4 && !urbanFree(6, 6) && urbanFree(0, 0) && urbanFree(6, 0) && navLine(g1, 0, 0, 14, 0) && URB.fadeable.some(f => f.mats === URB.temple);
+    return water && bridges && temple && hgt(0, 20) > 0.3 && hgt(30, -2) > 0.3;
+  }), 'Dschungel: Fluss sperrt nur das Laufen, Stege, Hängebrücken und Tempelgänge auch für Panzer');
+  check(await page.evaluate(() => {
+    // a shot across the river flies on; crates never land in the water, in the temple or in the dense forest
+    peaceT = 0; const a = spawnUnit(0, -22, 11, 'kaempfer'); const e = spawnUnit(1, -22, -9, 'kaempfer');
+    const pin = () => { a.x = -22; a.z = 11; e.x = -22; e.z = -9; };
+    pin(); a.cd = 0; e.hp = e.maxHp; const before = new Set(shots); fire(a, Math.PI); const mine = shots.filter(s => !before.has(s)); let minZ = 99;
+    for (let i = 0; i < 80; i++) { update(0.02); pin(); for (const s of mine) if (shots.includes(s)) minZ = Math.min(minZ, s.z); }
+    const across = mine.length > 0 && minZ < -3;
+    for (const u of [a, e]) { u.alive = false; scene.remove(u.bot.g); scene.remove(u.bot.blob); u.tag.el.remove(); units.splice(units.indexOf(u), 1); }
+    for (let i = 0; i < 800; i++) { const sp = dropSpot(DROPS[i % 2], i % 3 ? 1 : -1, i % 5 === 0); if (riverDepth(sp.x, sp.z) > -1 || !urbanFree(sp.x, sp.z, 1) || obstacles.some(o => Math.hypot(o.x - sp.x, o.z - sp.z) < o.r + 1)) return false; }
+    return across;
+  }), 'Dschungel: Schüsse fliegen über den Fluss, Kisten landen nie im Wasser, im Tempel oder zwischen den Bäumen');
+  check(await page.evaluate(() => URB.trees >= 120 && TREES.length >= 120 && obstacles.length > 150 && !!URB.flies && URB.flies.count > 20 && URB.undergrowth.every(m => m.count > 100)
+    && URB.boxes.filter(b => b.k === 'head').length === 4 && !XSNOW && DN.kind === 'regen' && GFX.water && renderer.info.render.triangles < 700000),
+    'Dschungel: Regenwald mit Bäumen, Farnen und Schmetterlingen, Steinköpfe, Wasser, Regen statt Schnee');
+  await page.evaluate(() => pause(true));
+  await page.goto(base + '?normal&karte=insel');
+  await openPlay(page);
+  await page.waitForSelector('#continueBtn', { state: 'visible' });
+  check((await page.textContent('#continueInfo')).startsWith('Dschungel · '), 'Spielstand merkt den Dschungel');
+  await Promise.all([page.waitForNavigation(), page.click('#continueBtn', { force: true })]);
+  await page.waitForFunction(() => typeof state !== 'undefined' && state === 'pause', null, { timeout: 60000 }).catch(() => {});
+  { const r = await page.evaluate(() => [MAP, state, units.length]); check(r[0] === 'dschungel' && r[1] === 'pause' && r[2] >= 3, 'Weiterspielen lädt den Dschungel und setzt fort (' + r.join(', ') + ')'); }
+  await page.evaluate(() => { endGame(false, 'Test.'); });
+  await page.goto(base + '?weihnachten&karte=dschungel');
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  await startRound(page);
+  await page.waitForTimeout(1200);
+  check(await page.evaluate(() => XMAS && !XSNOW && !SNOW.on && MAP === 'dschungel' && state === 'play' && !!URB.lights && URB.lights.count > 300 && crates.every(c => c.bow)
+    && renderer.info.render.calls < 500), 'Weihnachtsedition: Dschungel ohne Schnee, Lichterketten an Tempel, Stegen und Bäumen, Geschenkkisten');
+  await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
   }
   if (part(4)) {   // Wüste
   console.log('Wüste');

@@ -21,10 +21,12 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
    so every band rule (bridges, islands, the river as a wall) simply never applies.
    'mond' too: domes, craters, boulders and a covered tube round the side; low gravity (GRAV).
    'wueste' works like them: a pyramid with a cross-shaped passage in the middle, ruins, dunes and two oases.
+   'dschungel' too: a stepped temple on an island in the middle, a river round it and across the map (water blocks
+   walking, not shots), two stone footbridges and two rope bridges, dense forest with trails and clearings.
    The world is built once at load, so changing the map reloads the page. ?karte=gebirge|insel overrides. */
-const MAPS={insel:'Insel',gebirge:'Gebirge',vulkan:'Vulkan',flughafen:'Flughafen',stadt:'Stadt',wueste:'Wüste',mond:'Mond'};
+const MAPS={insel:'Insel',gebirge:'Gebirge',vulkan:'Vulkan',flughafen:'Flughafen',stadt:'Stadt',wueste:'Wüste',mond:'Mond',dschungel:'Dschungel'};
 const MAP=(function(){
-  const q=/[?&#]karte=(insel|gebirge|vulkan|flughafen|stadt|wueste|mond)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase();
+  const q=/[?&#]karte=(insel|gebirge|vulkan|flughafen|stadt|wueste|mond|dschungel)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase();
   try{const m=localStorage.getItem('kk-map');if(MAPS[m])return m;}catch(e){}
   return 'insel';
 })();
@@ -37,16 +39,16 @@ const XMAS=(function(){
   try{if(localStorage.getItem('kk-xmas')==='off')return false;}catch(e){}
   return xmasSeason();
 })();
-const MOUNTAIN=MAP==='gebirge',VOLCANO=MAP==='vulkan',AIRPORT=MAP==='flughafen',CITY=MAP==='stadt',DESERT=MAP==='wueste',MOON=MAP==='mond',URBAN=AIRPORT||CITY||DESERT||MOON;
+const MOUNTAIN=MAP==='gebirge',VOLCANO=MAP==='vulkan',AIRPORT=MAP==='flughafen',CITY=MAP==='stadt',DESERT=MAP==='wueste',MOON=MAP==='mond',JUNGLE=MAP==='dschungel',URBAN=AIRPORT||CITY||DESERT||MOON||JUNGLE;
 // gravity relative to the other maps: on the moon crates float down, dust hangs in the air, shells fly in flat arcs
 const GRAV=MOON?0.3:1;
-// winter in the Christmas edition: snow on the ground and snow as weather (not on the volcano and not in the desert)
-const XSNOW=XMAS&&!VOLCANO&&!DESERT&&!MOON;
+// winter in the Christmas edition: snow on the ground and snow as weather (not on the volcano, in the desert, on the moon, in the jungle)
+const XSNOW=XMAS&&!VOLCANO&&!DESERT&&!MOON&&!JUNGLE;
 // the city is point-symmetric (bases in opposite corners), all other maps mirror along z
-const BASES=CITY?[{x:-34,z:34},{x:34,z:-34}]:AIRPORT||DESERT||MOON?[{x:0,z:38},{x:0,z:-38}]:[{x:0,z:44},{x:0,z:-44}];
+const BASES=CITY?[{x:-34,z:34},{x:34,z:-34}]:AIRPORT||DESERT||MOON||JUNGLE?[{x:0,z:38},{x:0,z:-38}]:[{x:0,z:44},{x:0,z:-44}];
 const LIM=52;
 // BX: the two lanes the waves and defenders think in (bridges on the band maps, streets and gates on the new ones)
-const BX=VOLCANO?8:18,BRIDGES=[-BX,BX],BANK=URBAN?-100:VOLCANO?12:6.2,ISL_RX=VOLCANO?15:6.2,ISL_RZ=VOLCANO?7:3.4;
+const BX=VOLCANO?8:JUNGLE?30:18,BRIDGES=[-BX,BX],BANK=URBAN?-100:VOLCANO?12:6.2,ISL_RX=VOLCANO?15:6.2,ISL_RZ=VOLCANO?7:3.4;
 // ZS: how much further from the middle the banks lie than on the island map; shifts everything placed along them
 const ZS=URBAN?0:BANK-6.2,CRATER={x:0,z:0,r:3.3},LAVA_END=55.5;
 
@@ -114,6 +116,44 @@ const URB={boxes:[],zones:[[],[]],gold:[],routes:null,kind:MAP};
     URB.zones[1]=[{x0:0.2,x1:1.6,z0:18.5,z1:21.5,w:1},{x0:0.2,x1:1.6,z0:-21.5,z1:-18.5,w:1},sq(17.5,23.5,1.3,1.5),sq(17.5,-23.5,1.3,1.5)];
     URB.gold=[sq(0,0,3,1)];   // the big crater: the hotspot
     URB.routes=[[[-14,26],[-24,20],[-30,10]],[[14,28],[24,27],[44,22],[44,6]],[[-8,32],[8,32],[6,46],[-4,47]]];
+  }else if(JUNGLE){
+    // Jungle. Base A (z>0) and base B (z<0); in the middle a stepped temple (four blocks, a cross-shaped passage
+    // 6 wide between them, like the pyramid) on an island. The river runs from west to east and splits round the island. Crossings: a stone
+    // footbridge onto the island from each base, a rope bridge on each side (x = -30 and +30). Ruins and stone heads
+    // in four clearings; dense forest everywhere else, with trails for vehicles. Mirrored along x and z, the river
+    // itself point-symmetric. Water blocks walking (low boxes, h = 0), but not sight and shots.
+    const J=URB.jungle={th:9,pw:3,th_h:8,R:20,rw:2.2,sw:3};
+    const S=(x0,x1,z0,z1,h,k)=>B(Math.min(x0,x1),Math.max(x0,x1),Math.min(z0,z1),Math.max(z0,z1),h,k);
+    for(const sx of [-1,1])for(const sz of [-1,1])S(sx*J.pw,sx*J.th,sz*J.pw,sz*J.th,J.th_h,'temple');
+    for(const sx of [1,-1])for(const sz of [1,-1]){
+      S(sx*3.1,sx*4.1,sz*10.6,sz*11.6,3.4,'col');                   // columns at the passage mouths
+      S(sx*39.4,sx*40.6,sz*18.5,sz*26.5,2.4,'wall');S(sx*41,sx*45,sz*27.6,sz*28.6,1.8,'wall');   // ruin by each clearing
+      S(sx*26.6,sx*29.4,sz*29.6,sz*32.4,3.4,'head');                // a stone head looking at the clearing
+      S(sx*36,sx*41,sz*31.6,sz*32.8,1.2,'fallen');                  // a fallen statue
+    }
+    // the bridges: footbridges over the ring north and south, rope bridges over the stream
+    const rz=x=>-2.5*Math.sin(x*0.07);
+    URB.bridges=[{x0:-2.6,x1:2.6,z0:16.4,z1:23.4,k:'steg'},{x0:-2.6,x1:2.6,z0:-23.4,z1:-16.4,k:'steg'}];
+    for(const sx of [-1,1]){const c=rz(sx*30);URB.bridges.push({x0:sx*30-2.6,x1:sx*30+2.6,z0:c-4.6,z1:c+4.6,k:'rope'});}
+    J.rz=rz;
+    // the river as low boxes: 1 m cells, merged into runs along x
+    for(let z=-60.5;z<60.5;z+=1){let a=null;
+      for(let x=-60.5;x<=60.5;x+=1){const w=x<60.5&&riverDepth(x+0.5,z+0.5)>0.3&&!onJBridge(x+0.5,z+0.5);
+        if(w&&a===null)a=x;else if(!w&&a!==null){B(a,x,z,z+1,0,'water');a=null;}}}
+    const sq=(x,z,r,w)=>({x0:x-r,x1:x+r,z0:z-r,z1:z+r,w});
+    // blue on the west side, yellow on the east side, each on both halves: the clearing and the rope bridge head
+    URB.zones[0]=[sq(-34,23,2.4,1.5),sq(-34,-23,2.4,1.5),sq(-30,11,1.8,1),sq(-30,-11,1.8,1)];
+    URB.zones[1]=[sq(34,23,2.4,1.5),sq(34,-23,2.4,1.5),sq(30,11,1.8,1),sq(30,-11,1.8,1)];
+    URB.gold=[{x0:10.6,x1:13.4,z0:-3,z1:3,w:1},{x0:-13.4,x1:-10.6,z0:-3,z1:3,w:1}];   // beside the temple, on the island
+    URB.routes=[[[-30,14],[-34,22],[-20,28]],[[30,14],[34,22],[20,28]],[[-8,32],[8,32],[10,44],[-10,44]]];
+    // trails through the forest (team A; B mirrored along z): to the footbridge, to both rope bridges, into the clearings
+    URB.trails=[];
+    for(const sz of [1,-1]){
+      URB.trails.push([[0,sz*40],[0,sz*14]]);
+      for(const sx of [1,-1]){const c=rz(sx*30),end=sz>0?c+4.6:c-4.6;
+        URB.trails.push([[sx*6,sz*36],[sx*18,sz*28],[sx*30,sz*16],[sx*30,end]],[[sx*30,sz*16],[sx*34,sz*23],[sx*44,sz*30]]);}}
+    URB.clear=[];for(const sx of [1,-1])for(const sz of [1,-1])URB.clear.push({x:sx*34,z:sz*24,r:7.5},{x:sx*30,z:sz*11,r:5.5});
+    for(const sz of [1,-1])URB.clear.push({x:0,z:sz*27,r:7});
   }else{
     // Desert. Oasis A (z>0) and oasis B (z<0) face each other across a pyramid (28 x 28, apex in the middle) that
     // a cross-shaped passage, 6 wide, cuts into four blocks: a sheltered short cut, wide enough for vehicles too.
@@ -147,8 +187,16 @@ const URB={boxes:[],zones:[[],[]],gold:[],routes:null,kind:MAP};
 // inside the pyramid's footprint (passages included): crates never land or drift there
 // inside the moon tube or its walls
 function inTube(x,z,m){m=m||0;return MOON&&URB.tube.some(r=>x>r.x0-m&&x<r.x1+m&&z>r.z0-m&&z<r.z1+m);}
+// jungle river: how far inside the water a point lies (> 0 in the water, in metres from the bank)
+function riverDepth(x,z){
+  if(!JUNGLE)return -9;const J=URB.jungle;
+  let d=J.rw-Math.abs(Math.hypot(x,z)-J.R);
+  if(Math.abs(x)>=J.R-1)d=Math.max(d,J.sw-Math.abs(z-J.rz(x)));
+  return d;
+}
+function onJBridge(x,z,m){m=m||0;return JUNGLE&&URB.bridges.some(b=>x>b.x0-m&&x<b.x1+m&&z>b.z0-m&&z<b.z1+m);}
 function inPyramid(x,z,m){return DESERT&&Math.abs(x)<URB.pyr.r+(m||0)&&Math.abs(z)<URB.pyr.r+(m||0);}
-function urbanFree(x,z,m){m=m||0;for(const b of URB.boxes)if(x>b.x0-m&&x<b.x1+m&&z>b.z0-m&&z<b.z1+m)return false;return true;}
+function urbanFree(x,z,m,minH){m=m||0;for(const b of URB.boxes)if((!minH||b.h>=minH)&&x>b.x0-m&&x<b.x1+m&&z>b.z0-m&&z<b.z1+m)return false;return true;}
 // push a circle of radius r out of the buildings (the shortest way out)
 function urbanPush(u,r){
   for(const b of URB.boxes){
@@ -183,6 +231,7 @@ function islandE(x,z){if(URBAN)return 9;if(VOLCANO)return Math.hypot(x/ISL_RX,z/
 function hgtRaw(x,z){
   if(DESERT)return hgtDesert(x,z);
   if(MOON)return hgtMoon(x,z);
+  if(JUNGLE)return hgtJungle(x,z);
   if(URBAN)return 0.32;   // paved and flat
   if(MOUNTAIN)return hgtMountain(x,z);
   if(VOLCANO)return hgtVolcano(x,z);
@@ -222,6 +271,23 @@ function hgtMoon(x,z){
   for(const c of URB.craters)h+=bowl(Math.hypot(x-c.x,z-c.z),c.r,c.d);
   const e=smooth((Math.max(Math.abs(x),Math.abs(z))-56)/10);
   return h+e*(1.5+1.5*Math.sin(x*0.09)*Math.cos(z*0.07));
+}
+// jungle: soft, uneven forest floor; flat at the bases, on the island and on the trails near the bridges; the river
+// cut deep into it with sloping banks; hills beyond the edge of the field
+function hgtJungle(x,z){
+  let h=0.34+0.28*Math.sin(x*0.17+z*0.05)*Math.cos(z*0.13-x*0.07)+0.12*Math.sin(x*0.41-z*0.37);
+  let f=1;for(const b of BASES)f=Math.min(f,smooth((Math.hypot(x-b.x,z-b.z)-11)/6));
+  f=Math.min(f,smooth((Math.hypot(x,z)-15)/2));
+  for(const b of URB.bridges)f=Math.min(f,smooth((Math.max(b.x0-x,x-b.x1,b.z0-z,z-b.z1)-1)/4));
+  h=0.34+(h-0.34)*f;
+  const e=smooth((Math.max(Math.abs(x),Math.abs(z))-55)/9);
+  h+=e*(2.5+2*Math.sin(x*0.11)*Math.cos(z*0.09));
+  // the banks slope down to just above the water; at the bridges they stay at deck height
+  const r=riverDepth(x,z);
+  if(r>-3-e*3){let nb=0;for(const b of URB.bridges)nb=Math.max(nb,1-smooth((Math.max(b.x0-x,x-b.x1,b.z0-z,z-b.z1)-0.3)/2.6));
+    const k1=smooth((r+3+e*3)/(2.8+e*3));h=h*(1-k1)+(-1.15+1.55*nb)*k1;
+    const k2=smooth((r+0.2)/1.4);h=h*(1-k2)-2.6*k2;}
+  return h;
 }
 // small craters only for the look (x, z, radius), kept off the lanes and the drop zones
 const LITTLE=[[-12,12,2.2],[12,-10,1.8],[-40,30,3],[-44,-4,2.6],[30,4,2.4],[-18,-26,2],[10,14,1.6],[-6,-14,1.5],[34,-24,2.2],[-38,-30,2.8],[28,30,1.8],[-22,4,1.7],[6,28,1.4],[-48,18,2.4],[50,48,3],[-50,-48,3]];
@@ -266,7 +332,7 @@ function hgtVolcano(x,z){
   return h;
 }
 function segDist(px,pz,ax,az,bx,bz){const vx=bx-ax,vz=bz-az,t=clamp(((px-ax)*vx+(pz-az)*vz)/(vx*vx+vz*vz),0,1);return Math.hypot(px-ax-vx*t,pz-az-vz*t);}
-function pathDist(x,z){if(URBAN)return 1e9;let d=1e9;for(const s of [1,-1]){for(const bx of BRIDGES)d=Math.min(d,segDist(x,z,bx*0.2,s*37,bx,s*(9.5+ZS)));}return d;}
+function pathDist(x,z){if(JUNGLE){let d=1e9;for(const t of URB.trails)for(let i=0;i<t.length-1;i++)d=Math.min(d,segDist(x,z,t[i][0],t[i][1],t[i+1][0],t[i+1][1]));return d;}if(URBAN)return 1e9;let d=1e9;for(const s of [1,-1]){for(const bx of BRIDGES)d=Math.min(d,segDist(x,z,bx*0.2,s*37,bx,s*(9.5+ZS)));}return d;}
 const DROPS=[{x:-BX,sort:'blau'},{x:BX,sort:'gelb'}];
 // A landing spot for a crate on drop zone d: off the bridge lane, inside the island; gold on the volcano lands at the crater rim
 function dropSpot(d,side,gold){
@@ -291,6 +357,7 @@ function urbanSpot(zs){
 function onBridge(x,z){if(URBAN)return false;return Math.abs(z)<9.4+ZS&&BRIDGES.some(bx=>Math.abs(x-bx)<crossW(bx));}
 function hgt(x,z){
   let h=hgtRaw(x,z);
+  if(JUNGLE&&onJBridge(x,z))h=Math.max(h,0.42);
   if(onBridge(x,z)||onPlatform(x,z))h=Math.max(h,0.38);
   return Math.max(h,-1.3);
 }
