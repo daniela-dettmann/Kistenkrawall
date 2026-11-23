@@ -37,7 +37,7 @@ function drawMap(){
   const S=mm.width,sc=S/(LIM*2+6),X=x=>(x+LIM+3)*sc,Z=z=>(z+LIM+3)*sc;
   mctx.clearRect(0,0,S,S);
   if(URBAN){   // airport and city: ground, buildings, drop zones
-    mctx.fillStyle=JUNGLE?'rgba(70,110,55,.6)':CITY?'rgba(150,150,150,.45)':MOON?'rgba(150,150,150,.45)':DESERT?'rgba(226,195,135,.5)':'rgba(170,170,160,.45)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
+    mctx.fillStyle=MARKET?'rgba(225,225,232,.6)':JUNGLE?'rgba(70,110,55,.6)':CITY?'rgba(150,150,150,.45)':MOON?'rgba(150,150,150,.45)':DESERT?'rgba(226,195,135,.5)':'rgba(170,170,160,.45)';mctx.fillRect(X(-LIM),Z(-LIM),LIM*2*sc,LIM*2*sc);
     if(MOON){mctx.fillStyle='rgba(60,60,64,.75)';for(const c of URB.craters){mctx.beginPath();mctx.arc(X(c.x),Z(c.z),c.r*sc,0,TAU);mctx.fill();}
       mctx.fillStyle='rgba(200,200,230,.85)';for(const d of URB.domes){mctx.beginPath();mctx.arc(X(d.x),Z(d.z),d.r*sc,0,TAU);mctx.fill();}
       mctx.fillStyle='rgba(205,205,200,.55)';for(const r of URB.tube)mctx.fillRect(X(r.x0),Z(r.z0),(r.x1-r.x0)*sc,(r.z1-r.z0)*sc);}
@@ -47,7 +47,7 @@ function drawMap(){
       mctx.fillStyle='rgba(160,135,95,.7)';for(const q of URB.clear){mctx.beginPath();mctx.arc(X(q.x),Z(q.z),q.r*0.7*sc,0,TAU);mctx.fill();}}
     else if(CITY){mctx.fillStyle='rgba(95,160,70,.8)';mctx.fillRect(X(22),Z(22),24*sc,24*sc);}
     else{mctx.fillStyle='rgba(60,62,66,.85)';mctx.fillRect(X(40),Z(-20),12*sc,40*sc);}
-    for(const b of URB.boxes){mctx.fillStyle=b.k==='water'?'rgba(70,140,170,.9)':b.k==='temple'?'rgba(150,150,125,.95)':b.k==='head'||b.k==='col'?'rgba(120,120,105,.95)':b.k==='tube'?'rgba(225,225,220,.95)':b.k==='boulder'?'rgba(110,108,104,.95)':b.k==='pyr'?'rgba(150,120,80,.95)':b.k==='rock'?'rgba(140,110,80,.85)':b.k==='fence'?'rgba(80,90,80,.8)':b.k==='plane'||b.k==='wing'?'rgba(235,238,242,.95)':'rgba(70,64,60,.92)';mctx.fillRect(X(b.x0),Z(b.z0),(b.x1-b.x0)*sc,(b.z1-b.z0)*sc);}
+    for(const b of URB.boxes){mctx.fillStyle=b.k==='stall'?'rgba(150,60,40,.95)':b.k==='tree'?'rgba(40,110,60,.95)':b.k==='ginger'?'rgba(168,100,46,.95)':b.k==='water'?'rgba(70,140,170,.9)':b.k==='temple'?'rgba(150,150,125,.95)':b.k==='head'||b.k==='col'?'rgba(120,120,105,.95)':b.k==='tube'?'rgba(225,225,220,.95)':b.k==='boulder'?'rgba(110,108,104,.95)':b.k==='pyr'?'rgba(150,120,80,.95)':b.k==='rock'?'rgba(140,110,80,.85)':b.k==='fence'?'rgba(80,90,80,.8)':b.k==='plane'||b.k==='wing'?'rgba(235,238,242,.95)':'rgba(70,64,60,.92)';mctx.fillRect(X(b.x0),Z(b.z0),(b.x1-b.x0)*sc,(b.z1-b.z0)*sc);}
     if(JUNGLE){mctx.fillStyle='rgba(185,138,82,.95)';for(const b of URB.bridges)mctx.fillRect(X(b.x0+0.6),Z(b.z0),(b.x1-b.x0-1.2)*sc,(b.z1-b.z0)*sc);}
     URB.zones.forEach((zs,i)=>{mctx.strokeStyle=i?'#ffc928':'#5aa0ff';mctx.lineWidth=1.5;for(const r of zs)mctx.strokeRect(X(r.x0),Z(r.z0),(r.x1-r.x0)*sc,(r.z1-r.z0)*sc);});
   }else{

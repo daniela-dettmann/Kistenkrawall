@@ -158,6 +158,7 @@ refreshResume();
 
 /* ----- Map choice in the start menu ----- */
 for(const b of document.querySelectorAll('#mapSeg button')){
+  if(b.dataset.m==='weihnachtsmarkt'&&!xmasOn())b.hidden=true;   // the Christmas market is only open in the Christmas edition
   b.setAttribute('aria-pressed',b.dataset.m===MAP?'true':'false');
   b.addEventListener('click',()=>{if(b.dataset.m!==MAP)reloadOnMap(b.dataset.m);});
 }
@@ -167,3 +168,6 @@ setInterval(()=>{if(state==='menu'&&!$('#menu').hidden)refreshResume();},30000);
 setInterval(()=>{if(state==='play')writeSave();},30000);
 window.addEventListener('pagehide',()=>{if(state==='play'||state==='pause')writeSave();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&(state==='play'||state==='pause'))writeSave();});
+
+/* ----- On the Christmas market outside the season: only the saved round goes on there; a new game starts on the island ----- */
+if(MARKET_OFF)document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#startBtn')&&!MP){e.stopPropagation();e.preventDefault();reloadOnMap('insel');}},true);
