@@ -722,6 +722,20 @@ async function main() {
       && URB.wheel.rim.rotation.x > r0 && URB.carousel.rot.rotation.y > c0 && p1.distanceTo(p0) > 0.1 && level && outside && URB.steam.length >= 4
       && XMAS && XSNOW && DN.kind === 'schnee' && !!URB.lights && URB.lights.count > 300 && units.every(u => Math.max(Math.abs(u.x), Math.abs(u.z)) < LIM + 1);
   }), 'Weihnachtsmarkt: Buden, Baum, Lebkuchenhäuser, Kisten um den Baum, Riesenrad mit waagerechten Gondeln, Karussell und Besucher hinter dem Zaun, Schnee');
+  check(await page.evaluate(() => {
+    // no light string hangs in the air: every bulb sits on the tree (inside its tiers), on a stall or gingerbread house, or on the carousel
+    const tierR = y => { let r = 0; for (let i = 0; i < 5; i++) { const c = 2.4 + i * 1.75, t = (c + 1.3 - y) / 2.6; if (t >= 0 && t <= 1) r = Math.max(r, (3.3 - i * 0.58) * t); } return r; };
+    const m = new THREE.Matrix4(), p = new THREE.Vector3(), L = URB.lights, bad = [];
+    for (let i = 0; i < L.count; i++) {
+      L.getMatrixAt(i, m); p.setFromMatrixPosition(m); const r = Math.hypot(p.x, p.z);
+      const onTree = r < 3.6 && r <= tierR(p.y - 0.32) + 0.05;
+      const onBox = URB.boxes.some(b => b.k !== 'tree' && p.x > b.x0 - 1.1 && p.x < b.x1 + 1.1 && p.z > b.z0 - 1.1 && p.z < b.z1 + 1.1 && p.y < b.h + 2.2);
+      const onRide = Math.abs(p.x) > LIM + 2;   // carousel and Ferris wheel behind the fence
+      if (!onTree && !onBox && !onRide) bad.push(p.toArray().map(v => +v.toFixed(1)));
+    }
+    if (bad.length) console.log('frei hängende Lichter: ' + bad.length + ' z. B. ' + JSON.stringify(bad.slice(0, 3)));
+    return L.count > 300 && !bad.length;
+  }), 'Weihnachtsmarkt: keine Lichterkette hängt frei in der Luft, die Spirale liegt auf den Zweigen');
   await page.evaluate(() => pause(true));
   // outside the season: no map card, a saved round on the market is still played to the end (with a hint), a new game goes to the island
   await page.goto(base + '?normal&karte=insel');

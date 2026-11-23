@@ -53,9 +53,9 @@ if(MARKET)(function(){
     for(let i=0;i<Math.round(W*1.6);i++){const m=new THREE.Mesh(i%2?new THREE.BoxGeometry(0.22,0.22,0.22):new THREE.SphereGeometry(0.13,8,6),lam(gc[i%2]));
       m.position.set(-W/2+0.5+(W-1)*(i+0.5)/Math.round(W*1.6),1.17,D/2-0.4+((i%3)-1)*0.15);g.add(m);}
     for(let i=0;i<Math.round(W*1.2);i++){const m=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.28,0.2),lam(gc[(i+1)%2]));m.position.set(-W/2+0.6+(W-1.2)*i/Math.max(1,Math.round(W*1.2)-1),1.69,-D/2+0.5);g.add(m);}
-    add(g);
+    add(g);g.updateMatrixWorld(true);   // before localToWorld: otherwise the lights land round the middle of the square
     for(let i=0;i<=Math.round(W/0.5);i++){const lx=-W/2-0.2+(W+0.4)*i/Math.round(W/0.5),v=new THREE.Vector3(lx,H-0.05-Math.sin(i/Math.round(W/0.5)*Math.PI)*0.15,D/2+0.5);g.localToWorld(v);lightPts.push([v.x,v.y,v.z]);}
-    if(t.kind==='gluehwein'||t.kind==='wurst'){const v=new THREE.Vector3(0,1.4,D/2-0.4);g.updateMatrixWorld(true);g.localToWorld(v);URB.steam.push({x:v.x,y:v.y,z:v.z,t:Math.random(),c:t.kind==='wurst'?0xd8d2c8:0xf2f2f2});}
+    if(t.kind==='gluehwein'||t.kind==='wurst'){const v=new THREE.Vector3(0,1.4,D/2-0.4);g.localToWorld(v);URB.steam.push({x:v.x,y:v.y,z:v.z,t:Math.random(),c:t.kind==='wurst'?0xd8d2c8:0xf2f2f2});}
   }
 
   /* ---------- the big tree ---------- */
@@ -65,7 +65,10 @@ if(MARKET)(function(){
    const star=new THREE.Mesh(new THREE.OctahedronGeometry(0.7,0),new THREE.MeshBasicMaterial({color:0xffe27a}));star.position.y=11.6;tr.add(star);URB.star=star;
    const base=new THREE.Mesh(new THREE.CylinderGeometry(2.6,2.8,0.5,20),woodDark);base.position.y=0.25;tr.add(base);
    add(tr);
-   for(let i=0;i<120;i++){const a=i*0.62,y=1.8+i/120*8.6,r=3.2-(y-1.8)*0.33;lightPts.push([Math.cos(a)*r,0.32+y,Math.sin(a)*r]);}
+   // the light spiral lies on the branches: at each height the radius of the widest tier there (the tiers are
+   // cones 2.6 high), a little inside, so no bulb hangs in the air beside the tree
+   const tierR=y=>{let r=0;for(let i=0;i<5;i++){const c=2.4+i*1.75,t=(c+1.3-y)/2.6;if(t>=0&&t<=1)r=Math.max(r,(3.3-i*0.58)*t);}return r;};
+   for(let i=0;i<140;i++){const a=i*0.62,y=1.3+i/140*9.4,r=tierR(y)*0.94;if(r<0.25)continue;lightPts.push([Math.cos(a)*r,0.32+y,Math.sin(a)*r]);}
    // presents round the foot of the tree
    for(let i=0;i<10;i++){const a=i/10*TAU+0.2,r=2.9,s=0.4+(i%3)*0.12,p=new THREE.Mesh(new THREE.BoxGeometry(s,s,s),candy[i%4]);p.position.set(Math.cos(a)*r,0.32+s/2,Math.sin(a)*r);p.rotation.y=a;add(p);}}
 
