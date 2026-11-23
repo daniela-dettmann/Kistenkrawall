@@ -34,6 +34,7 @@ function volcanoColor(x,z,h){
 // Airport and city: asphalt with painted lines, paving on squares, grass in the park and beside the runway
 function urbanGrass(x,z){
   if(MOON)return false;
+  if(MARKET)return false;
   if(JUNGLE)return riverDepth(x,z)<-0.7&&Math.hypot(x,z)>14.5&&pathDist(x,z)>1.6;   // the forest floor, not the trails and the temple island
   if(DESERT)return URB.ponds.some(p=>{const d=Math.hypot(x-p.x,z-p.z);return d>p.r+0.3&&d<p.r+5;});   // green rings round the oasis ponds
   if(CITY)return x>22&&x<46&&z>22&&z<46;
@@ -57,6 +58,12 @@ function urbanColor(x,z){
     const r=riverDepth(x,z);if(r>-2.2)c.lerp(mud,smooth((r+2.2)/1.6));
     const m=Math.hypot(x,z);if(m<15.5){c.lerp(pave,0.7*smooth((15.5-m)/1.5));if(((Math.floor(x*0.6)+Math.floor(z*0.6))&1)===0)c.multiplyScalar(0.94);}
     for(const b of BASES){const d=Math.hypot(x-b.x,z-b.z);if(d<11)c.lerp(trail,(1-d/11)*0.55);}
+    return c;
+  }
+  if(MARKET){   // cobblestones on the market square, a ring of paving round the tree
+    const c=new THREE.Color(0x9a948a).lerp(new THREE.Color(0x7a746c),n*0.5);
+    if(((Math.floor(x*1.6)+Math.floor(z*1.6))&1)===0)c.multiplyScalar(0.93);
+    const r=Math.hypot(x,z);if(r<12&&r>3)c.lerp(pave,0.45);
     return c;
   }
   if(DESERT){   // warm sand, wind ripples, packed paths, stone slabs round the pyramid, green at the oases
@@ -175,7 +182,7 @@ let lavaMat=null;
     sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\nfloat sway=sin(uTime*1.8+instanceMatrix[3].x*0.35+instanceMatrix[3].z*0.22);transformed.x+=sway*0.09*position.y;transformed.z+=cos(uTime*1.3+instanceMatrix[3].x*0.2)*0.05*position.y;');
   };
-  const N=URBAN?(CITY?900:DESERT?320:MOON?0:JUNGLE?1900:600):MOUNTAIN?2200:VOLCANO?1500:6500,NF=MOUNTAIN||VOLCANO||AIRPORT||MOON?0:CITY?160:DESERT?40:JUNGLE?220:760,im=new THREE.InstancedMesh(g,mat,N),fl=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075,0),new THREE.MeshLambertMaterial({color:0xffffff}),NF);
+  const N=URBAN?(CITY?900:DESERT?320:MOON?0:JUNGLE?1900:600):MOUNTAIN?2200:VOLCANO?1500:6500,NF=MOUNTAIN||VOLCANO||AIRPORT||MOON||MARKET?0:CITY?160:DESERT?40:JUNGLE?220:760,im=new THREE.InstancedMesh(g,mat,N),fl=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.075,0),new THREE.MeshLambertMaterial({color:0xffffff}),NF);
   im.name='kkGrass';fl.name='kkFlowers';
   const d=new THREE.Object3D(),c=new THREE.Color();let n=0,f=0,tries=0;
   const FLC=[0xfff7e0,0xffd84a,0xff8fb1,0xb9a7ff];

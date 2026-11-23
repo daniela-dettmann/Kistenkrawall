@@ -23,32 +23,44 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
    'wueste' works like them: a pyramid with a cross-shaped passage in the middle, ruins, dunes and two oases.
    'dschungel' too: a stepped temple on an island in the middle, a river round it and across the map (water blocks
    walking, not shots), two stone footbridges and two rope bridges, dense forest with trails and clearings.
+   'weihnachtsmarkt' too, but only while the Christmas edition runs: the market square with the big tree in the
+   middle, stalls in two rings, gingerbread houses at the bases; Ferris wheel and carousel stand outside the fence.
    The world is built once at load, so changing the map reloads the page. ?karte=gebirge|insel overrides. */
-const MAPS={insel:'Insel',gebirge:'Gebirge',vulkan:'Vulkan',flughafen:'Flughafen',stadt:'Stadt',wueste:'Wüste',mond:'Mond',dschungel:'Dschungel'};
-const MAP=(function(){
-  const q=/[?&#]karte=(insel|gebirge|vulkan|flughafen|stadt|wueste|mond|dschungel)/i.exec(location.search+location.hash);if(q)return q[1].toLowerCase();
-  try{const m=localStorage.getItem('kk-map');if(MAPS[m])return m;}catch(e){}
-  return 'insel';
-})();
+const MAPS={insel:'Insel',gebirge:'Gebirge',vulkan:'Vulkan',flughafen:'Flughafen',stadt:'Stadt',wueste:'Wüste',mond:'Mond',dschungel:'Dschungel',weihnachtsmarkt:'Weihnachtsmarkt'};
 // Christmas edition (xmas.js): every year from 1 November to 10 January; ?weihnachten forces it, ?normal switches it off
 function xmasSeason(d){d=d||new Date();const m=d.getMonth(),day=d.getDate();return m===10||m===11||(m===0&&day<=10);}
-const XMAS=(function(){
+function xmasOn(){
   const q=location.search+location.hash;
   if(/weihnachten/i.test(q))return true;
   if(/\bnormal\b/i.test(q))return false;
   try{if(localStorage.getItem('kk-xmas')==='off')return false;}catch(e){}
   return xmasSeason();
+}
+const MAP=(function(){
+  let m='insel';
+  const q=/[?&#]karte=(insel|gebirge|vulkan|flughafen|stadt|wueste|mond|dschungel|weihnachtsmarkt)/i.exec(location.search+location.hash);
+  if(q)m=q[1].toLowerCase();else try{const k=localStorage.getItem('kk-map');if(MAPS[k])m=k;}catch(e){}
+  // the Christmas market is only open in the Christmas edition. Outside it, the map still loads for a saved round on
+  // it (that round is played to the end, with a hint) and when joining a host who plays on it; otherwise the island.
+  if(m==='weihnachtsmarkt'&&!xmasOn()){
+    let keep=false;
+    try{const sv=JSON.parse(localStorage.getItem('kk-save')||'null');keep=!!(sv&&sv.map==='weihnachtsmarkt')||!!sessionStorage.getItem('kk-rejoin');}catch(e){}
+    if(!keep)m='insel';
+  }
+  return m;
 })();
-const MOUNTAIN=MAP==='gebirge',VOLCANO=MAP==='vulkan',AIRPORT=MAP==='flughafen',CITY=MAP==='stadt',DESERT=MAP==='wueste',MOON=MAP==='mond',JUNGLE=MAP==='dschungel',URBAN=AIRPORT||CITY||DESERT||MOON||JUNGLE;
+const MARKET=MAP==='weihnachtsmarkt',MARKET_OFF=MARKET&&!xmasOn();   // MARKET_OFF: on the market outside the season
+const XMAS=MARKET||xmasOn();   // the market always wears its Christmas look
+const MOUNTAIN=MAP==='gebirge',VOLCANO=MAP==='vulkan',AIRPORT=MAP==='flughafen',CITY=MAP==='stadt',DESERT=MAP==='wueste',MOON=MAP==='mond',JUNGLE=MAP==='dschungel',URBAN=AIRPORT||CITY||DESERT||MOON||JUNGLE||MARKET;
 // gravity relative to the other maps: on the moon crates float down, dust hangs in the air, shells fly in flat arcs
 const GRAV=MOON?0.3:1;
 // winter in the Christmas edition: snow on the ground and snow as weather (not on the volcano, in the desert, on the moon, in the jungle)
 const XSNOW=XMAS&&!VOLCANO&&!DESERT&&!MOON&&!JUNGLE;
 // the city is point-symmetric (bases in opposite corners), all other maps mirror along z
-const BASES=CITY?[{x:-34,z:34},{x:34,z:-34}]:AIRPORT||DESERT||MOON||JUNGLE?[{x:0,z:38},{x:0,z:-38}]:[{x:0,z:44},{x:0,z:-44}];
+const BASES=CITY?[{x:-34,z:34},{x:34,z:-34}]:AIRPORT||DESERT||MOON||JUNGLE||MARKET?[{x:0,z:38},{x:0,z:-38}]:[{x:0,z:44},{x:0,z:-44}];
 const LIM=52;
 // BX: the two lanes the waves and defenders think in (bridges on the band maps, streets and gates on the new ones)
-const BX=VOLCANO?8:JUNGLE?30:18,BRIDGES=[-BX,BX],BANK=URBAN?-100:VOLCANO?12:6.2,ISL_RX=VOLCANO?15:6.2,ISL_RZ=VOLCANO?7:3.4;
+const BX=VOLCANO?8:JUNGLE?30:MARKET?24:18,BRIDGES=[-BX,BX],BANK=URBAN?-100:VOLCANO?12:6.2,ISL_RX=VOLCANO?15:6.2,ISL_RZ=VOLCANO?7:3.4;
 // ZS: how much further from the middle the banks lie than on the island map; shifts everything placed along them
 const ZS=URBAN?0:BANK-6.2,CRATER={x:0,z:0,r:3.3},LAVA_END=55.5;
 
@@ -116,6 +128,26 @@ const URB={boxes:[],zones:[[],[]],gold:[],routes:null,kind:MAP};
     URB.zones[1]=[{x0:0.2,x1:1.6,z0:18.5,z1:21.5,w:1},{x0:0.2,x1:1.6,z0:-21.5,z1:-18.5,w:1},sq(17.5,23.5,1.3,1.5),sq(17.5,-23.5,1.3,1.5)];
     URB.gold=[sq(0,0,3,1)];   // the big crater: the hotspot
     URB.routes=[[[-14,26],[-24,20],[-30,10]],[[14,28],[24,27],[44,22],[44,6]],[[-8,32],[8,32],[6,46],[-4,47]]];
+  }else if(MARKET){
+    // Christmas market. Base A (z>0) and base B (z<0), a gingerbread house beside each. In the middle the market
+    // square with the big tree; crates land in a ring round it. Stalls stand in two rings: four round the square
+    // (gaps on the axes), four rows outside them that make alleys on the west and east side. Mirrored along x and z.
+    B(-2.6,2.6,-2.6,2.6,11,'tree');
+    const S=(x,z,w,d,k)=>B(x-w/2,x+w/2,z-d/2,z+d/2,k==='ginger'?6:3.2,k||'stall');
+    URB.stalls=[];
+    for(const sx of [-1,1])for(const sz of [-1,1]){
+      // each stall: centre, size, which way the counter faces
+      URB.stalls.push({x:sx*18,z:sz*9,w:5,d:7,face:[-sx,0]},{x:sx*9,z:sz*19,w:7,d:5,face:[0,-sz]},
+        {x:sx*30,z:sz*20,w:12,d:4,face:[0,sz]},{x:sx*30,z:sz*30,w:12,d:4,face:[0,-sz]});
+    }
+    URB.stalls.forEach((t,i)=>{t.kind=['gluehwein','wurst','lebkuchen','mandeln','crepes','handwerk','deko'][i%7];S(t.x,t.z,t.w,t.d);});
+    for(const sz of [1,-1])S(-17,sz*41,7,7,'ginger');
+    const sq=(x,z,r,w)=>({x0:x-r,x1:x+r,z0:z-r,z1:z+r,w});
+    // blue on the west side, yellow on the east side: half of the ring round the tree, the alley, between the rows
+    URB.zones[0]=[{x0:-9,x1:-4,z0:-6,z1:6,w:3},sq(-24,0,1.8,1),sq(-30,25,1.8,1),sq(-30,-25,1.8,1)];
+    URB.zones[1]=[{x0:4,x1:9,z0:-6,z1:6,w:3},sq(24,0,1.8,1),sq(30,25,1.8,1),sq(30,-25,1.8,1)];
+    URB.gold=[{x0:-2,x1:2,z0:4.5,z1:7.5,w:1},{x0:-2,x1:2,z0:-7.5,z1:-4.5,w:1}];   // in front of and behind the tree
+    URB.routes=[[[-18,26],[-24,12],[-10,13]],[[18,26],[24,12],[10,13]],[[-8,32],[8,32],[10,44],[-10,44]]];
   }else if(JUNGLE){
     // Jungle. Base A (z>0) and base B (z<0); in the middle a stepped temple (four blocks, a cross-shaped passage
     // 6 wide between them, like the pyramid) on an island. The river runs from west to east and splits round the island. Crossings: a stone

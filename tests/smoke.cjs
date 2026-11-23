@@ -28,7 +28,7 @@ const bad = msg => { failed++; console.log('  FAIL ' + msg); };
 const check = (cond, msg) => (cond ? ok(msg) : bad(msg));
 // On GitHub the browser test runs in four parts at the same time (KK_PART=1..4, see .github/workflows/pages.yml).
 // Without KK_PART (locally) everything runs. Part 1: game, offline, save; 2: sound studio, Christmas, mountain;
-// 3: graphics, day/night and weather, airport, city, jungle; 4: desert, volcano, update notice. The multiplayer part only runs locally.
+// 3: graphics, day/night and weather, airport, city, jungle; 4: desert, Christmas market, volcano, update notice. The multiplayer part only runs locally.
 const PART = +process.env.KK_PART || 0;
 const part = n => !PART || PART === n;
 
@@ -92,8 +92,8 @@ async function main() {
   const startRound = async p => { if (await p.isVisible('#playBtn')) await p.click('#playBtn', { force: true }); await p.click('#startBtn', { force: true }); };
   const openPlay = async p => { await p.waitForSelector('#playBtn', { state: 'visible' }); await p.click('#playBtn', { force: true }); };
   // shared checks for the maps with buildings (Stadt, Flughafen, Wüste): map choice, no crate on a roof, routes, round, shots
-  async function urbanMapChecks(page, m, name) {
-    await page.goto(base + '?normal');
+  async function urbanMapChecks(page, m, name, q) {
+    await page.goto(base + (q || '?normal'));
     await openPlay(page);
     await Promise.all([page.waitForNavigation(), page.click('#mapSeg [data-m="' + m + '"]', { force: true })]);
     await page.waitForSelector('#startBtn', { state: 'visible' });
@@ -106,7 +106,7 @@ async function main() {
       for (let i = 0; i < 200; i++) wxCrate(c, 0.1);
       const ok = urbanFree(c.x, c.z, 1); removeCrate(c); DN.setWeather('klar', false); DN.wx.s = 0; return ok;
     }), name + ': Kisten landen nie auf Dächern, auch nicht durch Wind');
-  if (m === 'wueste' || m === 'mond' || m === 'dschungel') check(await page.evaluate(() => URB.zones.every(zs => {
+  if (m === 'wueste' || m === 'mond' || m === 'dschungel' || m === 'weihnachtsmarkt') check(await page.evaluate(() => URB.zones.every(zs => {
     // each crate colour lands on both halves of the field: on average as close to one base as to the other
     const d = b => zs.reduce((a, r) => a + r.w * Math.hypot((r.x0 + r.x1) / 2 - b.x, (r.z0 + r.z1) / 2 - b.z), 0);
     return Math.abs(d(BASES[0]) - d(BASES[1])) < 0.5 && zs.some(r => r.z1 > 0) && zs.some(r => r.z0 < 0);
@@ -130,7 +130,7 @@ async function main() {
     check(await page.evaluate(() => state === 'play' && renderer.info.render.calls > 50 && renderer.info.render.calls < 500), name + ': Runde läuft, unter 500 Zeichenvorgänge pro Bild');
     check(await page.evaluate(() => {
       // a house stops direct shots; the mortar lobs over it (the shots themselves are followed, other units may join the fight)
-      peaceT = 0; const b = URB.boxes.find(b => ['house', 'hangar', 'gate', 'pyr', 'boulder', 'temple'].includes(b.k) && b.x0 > -40 && b.x1 < 40), cz = (b.z0 + b.z1) / 2;
+      peaceT = 0; const b = URB.boxes.find(b => ['house', 'hangar', 'gate', 'pyr', 'boulder', 'temple', 'stall'].includes(b.k) && b.x0 > -40 && b.x1 < 40), cz = (b.z0 + b.z1) / 2;
       const a = spawnUnit(0, b.x0 - 2, cz, 'kaempfer'), e = spawnUnit(1, b.x1 + 2, cz, 'kaempfer');
       const pin = () => { a.x = b.x0 - 2; a.z = cz; e.x = b.x1 + 2; e.z = cz; };
       pin(); a.cd = 0; const before = new Set(shots); fire(a, Math.PI / 2); const mine = shots.filter(s => !before.has(s)); let maxX = -99;
@@ -703,6 +703,42 @@ async function main() {
     return clear && storm && URB.lights.material.color.getHex() === 0xffffff && URB.lights.material.opacity === 1 && motes.visible;
   }), 'Sandsturm: keine bunten Punkte, Lichterketten verschwinden im Dunst, keine Pollen');
   await page.evaluate(() => { endGame(false, 'Test.'); localStorage.setItem('kk-map', 'insel'); });
+  }
+  if (part(4)) {   // Weihnachtsmarkt
+  console.log('Weihnachtsmarkt');
+  await urbanMapChecks(page, 'weihnachtsmarkt', 'Weihnachtsmarkt', '?weihnachten');
+  check(await page.evaluate(() => {
+    // stalls are cover; crates land round the tree, never on it or on a stall roof; the Ferris wheel and carousel turn
+    // outside the fence, visitors walk round it and are nobody's target
+    for (let i = 0; i < 800; i++) { const sp = dropSpot(DROPS[i % 2], i % 3 ? 1 : -1, i % 5 === 0); if (!urbanFree(sp.x, sp.z, 1) || Math.hypot(sp.x, sp.z) < 3.5) return false; }
+    const r0 = URB.wheel.rim.rotation.x, c0 = URB.carousel.rot.rotation.y, v0 = new THREE.Matrix4(); URB.visitors.body.getMatrixAt(0, v0);
+    const p0 = new THREE.Vector3().setFromMatrixPosition(v0);
+    for (let i = 0; i < 20; i++) updateMood(0.1);
+    const v1 = new THREE.Matrix4(); URB.visitors.body.getMatrixAt(0, v1); const p1 = new THREE.Vector3().setFromMatrixPosition(v1);
+    const g = URB.wheel.gond[3], q = new THREE.Quaternion(); g.children[0].getWorldQuaternion(q);
+    const level = Math.abs(new THREE.Euler().setFromQuaternion(q).x) < 0.05;
+    const outside = Math.abs(URB.wheel.g.position.x) > LIM + 5 && Math.abs(URB.carousel.g.position.x) > LIM + 5 && Math.max(Math.abs(p1.x), Math.abs(p1.z)) > LIM + 2;
+    return URB.boxes.filter(b => b.k === 'stall').length === 16 && URB.boxes.filter(b => b.k === 'ginger').length === 2 && !urbanFree(0, 0)
+      && URB.wheel.rim.rotation.x > r0 && URB.carousel.rot.rotation.y > c0 && p1.distanceTo(p0) > 0.1 && level && outside && URB.steam.length >= 4
+      && XMAS && XSNOW && DN.kind === 'schnee' && !!URB.lights && URB.lights.count > 300 && units.every(u => Math.max(Math.abs(u.x), Math.abs(u.z)) < LIM + 1);
+  }), 'Weihnachtsmarkt: Buden, Baum, Lebkuchenhäuser, Kisten um den Baum, Riesenrad mit waagerechten Gondeln, Karussell und Besucher hinter dem Zaun, Schnee');
+  await page.evaluate(() => pause(true));
+  // outside the season: no map card, a saved round on the market is still played to the end (with a hint), a new game goes to the island
+  await page.goto(base + '?normal&karte=insel');
+  await openPlay(page);
+  check(await page.evaluate(() => document.querySelector('#mapSeg [data-m="weihnachtsmarkt"]').hidden && !XMAS), 'Außerhalb der Weihnachtszeit: keine Kartenkarte für den Weihnachtsmarkt');
+  await page.waitForSelector('#continueBtn', { state: 'visible' });
+  check((await page.textContent('#continueInfo')).startsWith('Weihnachtsmarkt · '), 'Spielstand merkt den Weihnachtsmarkt');
+  await Promise.all([page.waitForNavigation(), page.click('#continueBtn', { force: true })]);
+  await page.waitForFunction(() => typeof state !== 'undefined' && state === 'pause', null, { timeout: 60000 }).catch(() => {});
+  await page.waitForTimeout(1500);
+  { const r = await page.evaluate(() => [MAP, state, units.length, MARKET_OFF, XMAS, document.querySelector('#toast') ? document.querySelector('#toast').textContent : '']);
+    check(r[0] === 'weihnachtsmarkt' && r[1] === 'pause' && r[2] >= 3 && r[3] && r[4] && /nur in der Weihnachtszeit/.test(r[5]), 'Außerhalb der Saison: gespeicherte Runde auf dem Weihnachtsmarkt geht mit Hinweis weiter (' + r.slice(0, 4).join(', ') + ')'); }
+  await page.evaluate(() => { endGame(false, 'Test.'); });
+  await page.goto(base + '?normal');
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  check(await page.evaluate(() => MAP === 'insel'), 'Außerhalb der Saison ohne Spielstand: zurück auf der Insel');
+  await page.evaluate(() => localStorage.setItem('kk-map', 'insel'));
   }
   if (part(4)) {   // Vulkan
   console.log('Vulkan');
