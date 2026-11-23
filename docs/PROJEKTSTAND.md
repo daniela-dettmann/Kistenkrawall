@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 23. November 2026 · Live-Version auf `main`: `344a10a` (PR #43: Karte Dschungel)
+Stand: 23. November 2026 · Live-Version auf `main`: `92d9159` (PR #44: Karte Weihnachtsmarkt)
 
 ## Links
 
