@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 20. November 2026 · Live-Version auf `main`: `bc930db` (PR #42: glänzenderes Metall)
+Stand: 23. November 2026 · Live-Version auf `main`: `344a10a` (PR #43: Karte Dschungel)
 
 ## Links
 
