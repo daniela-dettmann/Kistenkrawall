@@ -6,9 +6,9 @@ Stand: 23. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was 
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `344a10a` (PR #43, Karte Dschungel) |
-| `main` | `344a10a` |
-| Offener Pull Request | keiner. Auftrag „Grafik und Atmosphäre“ fertig (#38 bis #42), Karte Dschungel fertig (#43, Skizze in Drive). Als Nächstes Karte 9 Weihnachtsmarkt (Drive: `Kistenkrawall-Auftrag-Dschungel-Weihnachtsmarkt.md`): erst Skizze mit Daniela abstimmen. Entschieden: Ein Spielstand auf dem Weihnachtsmarkt außerhalb der Saison wird mit kurzem Hinweis trotzdem geladen und zu Ende gespielt. Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone (auch Dschungel) |
+| Live auf GitHub Pages | `92d9159` (PR #44, Karte Weihnachtsmarkt) |
+| `main` | `92d9159` |
+| Offener Pull Request | keiner. Erledigt: Auftrag „Grafik und Atmosphäre“ (#38 bis #42) und Auftrag „Zwei neue Karten“ mit Dschungel (#43) und Weihnachtsmarkt (#44, nur in der Weihnachtszeit; ein Spielstand auf dem Markt außerhalb der Saison wird mit Hinweis zu Ende gespielt). Skizzen beider Karten in Drive. Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone (auch Dschungel und Weihnachtsmarkt) |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
