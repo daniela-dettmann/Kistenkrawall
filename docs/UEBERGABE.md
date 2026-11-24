@@ -1,14 +1,14 @@
 # Kistenkrawall – Übergabe
 
-Stand: 23. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
+Stand: 24. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
 
 ## Wo wir stehen
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `92d9159` (PR #44, Karte Weihnachtsmarkt) |
-| `main` | `92d9159` |
-| Offener Pull Request | keiner. Erledigt: Auftrag „Grafik und Atmosphäre“ (#38 bis #42) und Auftrag „Zwei neue Karten“ mit Dschungel (#43) und Weihnachtsmarkt (#44, nur in der Weihnachtszeit; ein Spielstand auf dem Markt außerhalb der Saison wird mit Hinweis zu Ende gespielt). Skizzen beider Karten in Drive. Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone (auch Dschungel und Weihnachtsmarkt) |
+| Live auf GitHub Pages | `e23b84a` (PR #45, Lichterketten auf dem Weihnachtsmarkt) |
+| `main` | `e23b84a` |
+| Offener Pull Request | keiner. #45 hat frei hängende Lichterketten auf dem Weihnachtsmarkt behoben. Als Nächstes: Weihnachtsmarkt hübscher machen; Probebilder mit acht Vorschlägen (Lichterketten vom Baum zu Laternen, Laternen, geschmückte Buden, Lichter über den Gassen, Kopfsteinpflaster, schönere Buden, bunte Fachwerkhäuser, Rundenbeginn in der Abenddämmerung) liegen bei Daniela, Auswahl steht aus. Erledigt: Auftrag „Grafik und Atmosphäre“ (#38 bis #42) und Auftrag „Zwei neue Karten“ mit Dschungel (#43) und Weihnachtsmarkt (#44, nur in der Weihnachtszeit; ein Spielstand auf dem Markt außerhalb der Saison wird mit Hinweis zu Ende gespielt). Skizzen beider Karten in Drive. Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone (auch Dschungel und Weihnachtsmarkt) |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 

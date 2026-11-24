@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 23. November 2026 · Live-Version auf `main`: `92d9159` (PR #44: Karte Weihnachtsmarkt)
+Stand: 24. November 2026 · Live-Version auf `main`: `e23b84a` (PR #45: Lichterketten auf dem Weihnachtsmarkt)
 
 ## Links
 
