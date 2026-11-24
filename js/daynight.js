@@ -17,7 +17,8 @@ const DN={
     try{const w=localStorage.getItem('kk-wx');if(['zufall','klar','regen','gewitter','schnee'].includes(w))return w;return localStorage.getItem('kk-dn')==='0'?'klar':'zufall';}catch(e){return 'zufall';}
   })(),
   DAY:480,START:0.36,           // seconds per day; a round begins in the morning
-  phase:0.36,night:0,dusk:0,    // phase: 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset
+  EVENING:0.85,                 // the Christmas market is always in the evening (Daniela's wish: it looks more idyllic)
+  phase:typeof MARKET!=='undefined'&&MARKET?0.85:0.36,night:0,dusk:0,    // phase: 0 midnight, 0.25 sunrise, 0.5 noon, 0.75 sunset
   fixed:null,                   // tests: a fixed phase instead of the game clock
   // Tageszeit in the settings: 'auto' (the day runs with the round), 'tag' or 'nacht' (fixed); DN.on is the weather switch
   tod:(function(){try{const t=localStorage.getItem('kk-tod');if(t==='auto'||t==='tag'||t==='nacht')return t;return localStorage.getItem('kk-dn')==='0'?'tag':'auto';}catch(e){return 'auto';}})(),
@@ -79,12 +80,12 @@ const DN={
   function step(dt){
     const W=DN.wx,sim=MP!=='guest',playing=state==='play';
     /* time of day */
-    const want=DN.fixed!==null?DN.fixed:DN.tod==='tag'?0.42:DN.tod==='nacht'?0.0:(state!=='menu'?(gameT/DN.DAY+DN.START)%1:DN.START);
+    const want=DN.fixed!==null?DN.fixed:MARKET?DN.EVENING:DN.tod==='tag'?0.42:DN.tod==='nacht'?0.0:(state!=='menu'?(gameT/DN.DAY+DN.START)%1:DN.START);
     let d=want-DN.phase;if(d>0.5)d-=1;if(d<-0.5)d+=1;
     DN.phase=(DN.phase+d*Math.min(1,dt*1.5)+1)%1;
     const p=DN.phase,el=Math.sin((p-0.25)*TAU)+0.38;      // sun height; the offset makes the day longer than the night
     const night=DN.night=smooth((0.02-el)/0.34),dusk=DN.dusk=Math.max(0,1-Math.abs(el-0.12)/0.4)*(1-night*0.6);
-    if(playing&&DN.tod==='auto'&&DN.fixed===null){if(night>0.5&&!lastNight)toast('Die Nacht bricht an',2.2);if(night<0.5&&lastNight)toast('Der Morgen dämmert',2.2);}
+    if(playing&&DN.tod==='auto'&&DN.fixed===null&&!MARKET){if(night>0.5&&!lastNight)toast('Die Nacht bricht an',2.2);if(night<0.5&&lastNight)toast('Der Morgen dämmert',2.2);}
     lastNight=night>0.5;
 
     /* weather: who computes the game rolls it, the guest is told */
@@ -170,6 +171,8 @@ const DN={
   if(DESERT){const b=document.querySelector('#wxSeg button[data-w="schnee"]');if(b)b.textContent='Sandsturm';}
   // the moon has no weather: Zufall means meteor showers now and then, Klar none; rain, storm and snow cannot be chosen
   if(MOON)for(const b of document.querySelectorAll('#wxSeg button'))if(!['zufall','klar'].includes(b.dataset.w)){b.disabled=true;b.title='Auf dem Mond gibt es kein Wetter';}   // in the desert the storm is sand
+  // on the Christmas market it is always evening: the time of day cannot be chosen there
+  if(MARKET)for(const b of document.querySelectorAll('#todSeg button')){b.disabled=true;b.title='Auf dem Weihnachtsmarkt ist immer Abend';}
   label();
   DN.step=step;DN.setWeather=setWeather;DN.lights={lantern,beams,crateGlow,hqGlow,stars,wPts};DN.kind=KIND;
 })();

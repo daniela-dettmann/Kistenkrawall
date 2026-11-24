@@ -66,7 +66,7 @@ if(XMAS)(function(){
   /* ---------- Gelände, Wasser, Gras, Schneewälle ---------- */
   scene.traverse(o=>{
     if(!o.isMesh)return;
-    if(XSNOW&&!MOUNTAIN&&o.material&&o.material.map===TX.ground&&o.geometry.attributes.color){
+    if(XSNOW&&!MOUNTAIN&&!MARKET&&o.material&&o.material.map===TX.ground&&o.geometry.attributes.color){   // the market keeps its cobblestones (world.js)
       const p=o.geometry.attributes.position,col=o.geometry.attributes.color,snow=new THREE.Color(0xffffff),dirt=new THREE.Color(0xa99a86),deep=new THREE.Color(0xf4f8ff),c=new THREE.Color();
       for(let i=0;i<p.count;i++){
         const x=p.getX(i),z=p.getZ(i),h=p.getY(i);if(h<-1.05)continue;   // keep beach sand under water

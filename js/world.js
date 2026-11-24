@@ -60,11 +60,15 @@ function urbanColor(x,z){
     for(const b of BASES){const d=Math.hypot(x-b.x,z-b.z);if(d<11)c.lerp(trail,(1-d/11)*0.55);}
     return c;
   }
-  if(MARKET){   // cobblestones on the market square, a ring of paving round the tree
-    const c=new THREE.Color(0x9a948a).lerp(new THREE.Color(0x7a746c),n*0.5);
-    if(((Math.floor(x*1.6)+Math.floor(z*1.6))&1)===0)c.multiplyScalar(0.93);
-    const r=Math.hypot(x,z);if(r<12&&r>3)c.lerp(pave,0.45);
-    return c;
+  if(MARKET){   // cobblestones with a dusting of snow: snow lies at the edge, along the stalls and in a few patches
+    const stone=new THREE.Color(0xb0a493),dark=new THREE.Color(0x857a6c),ring=new THREE.Color(0xc0a888),snow=new THREE.Color(0xf2f5fa);
+    const k=Math.sin(x*2.7+Math.sin(z*1.9)*1.3)*Math.sin(z*2.3-Math.sin(x*1.7));
+    const c=stone.clone().lerp(dark,0.5+0.3*k);
+    const r=Math.hypot(x,z);if(r>3&&r<12.8)c.lerp(ring,0.3+0.15*Math.sin(Math.atan2(z,x)*24));   // a ring of lighter paving round the tree
+    let sn=smooth((Math.max(Math.abs(x),Math.abs(z))-47)/5);
+    for(const b of URB.boxes){const d=Math.max(b.x0-x,x-b.x1,b.z0-z,z-b.z1);if(d<2)sn=Math.max(sn,0.8*smooth((1.5-d)/1.3));}
+    sn=Math.max(sn,0.45*smooth(Math.sin(x*0.37+z*0.21)*Math.cos(z*0.29-x*0.13)-0.2));
+    return c.lerp(snow,clamp(sn,0,1));
   }
   if(DESERT){   // warm sand, wind ripples, packed paths, stone slabs round the pyramid, green at the oases
     const sand=new THREE.Color(0xe2c387),dark=new THREE.Color(0xc9a464),pale=new THREE.Color(0xf0dcaa),stone=new THREE.Color(0xcdb68a),oasis=new THREE.Color(0x8fa45a);

@@ -116,6 +116,7 @@ if(SNOW.on)(function(){
   const dm=new THREE.InstancedMesh(domeG,snowMat2,domes.length),dd=new THREE.Object3D();
   domes.forEach((d,i)=>{dd.position.set(d.x,d.y,d.z);dd.rotation.set(0,d.ry,0);dd.scale.set(d.sx,d.sy,d.sz);dd.updateMatrix();dm.setMatrixAt(i,dd.matrix);});
   dm.receiveShadow=true;dm.castShadow=false;scene.add(dm);SNOW.domes=dm;
+  if(MARKET){dm.visible=false;SNOW.drifts.length=0;}   // the market square is swept: no snow mounds on the cobblestones
   // crates: a snow cap, only on the top layer of a stack
   const capG=new THREE.SphereGeometry(0.62,14,6,0,TAU,0,Math.PI/2).scale(1,0.24,1);
   const capOn=c=>{if(!c||!c.m||c.snowCap)return;const m=new THREE.Mesh(capG,snowMat2);m.position.y=0.49;m.receiveShadow=true;c.m.add(m);c.snowCap=m;};
