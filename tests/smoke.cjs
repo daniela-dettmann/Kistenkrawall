@@ -715,8 +715,8 @@ async function main() {
     const p0 = new THREE.Vector3().setFromMatrixPosition(v0);
     for (let i = 0; i < 20; i++) updateMood(0.1);
     const v1 = new THREE.Matrix4(); URB.visitors.body.getMatrixAt(0, v1); const p1 = new THREE.Vector3().setFromMatrixPosition(v1);
-    const g = URB.wheel.gond[3], q = new THREE.Quaternion(); g.children[0].getWorldQuaternion(q);
-    const level = Math.abs(new THREE.Euler().setFromQuaternion(q).x) < 0.05;
+    const cm = new THREE.Matrix4(); URB.wheel.cabins.getMatrixAt(3, cm); const e = cm.elements;   // a cabin hangs level: its up axis stays straight up
+    const level = Math.abs(e[4]) < 0.01 && Math.abs(e[5] - 1) < 0.01 && Math.abs(e[6]) < 0.01;
     const outside = Math.abs(URB.wheel.g.position.x) > LIM + 5 && Math.abs(URB.carousel.g.position.x) > LIM + 5 && Math.max(Math.abs(p1.x), Math.abs(p1.z)) > LIM + 2;
     return URB.boxes.filter(b => b.k === 'stall').length === 16 && URB.boxes.filter(b => b.k === 'ginger').length === 2 && !urbanFree(0, 0)
       && URB.wheel.rim.rotation.x > r0 && URB.carousel.rot.rotation.y > c0 && p1.distanceTo(p0) > 0.1 && level && outside && URB.steam.length >= 4
@@ -734,8 +734,24 @@ async function main() {
       if (!onTree && !onBox && !onRide) bad.push(p.toArray().map(v => +v.toFixed(1)));
     }
     if (bad.length) console.log('frei hängende Lichter: ' + bad.length + ' z. B. ' + JSON.stringify(bad.slice(0, 3)));
-    return L.count > 300 && !bad.length;
-  }), 'Weihnachtsmarkt: keine Lichterkette hängt frei in der Luft, die Spirale liegt auf den Zweigen');
+    // the light strings over the square and the alleys: both ends on the tree top, a lantern post or a stall's eave
+    const anchored = v => (Math.hypot(v.x, v.z) < 0.5 && v.y > 10) || URB.posts.some(q => Math.hypot(q.x - v.x, q.z - v.z) < 0.3 && Math.abs(q.top - v.y) < 0.3)
+      || URB.stalls.some(t => Math.abs(t.x - v.x) < t.w / 2 + 0.6 && Math.abs(t.z - v.z) < t.d / 2 + 0.6 && Math.abs(t.eave - v.y) < 0.4);
+    const loose = URB.strings.filter(q => !anchored(q.a) || !anchored(q.b));
+    if (loose.length) console.log('lose Ketten: ' + JSON.stringify(loose.slice(0, 2)));
+    return L.count > 300 && !bad.length && URB.strings.length >= 20 && !loose.length && URB.stringLights.count > 200 && URB.posts.length === 8 && !!URB.halo && !!URB.garland;
+  }), 'Weihnachtsmarkt: keine Lichterkette hängt frei in der Luft (Spirale auf den Zweigen, Ketten an Buden, Baumspitze und Laternen)');
+  check(await page.evaluate(() => {
+    // the look after dusk: lanterns, stall interiors and windows glow, the halos appear; the round starts at dusk; cobblestones, no snow mounds
+    // updateMood runs the market before the day/night step, so step first, then let the market read the new light
+    DN.fixed = 0.42; DN.phase = 0.42; for (let i = 0; i < 4; i++) { DN.step(0.05); updateMood(0.05); } const dayOp = URB.halo.material.opacity;
+    DN.fixed = 0.9; DN.phase = 0.9; for (let i = 0; i < 4; i++) { DN.step(0.05); updateMood(0.05); } const nightOp = URB.halo.material.opacity;
+    // without a fixed test phase the market stays in the evening, whatever the game clock or the time-of-day setting says
+    DN.fixed = null; const tod = DN.tod, gt = gameT; DN.tod = 'tag'; gameT = 200; for (let i = 0; i < 80; i++) DN.step(0.1);
+    const evening = Math.abs(DN.phase - DN.EVENING) < 0.01 && DN.night > 0.3 && document.querySelector('#todSeg [data-t="tag"]').disabled;
+    DN.tod = tod; gameT = gt;
+    return dayOp < 0.05 && nightOp > 0.6 && evening && !SNOW.domes.visible && !SNOW.drifts.length;
+  }), 'Weihnachtsmarkt: immer Abend (Tageszeit nicht wählbar), Laternen und Fenster leuchten, Kopfsteinpflaster ohne Schneehügel');
   await page.evaluate(() => pause(true));
   // outside the season: no map card, a saved round on the market is still played to the end (with a hint), a new game goes to the island
   await page.goto(base + '?normal&karte=insel');
