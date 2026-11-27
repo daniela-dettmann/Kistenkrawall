@@ -273,9 +273,12 @@ function hostAccept(conn){
         const other=m.tok!==NET.tok&&!(NET.conn&&NET.conn.peer===conn.peer),busy=NET.conn&&NET.conn!==conn&&NET.conn.open&&performance.now()-NET.lastHeard<20000;
         if(other&&(busy||NET.started)){NET.stats.rejected++;netLog('Weiterer Gast abgewiesen (Raum voll)');sendThenClose(conn,{t:'full'});return;}
         if(m.v!==appVersion()){NET.stats.rejected++;netLog('Gast abgewiesen: andere Version');sendThenClose(conn,{t:'version',v:appVersion()});netStatus('Dein Gegner hat eine andere Spielversion. Ihr braucht beide die neueste.');return;}
-        if(NET.conn&&NET.conn!==conn)try{NET.conn.close();}catch(e){}
+        // take the new connection first, then close the old one: closing it while it is still ours would look like a
+        // dropped connection and pause the round
+        const old=NET.conn;
         NET.conn=conn;NET.guestPeer=conn.peer;NET.joined=true;NET.lastHeard=performance.now();NET.gate=makeGate(300,80);clearTimeout(NET.expireTimer);
         conn.send({t:'welcome',v:appVersion(),map:MAP,tok:NET.tok,peace:peaceMin});netLog('Gast begrüßt');
+        if(old&&old!==conn)try{old.close();}catch(e){}
         if(NET.started){NET.lostAt=0;netOverlay(null);toast('Verbindung wieder da',1.6);conn.send({t:'start'});if(state==='pause')conn.send({t:'pause',on:true});}
         else{netStatus('Dein Gegner ist da!');$('#netStartBtn').disabled=false;}
         return;
@@ -401,6 +404,9 @@ function guestConnect(){
   const conn=NET.peer.connect(NET_CFG.idPrefix+NET.code,{serialization:'json',reliable:true});
   netLog('Verbindung zum Raum wird aufgebaut');watchPc(conn);
   conn.on('open',()=>{netLog('Datenkanal offen');
+    // an older attempt that only gets through now, while the connection in use still brings data: not needed, and
+    // switching to it would make the host drop the working one
+    if(NET.joined&&NET.conn&&NET.conn!==conn&&NET.conn.open&&performance.now()-NET.lastHeard<3000){netLog('Späten Versuch verworfen');try{conn.close();}catch(e){}return;}
     NET.conn=conn;NET.gate=makeGate(120000,60);NET.lastHeard=performance.now();
     conn.send(NET.tok?{t:'hello',v:appVersion(),tok:NET.tok}:{t:'hello',v:appVersion()});
   });
