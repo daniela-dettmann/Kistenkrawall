@@ -884,7 +884,9 @@ async function main() {
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'aaa111');
     // the guest opens the shared link (…?raum=CODE) and joins without typing anything
     const guest = await mkPage('Gast', '&raum=' + code);
-    await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled).catch(async e => {
+    // the guest page builds its world in software rendering next to two others: in a busy container its first
+    // connection can take well over a minute, so wait longer here than elsewhere
+    await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled, null, { timeout: 150000 }).catch(async e => {
       const d = p => p.evaluate(() => netDiagText().split('\n').slice(-16).join(' / ') + ' · ' + document.querySelector('#netStatus').textContent).catch(x => String(x));
       throw new Error('Gast kommt nicht in den Raum (Host: ' + await d(host) + ' | Gast: ' + await d(guest) + ')'); });
     check(await guest.evaluate(() => NET.role === 'guest' && NET.joined && !/raum=/.test(location.search)), 'Gast ist über den Beitrittslink dem Raum beigetreten');
