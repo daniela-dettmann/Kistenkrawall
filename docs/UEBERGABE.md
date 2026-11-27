@@ -1,14 +1,14 @@
 # Kistenkrawall – Übergabe
 
-Stand: 26. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
+Stand: 27. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
 
 ## Wo wir stehen
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `2f38772` (PR #46, Weihnachtsmarkt hübscher, immer Abend) |
-| `main` | `2f38772` |
-| Offener Pull Request | keiner. #45 hat frei hängende Lichterketten auf dem Weihnachtsmarkt behoben. #46 hat den Weihnachtsmarkt verschönert (alle acht Vorschläge: Laternen mit Lichterketten vom Baum, geschmückte Buden, Ketten über den Gassen, Kopfsteinpflaster, schönere Buden, bunte Fachwerkhäuser zum Markt hin, Kirchturm) und auf Danielas Wunsch spielt der Markt immer am Abend. Offen bei Daniela: „Require status checks“ für `main`; FPS auf dem iPhone (Dschungel und Weihnachtsmarkt) |
+| Live auf GitHub Pages | `b2a882e` (PR #47, Mehrspieler: Raum übersteht den Hintergrund) |
+| `main` | `b2a882e` |
+| Offener Pull Request | #48 (Teil 3). Laufender Auftrag „Mehrspieler zuverlässig machen und Musik im Hintergrund“ (Drive: `Kistenkrawall-Auftrag-Mehrspieler-Hintergrundmusik.md`), mit Daniela abgestimmt: Teil 2 erledigt (#47: Wiederverbinden nach dem Hintergrund, Einladung mit Link). Teil 3 (Diagnose-Anzeige „Verbindungsdetails“) im Pull Request #48. Teil 1 (TURN): Anbieter Cloudflare, Daniela richtet Konto und Worker nach `Kistenkrawall-Anleitung-Cloudflare-TURN.md` (Drive) ein und schickt nur die Worker-Adresse. Teil 4 (Musik im Hintergrund): erst eine kleine Testseite, Daniela prüft auf dem iPhone, dann der Umbau. Am Ende: Checkliste für den Test mit zwei echten Geräten. Offen bei Daniela außerdem: „Require status checks“ für `main`; FPS auf dem iPhone |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
