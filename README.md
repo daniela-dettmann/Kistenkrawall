@@ -81,7 +81,7 @@ Der **Vulkan** weicht davon ab: Der Lavastrom in der Mitte ist breiter, darin li
 
 ## Mehrspieler (1 gegen 1)
 
-„Mehrspieler“ im Hauptmenü: Eine Person erstellt einen Raum und gibt den 8-stelligen Code weiter, die andere tritt bei. Die Geräte verbinden sich direkt und verschlüsselt per WebRTC; den Verbindungsaufbau vermittelt der kostenlose öffentliche PeerJS-Server (sieht die IP-Adressen, nicht das Spiel). Im gleichen WLAN läuft die Verbindung automatisch lokal.
+„Mehrspieler“ im Hauptmenü: Eine Person erstellt einen Raum und gibt den 8-stelligen Code weiter („Teilen“ oder „Kopieren“ schickt eine Einladung mit Code und Beitrittslink `?raum=ABCD-EF23`), die andere tritt bei. Kommt eine App aus dem Hintergrund zurück, meldet sie sich sofort neu beim Vermittlungsserver an (`netResume` in `js/net.js`); der Raum bleibt gültig, seine Ablaufzeit steht im Hintergrund still. Die Geräte verbinden sich direkt und verschlüsselt per WebRTC; den Verbindungsaufbau vermittelt der kostenlose öffentliche PeerJS-Server (sieht die IP-Adressen, nicht das Spiel). Im gleichen WLAN läuft die Verbindung automatisch lokal.
 
 - Der Host (Orange) rechnet das Spiel und schickt etwa zehnmal pro Sekunde den Stand, der Gast (Petrol) schickt nur seine Eingaben. Beide Teams haben gleich starke KI-Mitstreiter, automatische Wellen gibt es im Mehrspieler nicht.
 - Raumcodes aus kryptografischem Zufall ohne 0/O/1/I/L, Ablauf nach 10 Minuten ohne Beitritt, nur ein Gast, Versionsvergleich, Prüfung jeder Nachricht (Format, Werte, Größe, Häufigkeit), kein Chat, keine persönlichen Daten.
