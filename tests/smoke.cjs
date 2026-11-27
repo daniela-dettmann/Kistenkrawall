@@ -151,6 +151,16 @@ async function main() {
   await page.waitForSelector('#playBtn', { state: 'visible' });
   check(await page.evaluate(() => typeof THREE === 'object' && THREE.REVISION === '128'), 'three.js r128 geladen');
   check(await page.evaluate(() => [...document.querySelectorAll('#panelStart button')].filter(b => b.offsetParent).map(b => b.id).join() === 'playBtn,netBtn,settingsBtn'), 'Hauptmenü: nur Spielen, Mehrspieler, Einstellungen');
+  check(await page.evaluate(() => {
+    // the multiplayer screen shows the connection steps and copies a log without addresses (#48)
+    document.querySelector('#netBtn').click();
+    const steps = [...document.querySelectorAll('#netSteps li')].map(li => li.textContent);
+    netLog('Test 192.168.178.20 und fe80::1c2b:3a4d:5e6f:7a8b');
+    const t = netDiagText(); diagReset(); document.querySelector('#netBack').click();
+    return steps.length === 5 && /Vermittlungsserver erreicht/.test(steps[0]) && /Art der Verbindung/.test(steps[3]) && /Spiel läuft/.test(steps[4])
+      && /^Kistenkrawall Verbindungsprotokoll/.test(t) && /Version: .* · /.test(t) && !/192\.168|fe80/.test(t) && /\[Adresse\]/.test(t)
+      && !!document.querySelector('#netDiagCopy') && !!document.querySelector('#netOverlayCopy');
+  }), 'Mehrspieler: Verbindungsdetails mit fünf Schritten, „Details kopieren“ ohne Adressen');
   check(/^Zuletzt: Insel, normal/.test(await page.textContent('#lastLine')), 'Hauptmenü zeigt die letzte Wahl');
   check(await page.evaluate(() => [...document.querySelectorAll('#menu button')].filter(b => b.offsetParent).every(b => b.getBoundingClientRect().height >= 44)), 'Tippflächen im Menü mindestens 44 px hoch');
   check(await page.evaluate(() => /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content)), 'Seite lässt sich nicht versehentlich zoomen');
@@ -876,6 +886,11 @@ async function main() {
     const guest = await mkPage('Gast', '&raum=' + code);
     await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled);
     check(await guest.evaluate(() => NET.role === 'guest' && NET.joined && !/raum=/.test(location.search)), 'Gast ist über den Beitrittslink dem Raum beigetreten');
+    await host.waitForFunction(() => !!DIAG.kind, null, { timeout: 15000 }).catch(() => {});
+    { const r = await host.evaluate(c => { netDiagRender(); const li = [...document.querySelectorAll('#netSteps li')].map(l => l.className === 'ok'); const t = netDiagText();
+        return { li, kind: DIAG.kind, step4: document.querySelectorAll('#netSteps li')[3].textContent, clean: !t.includes(c) && !t.includes(c.replace('-', '')) && !/\b\d{1,3}(\.\d{1,3}){3}\b/.test(t), ice: DIAG.ice }; }, code);
+      check(r.li[0] && r.li[1] && r.li[2] && r.li[3] && !r.li[4] && /direkt im WLAN|direkt übers Internet|über TURN/.test(r.step4) && r.clean,
+        'Verbindungsdetails beim Host: Vermittlungsserver, Gegenüber, Verbindung und Art der Verbindung abgehakt, Protokoll ohne Raumcode und Adressen (' + JSON.stringify(r) + ')'); }
     // the guest's app goes to the background while waiting for the start and loses both connections: back in
     // front it knocks again at once with its token and is let in again
     await guest.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange'));
@@ -894,10 +909,13 @@ async function main() {
     await host.click('#netStartBtn', { force: true });
     await guest.waitForFunction(() => MP === 'guest' && player && player.team === 1 && units.length >= 6);
     check(await host.evaluate(() => MP === 'host' && player.team === 0 && player2 && player2.team === 1), 'Spiel läuft: Host spielt Orange, Gast Petrol');
+    check(await host.evaluate(() => diagState().every(x => x.d)) && await guest.evaluate(() => diagState()[4].d && diagState()[2].d), 'Verbindungsdetails: alle fünf Schritte abgehakt, sobald das Spiel läuft');
     check(await host.evaluate(() => teams[1].wave.phase === 'idle' && aiParams(1) === ALLY), 'faire KI: beide Teams wie Mitstreiter, keine Petrol-Wellen');
     const z0 = await host.evaluate(() => player2.z);
     await guest.keyboard.down('w'); await guest.waitForTimeout(2500); await guest.keyboard.up('w');
-    check(await host.evaluate(z => Math.abs(player2.z - z) > 0.5, z0), 'Eingaben des Gasts bewegen seinen Blechling beim Host');
+    { const moved = await host.evaluate(z => Math.abs(player2.z - z) > 0.5, z0);
+      const why = moved ? '' : ' (Host: ' + await host.evaluate(() => netDiagText().split('\n').slice(-12).join(' / ') + ' · state ' + state) + ' | Gast: ' + await guest.evaluate(() => netDiagText().split('\n').slice(-12).join(' / ') + ' · state ' + state + ' · focus ' + document.hasFocus()) + ')';
+      check(moved, 'Eingaben des Gasts bewegen seinen Blechling beim Host' + why); }
     check(await guest.evaluate(() => crates.length > 0 && units.every(u => !u.alive || u.tx !== undefined)), 'Gast zeigt Blechlinge und Kisten des Hosts');
     await guest.evaluate(() => { netDebug.send({ t: 'in', mx: 9, mz: 0, a: null, f: true }); netDebug.send({ t: 'act', a: 'eval(1)' }); netDebug.send({ t: 'x', html: '<img src=x onerror=alert(1)>' }); netDebug.send('<b>hi</b>'); });
     await host.waitForTimeout(800);

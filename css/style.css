@@ -209,6 +209,9 @@ table.stack{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-nu
 @media (prefers-reduced-motion:reduce){.xmas #xsnow,.xmas .xribbon{animation:none}}
 .seg.seg2{grid-template-columns:repeat(2,1fr)}
 .netRow{display:flex;gap:8px;flex-wrap:wrap}.netRow>*{flex:1 1 140px}
+.netDiag{font-size:13px;color:var(--muted)}.netDiag summary{cursor:pointer;padding:4px 0}
+.netDiag ol{list-style:none;margin:4px 0 8px;padding:0;line-height:1.7}.netDiag li.ok{color:var(--ink)}
+.netDiagErr{margin:0 0 8px;color:#e0784a;font-size:13px}
 .netCode{margin:0;font-family:var(--display);font-size:clamp(30px,9vw,40px);letter-spacing:.08em;text-align:center;color:var(--orange);user-select:text;-webkit-user-select:text}
 .netIn{font-family:var(--display);font-size:20px;letter-spacing:.08em;text-transform:uppercase;padding:10px;border-radius:10px;border:2px solid rgba(245,241,227,.25);background:transparent;color:var(--ink);min-width:0;user-select:text;-webkit-user-select:text}
 #netOverlay{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,20,16,.7)}

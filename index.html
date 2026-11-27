@@ -23,7 +23,7 @@
 <body>
 
 <div id="netOverlay" hidden>
-  <div class="panel"><p class="lead" id="netOverlayText"></p><button class="go2" id="netLeave">Spiel verlassen</button></div>
+  <div class="panel"><p class="lead" id="netOverlayText"></p><button class="go2" id="netOverlayCopy">Details kopieren</button><button class="go2" id="netLeave">Spiel verlassen</button></div>
 </div>
 <div id="fail" hidden>
   <div class="panel">
@@ -266,6 +266,7 @@
       <div class="netRow"><input id="netCodeIn" class="netIn" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EF23"><button class="go" id="netJoinGo">Beitreten</button></div>
     </div>
     <p class="ctrl" id="netStatus" role="status" aria-live="polite"></p>
+    <details class="netDiag" id="netDiag"><summary>Verbindungsdetails: <span id="netDiagSum">–</span></summary><ol id="netSteps"></ol><p class="netDiagErr" id="netDiagErr" hidden></p><button class="go2" id="netDiagCopy">Details kopieren</button></details>
     <button class="go2" id="netBack">Zurück</button>
   </div>
   <div class="panel" id="panelEnd" hidden>

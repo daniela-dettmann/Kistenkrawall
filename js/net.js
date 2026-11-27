@@ -145,19 +145,95 @@ function leaveMultiplayer(msg){
   if(msg)toast(msg,3);
 }
 
+/* ---------- Diagnosis: steps with ticks, plain messages, a log to copy ----------
+   Shows how far the connection got: signalling server reached, other side found, connection open, which way it runs
+   (directly in the same WLAN, directly over the internet, or through a TURN relay), round running. The log that
+   „Details kopieren“ puts on the clipboard holds times, states, candidate types and errors, but no IP addresses,
+   no room code and no peer ids. */
+const DIAG={t0:performance.now(),log:[],kind:null,cands:{host:0,srflx:0,prflx:0,relay:0},err:null,ice:null,slowT:0,pcs:new WeakSet()};
+window.DIAG=DIAG;
+function netLog(ev){DIAG.log.push([Math.round((performance.now()-DIAG.t0)/100)/10,String(ev).slice(0,120)]);if(DIAG.log.length>150)DIAG.log.shift();netDiagRender();}
+function diagReset(){Object.assign(DIAG,{log:[],kind:null,cands:{host:0,srflx:0,prflx:0,relay:0},err:null,ice:null,slowT:0,t0:performance.now()});}
+function diagError(t){DIAG.err=t;netLog('Fehler: '+t);}
+const hasTurn=()=>NET_CFG.turn.length>0;
+// which way the connection runs: from the candidate pair the browser picked
+function diagKind(pc){
+  pc.getStats().then(st=>{
+    let pair=null;const by=new Map();st.forEach(r=>by.set(r.id,r));
+    st.forEach(r=>{if(r.type==='transport'&&r.selectedCandidatePairId)pair=by.get(r.selectedCandidatePairId);});
+    if(!pair)st.forEach(r=>{if(r.type==='candidate-pair'&&r.state==='succeeded'&&(r.nominated||!pair))pair=r;});
+    if(!pair)return;
+    const l=by.get(pair.localCandidateId),r=by.get(pair.remoteCandidateId),lt=l&&l.candidateType,rt=r&&r.candidateType;
+    DIAG.kind=lt==='relay'||rt==='relay'?'turn':lt==='host'&&rt==='host'?'lan':'internet';
+    netLog('Weg: '+(lt||'?')+' → '+(rt||'?'));
+  }).catch(()=>{});
+}
+function watchPc(conn){
+  const pc=conn&&conn.peerConnection;if(!pc||DIAG.pcs.has(pc))return;DIAG.pcs.add(pc);
+  pc.addEventListener('icecandidate',e=>{const t=e.candidate&&e.candidate.type;if(t&&t in DIAG.cands)DIAG.cands[t]++;});
+  pc.addEventListener('iceconnectionstatechange',()=>{
+    const st=pc.iceConnectionState;DIAG.ice=st;netLog('ICE: '+st);
+    if(st==='checking')DIAG.slowT=performance.now();
+    if(st==='connected'||st==='completed'){DIAG.err=null;diagKind(pc);}
+    if(st==='failed')diagError(hasTurn()?'Verbindung gescheitert, auch der Umweg über TURN klappt nicht.':'Direktverbindung gescheitert. Einen Umweg über TURN gibt es noch nicht.');
+    if(st==='disconnected')netLog('Verbindung wackelt');
+  });
+}
+const DIAG_STEPS=['Vermittlungsserver erreicht','Gegenüber gefunden','Verbindung steht','Art der Verbindung','Spiel läuft'];
+function diagState(){
+  const p=NET.peer,c=NET.conn,live=!!(c&&c.open&&NET.joined);
+  const found=live||DIAG.ice==='checking'||DIAG.ice==='connected'||DIAG.ice==='completed'||(NET.role==='host'&&NET.stats.conns>0);
+  const kind=DIAG.kind==='lan'?'direkt im WLAN':DIAG.kind==='internet'?'direkt übers Internet':DIAG.kind==='turn'?'über TURN':'';
+  return [!!(p&&p.open)||live,found,live,live&&!!DIAG.kind,!!NET.started].map((d,i)=>({t:i===3&&kind?DIAG_STEPS[3]+': '+kind:DIAG_STEPS[i],d}));
+}
+function netDiagRender(){
+  const ol=$('#netSteps');if(!ol)return;
+  // a direct connection that takes long: with TURN the browser tries the relay next
+  if(DIAG.ice==='checking'&&DIAG.slowT&&performance.now()-DIAG.slowT>6000&&!DIAG.err)DIAG.err=hasTurn()?'Direktverbindung dauert, versuche Umweg über TURN …':'Direktverbindung dauert …';
+  const st=diagState();
+  ol.textContent='';for(const s of st){const li=document.createElement('li');li.className=s.d?'ok':'';li.textContent=(s.d?'✓ ':'○ ')+s.t;ol.appendChild(li);}
+  const n=st.filter(s=>s.d).length;
+  $('#netDiagSum').textContent=NET.role?n+' von 5':'–';
+  $('#netDiagErr').textContent=DIAG.err||'';$('#netDiagErr').hidden=!DIAG.err;
+}
+function diagDevice(){
+  const u=navigator.userAgent||'',dev=/iPhone/.test(u)?'iPhone':/iPad/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)?'iPad':/Android/.test(u)?'Android':/Mac/.test(u)?'Mac':/Windows/.test(u)?'Windows':/Linux/.test(u)?'Linux':'anderes Gerät';
+  const ios=(u.match(/OS (\d+)_(\d+)/)||[]).slice(1).join('.'),br=/CriOS|Chrome\//.test(u)&&!/Edg/.test(u)?'Chrome':/Edg/.test(u)?'Edge':/Firefox|FxiOS/.test(u)?'Firefox':/Safari/.test(u)?'Safari':'anderer Browser';
+  const app=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone?'installierte App':'im Browser';
+  return dev+(ios?' (iOS '+ios+')':'')+' · '+br+' · '+app;
+}
+function netDiagText(){
+  const st=diagState(),s=NET.stats,c=DIAG.cands;
+  const lines=['Kistenkrawall Verbindungsprotokoll','Version: '+appVersion()+' · '+diagDevice(),'Rolle: '+(NET.role==='host'?'Host':NET.role==='guest'?'Gast':'keine')+' · TURN: '+(hasTurn()?'eingerichtet':'nicht eingerichtet'),
+    'Schritte: '+st.map(x=>(x.d?'✓ ':'○ ')+x.t).join(' | '),
+    'ICE: '+(DIAG.ice||'–')+' · Kandidaten: host '+c.host+', srflx '+c.srflx+', prflx '+c.prflx+', relay '+c.relay,
+    'Zähler: Verbindungen '+s.conns+', geöffnet '+s.opened+', Begrüßungen '+s.hellos+', abgelehnt '+s.rejected+', empfangen '+s.got+', verworfen '+s.dropped+', ungültig '+s.invalid+', Neuanmeldungen '+(NET.resumes||0),
+    'Fehler: '+(DIAG.err||'keiner'),'Protokoll:'];
+  for(const [t,e] of DIAG.log)lines.push(t.toFixed(1)+' s  '+e);
+  // never anything that looks like an address
+  return lines.join('\n').replace(/\b\d{1,3}(\.\d{1,3}){3}\b/g,'[Adresse]').replace(/\b[0-9a-f]{0,4}(:[0-9a-f]{0,4}){2,7}\b/gi,'[Adresse]');
+}
+function netDiagCopy(){
+  const t=netDiagText();
+  if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>toast('Details kopiert. Schick sie Claude.',2),()=>toast('Kopieren ging nicht.',2));
+}
+setInterval(()=>{if(NET.role){if(NET.conn)watchPc(NET.conn);netDiagRender();}},1000);
+
 /* ---------- Host ---------- */
 function hostRoom(){
   if(typeof Peer==='undefined'){netStatus('Mehrspieler ist gerade nicht verfügbar. Lade die Seite neu.');return;}
   closeNet();
-  NET.role='host';NET.code=makeRoomCode();NET.tok=token();
+  NET.role='host';NET.code=makeRoomCode();NET.tok=token();diagReset();netLog('Host: Raum wird geöffnet');
   $('#netCode').textContent=prettyCode(NET.code);$('#netStartBtn').disabled=true;
   $('#netHostInfo').textContent='Karte: '+MAPS[MAP]+' · Bauruhe '+peaceMin+' Min. Karte und Bauruhe stellst du vorher im Startmenü ein.';
   netStatus('Raum wird geöffnet …');
   const peer=NET.peer=new Peer(NET_CFG.idPrefix+NET.code,peerOpts());
-  peer.on('open',()=>netStatus('Warte auf deinen Gegner …'));
+  peer.on('open',()=>{netStatus('Warte auf deinen Gegner …');DIAG.err=null;netLog('Vermittlungsserver erreicht');});
+  peer.on('disconnected',()=>netLog('Vermittlungsserver getrennt'));
   peer.on('error',e=>{
+    netLog('PeerJS-Fehler: '+e.type);
     if(e.type==='unavailable-id'){netStatus('Code schon vergeben, neuer Code wird erstellt …');setTimeout(hostRoom,300);return;}
-    if(e.type==='network'||e.type==='server-error'||e.type==='socket-error')netStatus('Keine Verbindung zum Vermittlungsserver. Prüfe das Internet.');
+    if(e.type==='network'||e.type==='server-error'||e.type==='socket-error'){netStatus('Keine Verbindung zum Vermittlungsserver. Prüfe das Internet.');diagError('Vermittlungsserver nicht erreichbar');}
   });
   peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{if(peer.disconnected)peer.reconnect();}catch(e){}},2000);});
   peer.on('connection',conn=>hostAccept(conn));
@@ -178,12 +254,12 @@ function sendThenClose(conn,msg){
   setTimeout(()=>{try{if(conn.open)conn.close();}catch(e){}},10000);
 }
 function hostAccept(conn){
-  NET.stats.conns++;
+  NET.stats.conns++;netLog('Gegenüber meldet sich');watchPc(conn);
   conn.on('error',e=>{NET.stats.connErr=String(e&&(e.type||e.message)||e).slice(0,80);});
   // only one guest: a second device is turned away; after a drop the same guest may come back with its token
   let greeted=false;
   conn.on('open',()=>{
-    NET.stats.opened++;
+    NET.stats.opened++;netLog('Datenkanal offen');
     const t=setTimeout(()=>{if(!greeted)try{conn.close();}catch(e){}},5000);
     conn.on('data',m=>{
       if(!greeted){NET.stats.hellos++;
@@ -195,16 +271,22 @@ function hostAccept(conn){
         // its place to a stranger.)
         // a second attempt of the same device (same peer id) is that device, not a stranger
         const other=m.tok!==NET.tok&&!(NET.conn&&NET.conn.peer===conn.peer),busy=NET.conn&&NET.conn!==conn&&NET.conn.open&&performance.now()-NET.lastHeard<20000;
-        if(other&&(busy||NET.started)){NET.stats.rejected++;sendThenClose(conn,{t:'full'});return;}
-        if(m.v!==appVersion()){NET.stats.rejected++;sendThenClose(conn,{t:'version',v:appVersion()});netStatus('Dein Gegner hat eine andere Spielversion. Ihr braucht beide die neueste.');return;}
+        if(other&&(busy||NET.started)){NET.stats.rejected++;netLog('Weiterer Gast abgewiesen (Raum voll)');sendThenClose(conn,{t:'full'});return;}
+        if(m.v!==appVersion()){NET.stats.rejected++;netLog('Gast abgewiesen: andere Version');sendThenClose(conn,{t:'version',v:appVersion()});netStatus('Dein Gegner hat eine andere Spielversion. Ihr braucht beide die neueste.');return;}
         if(NET.conn&&NET.conn!==conn)try{NET.conn.close();}catch(e){}
-        NET.conn=conn;NET.joined=true;NET.lastHeard=performance.now();NET.gate=makeGate(300,80);clearTimeout(NET.expireTimer);
-        conn.send({t:'welcome',v:appVersion(),map:MAP,tok:NET.tok,peace:peaceMin});
+        NET.conn=conn;NET.guestPeer=conn.peer;NET.joined=true;NET.lastHeard=performance.now();NET.gate=makeGate(300,80);clearTimeout(NET.expireTimer);
+        conn.send({t:'welcome',v:appVersion(),map:MAP,tok:NET.tok,peace:peaceMin});netLog('Gast begrüßt');
         if(NET.started){NET.lostAt=0;netOverlay(null);toast('Verbindung wieder da',1.6);conn.send({t:'start'});if(state==='pause')conn.send({t:'pause',on:true});}
         else{netStatus('Dein Gegner ist da!');$('#netStartBtn').disabled=false;}
         return;
       }
-      if(conn!==NET.conn)return;
+      if(conn!==NET.conn){
+        // the guest came back on a newer connection while the older one still looks open (e.g. after the app was
+        // in the background): follow the one it actually uses, otherwise its input and pings would be lost and the
+        // room would look free to a stranger
+        if(NET.joined&&conn.peer===NET.guestPeer&&conn.open){const old=NET.conn;NET.conn=conn;netLog('Gast nutzt neue Verbindung');try{if(old)old.close();}catch(e){}}
+        else return;
+      }
       hostReceive(m);
     });
     conn.on('close',()=>{if(conn===NET.conn)connectionLost();});
@@ -222,6 +304,7 @@ function hostReceive(m){
 }
 function hostStart(){
   if(!NET.conn||!NET.conn.open)return;
+  netLog('Spiel startet');
   MP='host';NET.started=true;document.documentElement.classList.add('mp');
   startGame();
   player2=null;netSetGuestPilot(teamUnits(1).find(u=>u.kind==='bot'));
@@ -287,14 +370,16 @@ function joinRoom(raw){
   if(!validCode(code)){netStatus('Der Code hat 8 Zeichen, zum Beispiel ABCD-EF23.');return;}
   if(typeof Peer==='undefined'){netStatus('Mehrspieler ist gerade nicht verfügbar. Lade die Seite neu.');return;}
   closeNet();
-  NET.role='guest';NET.code=code;
+  NET.role='guest';NET.code=code;diagReset();netLog('Gast: Beitritt');
   netStatus('Verbinde …');
   const peer=NET.peer=new Peer(peerOpts());
-  peer.on('open',()=>guestConnect());
+  peer.on('open',()=>{DIAG.err=null;netLog('Vermittlungsserver erreicht');guestConnect();});
+  peer.on('disconnected',()=>netLog('Vermittlungsserver getrennt'));
   peer.on('error',e=>{
+    netLog('PeerJS-Fehler: '+e.type);
     // the room is gone: during a round that means the host has left, so end it at once instead of waiting a minute
-    if(e.type==='peer-unavailable'){if(NET.started){leaveMultiplayer('Dein Gegner hat das Spiel verlassen.');return;}netStatus('Kein Raum mit diesem Code gefunden.');return;}
-    if(e.type==='network'||e.type==='server-error'||e.type==='socket-error')netStatus('Keine Verbindung zum Vermittlungsserver. Prüfe das Internet.');
+    if(e.type==='peer-unavailable'){if(NET.started){leaveMultiplayer('Dein Gegner hat das Spiel verlassen.');return;}netStatus('Kein Raum mit diesem Code gefunden.');diagError('Kein Raum mit diesem Code');return;}
+    if(e.type==='network'||e.type==='server-error'||e.type==='socket-error'){netStatus('Keine Verbindung zum Vermittlungsserver. Prüfe das Internet.');diagError('Vermittlungsserver nicht erreichbar');}
   });
   peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{if(peer.disconnected)peer.reconnect();}catch(e){}},2000);});
   // a join that gets lost on the way (busy device, bad network) used to leave „Verbinde …“ on screen for ever:
@@ -303,21 +388,28 @@ function joinRoom(raw){
   let tries=0;
   const watch=setInterval(()=>{
     if(NET.peer!==peer||NET.role!=='guest'||NET.joined||peer.destroyed){clearInterval(watch);return;}
-    if(++tries>4){clearInterval(watch);netStatus('Keine Antwort vom Raum. Prüfe den Code und versuch es noch einmal.');return;}
+    if(++tries>4){clearInterval(watch);netStatus('Keine Antwort vom Raum. Prüfe den Code und versuch es noch einmal.');diagError('Keine Antwort vom Raum');return;}
+    netLog('Keine Antwort, neuer Versuch '+tries);
     if(!peer.open){try{peer.reconnect();}catch(e){}return;}
     guestConnect();
   },15000);
 }
 function guestConnect(){
   if(!NET.peer||NET.peer.destroyed)return;
+  // two triggers at once (coming back to the app and the dropped connection) make one attempt, not two
+  if(performance.now()-(NET.lastTry||0)<1500)return;NET.lastTry=performance.now();
   const conn=NET.peer.connect(NET_CFG.idPrefix+NET.code,{serialization:'json',reliable:true});
-  conn.on('open',()=>{
+  netLog('Verbindung zum Raum wird aufgebaut');watchPc(conn);
+  conn.on('open',()=>{netLog('Datenkanal offen');
     NET.conn=conn;NET.gate=makeGate(120000,60);NET.lastHeard=performance.now();
     conn.send(NET.tok?{t:'hello',v:appVersion(),tok:NET.tok}:{t:'hello',v:appVersion()});
   });
   conn.on('data',m=>{
-    if(conn!==NET.conn&&!(NET.role==='guest'&&!NET.joined&&NET.peer&&conn.provider===NET.peer))return;
-    NET.conn=conn;guestReceive(m);   // before the welcome: the first answer counts, on whichever attempt it comes
+    // all our connections lead to the host: the first answer counts on whichever attempt it comes, and later the
+    // connection the host actually uses wins (after a reconnect an older one can still look open)
+    if(NET.role!=='guest'||!NET.peer||conn.provider!==NET.peer)return;
+    if(NET.conn!==conn){if(NET.joined)netLog('Host nutzt neue Verbindung');NET.conn=conn;}
+    guestReceive(m);
   });
   conn.on('close',()=>{if(conn===NET.conn)connectionLost();});
   conn.on('error',()=>{if(conn===NET.conn)connectionLost();});
@@ -329,7 +421,7 @@ function guestReceive(m){
   if(!validFromHost(m)){NET.stats.invalid++;if(NET.stats.invalid>200)leaveMultiplayer('Die Verbindung wurde wegen fehlerhafter Daten beendet.');return;}
   switch(m.t){
     case 'welcome':
-      NET.tok=m.tok;NET.joined=true;peaceMin=m.peace;
+      NET.tok=m.tok;NET.joined=true;peaceMin=m.peace;netLog('Vom Host begrüßt');
       if(m.map!==MAP&&!NET.started){
         // the world is built for one map: reload on the host's map and join again automatically
         try{sessionStorage.setItem('kk-rejoin',NET.code);}catch(e){}
@@ -338,8 +430,8 @@ function guestReceive(m){
       if(NET.started){NET.lostAt=0;netOverlay(null);toast('Verbindung wieder da',1.6);}
       else netStatus('Verbunden! Warte, bis dein Gegner das Spiel startet …');
       return;
-    case 'version':netStatus('Ihr habt verschiedene Spielversionen. Bitte aktualisiere die App.');if(window.kkCheckUpdate)window.kkCheckUpdate();closeNet();return;
-    case 'full':netStatus('Dieser Raum ist schon voll.');closeNet();return;
+    case 'version':netLog('Abgewiesen: andere Version');netStatus('Ihr habt verschiedene Spielversionen. Bitte aktualisiere die App.');if(window.kkCheckUpdate)window.kkCheckUpdate();closeNet();return;
+    case 'full':netLog('Abgewiesen: Raum voll');netStatus('Dieser Raum ist schon voll.');closeNet();return;
     case 'start':if(!NET.started)guestStart();return;
     case 'pause':if(m.on)pause(true,true);else pause(false,true);return;
     case 'end':
@@ -349,6 +441,7 @@ function guestReceive(m){
   }
 }
 function guestStart(){
+  netLog('Spiel startet');
   MP='guest';NET.started=true;document.documentElement.classList.add('mp');
   initAudio();tryLandscape();
   clearWorld();player=null;
@@ -450,11 +543,13 @@ function netSendAct(a){if(ACTS.includes(a))send({t:'act',a});}
 
 /* ---------- Both: heartbeat, drops, pause, end ---------- */
 function connectionLost(){
+  netLog('Verbindung verloren');
   if(!NET.started){
     if(NET.role==='host'){NET.conn=null;NET.joined=false;$('#netStartBtn').disabled=true;netStatus('Dein Gegner ist weg. Warte auf ihn …');}
     else if(NET.role==='guest'&&NET.joined&&NET.peer&&!NET.peer.destroyed){
       // still waiting for the start (e.g. the app was in the background): knock again with our token
-      netStatus('Verbindung unterbrochen, verbinde neu …');NET.conn=null;
+      // not joined any more: the first answer counts again, on whichever attempt it comes (see guestConnect)
+      netStatus('Verbindung unterbrochen, verbinde neu …');NET.conn=null;NET.joined=false;
       const p=NET.peer;setTimeout(()=>{if(NET.peer===p&&!NET.started){if(sigOpen(p))guestConnect();else{try{if(p.disconnected)p.reconnect();}catch(e){}p.once('open',guestConnect);}}},500);
     }
     else netStatus('Die Verbindung ist abgebrochen.');
@@ -523,12 +618,13 @@ function relogin(p,n){
 }
 function netHidden(){
   if(!NET.role)return;
+  netLog('App im Hintergrund');
   NET.hiddenAt=performance.now();
   if(NET.role==='host'&&!NET.joined&&NET.ttlEnd){NET.ttlLeft=Math.max(0,NET.ttlEnd-Date.now());clearTimeout(NET.expireTimer);}
 }
 function netResume(){
   if(!NET.role||!NET.peer||NET.peer.destroyed)return;
-  const p=NET.peer;NET.hiddenAt=0;NET.resumes++;
+  const p=NET.peer;NET.hiddenAt=0;NET.resumes++;netLog('App wieder im Vordergrund');
   // the room's clock went on standing still in the background; afterwards it has at least two more minutes
   if(NET.role==='host'&&!NET.joined&&NET.ttlLeft!=null)armExpire(Math.max(NET.ttlLeft,120000));
   const fresh=sigOpen(p);
@@ -546,7 +642,7 @@ function netShareText(){return 'Spiel mit mir Kistenkrawall! Raumcode: '+prettyC
 /* ---------- Menu ---------- */
 (function(){
   const show=id=>{for(const p of ['#netChoose','#netHostBox','#netJoinBox'])$(p).hidden=p!==id;};
-  $('#netBtn').addEventListener('click',()=>{$('#panelStart').hidden=true;$('#panelNet').hidden=false;show('#netChoose');netStatus('');$('#menu').scrollTop=0;});
+  $('#netBtn').addEventListener('click',()=>{$('#panelStart').hidden=true;$('#panelNet').hidden=false;show('#netChoose');netStatus('');if(!NET.role)diagReset();netDiagRender();$('#menu').scrollTop=0;});
   $('#netBack').addEventListener('click',()=>{closeNet();$('#panelNet').hidden=true;$('#panelStart').hidden=false;});
   $('#netHostBtn').addEventListener('click',()=>{show('#netHostBox');hostRoom();});
   $('#netJoinBtn').addEventListener('click',()=>{show('#netJoinBox');netStatus('');$('#netCodeIn').focus();});
@@ -562,6 +658,7 @@ function netShareText(){return 'Spiel mit mir Kistenkrawall! Raumcode: '+prettyC
   // „Teilen“ opens the share sheet (WhatsApp, Messages …); the room survives the trip to the other app (see above)
   $('#netShare').addEventListener('click',()=>{if(!NET.code)return;navigator.share({title:'Kistenkrawall',text:netShareText()}).then(()=>netResume(),()=>netResume());});
   $('#netLeave').addEventListener('click',()=>leaveMultiplayer());
+  $('#netDiagCopy').addEventListener('click',netDiagCopy);$('#netOverlayCopy').addEventListener('click',netDiagCopy);
   // after a reload onto the host's map, join the same room again; a shared link (…?raum=ABCD-EF23) joins at once
   let code=null;try{code=sessionStorage.getItem('kk-rejoin');sessionStorage.removeItem('kk-rejoin');}catch(e){}
   {const m=/[?&]raum=([A-Za-z0-9-]{8,9})/.exec(location.search);
