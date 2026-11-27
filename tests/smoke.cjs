@@ -935,7 +935,9 @@ async function main() {
     await host.waitForFunction(() => !document.querySelector('#netOverlay').hidden, null, { timeout: 15000 }).catch(() => {});
     check(await host.evaluate(() => !document.querySelector('#netOverlay').hidden && state === 'pause'), 'Abbruch: pausiert und zeigt „Verbindung verloren“');
     await host.waitForFunction(() => document.querySelector('#netOverlay').hidden, null, { timeout: 30000 }).catch(() => {});
-    check(await host.evaluate(() => document.querySelector('#netOverlay').hidden && NET.conn && NET.conn.open), 'Gast verbindet sich von selbst wieder');
+    { const back = await host.evaluate(() => document.querySelector('#netOverlay').hidden && NET.conn && NET.conn.open);
+      const d = p => p.evaluate(() => netDiagText().split('\n').slice(-14).join(' / ')).catch(x => String(x));
+      check(back, 'Gast verbindet sich von selbst wieder' + (back ? '' : ' (Host: ' + await d(host) + ' | Gast: ' + await d(guest) + ')')); }
     check(await host.evaluate(() => JSON.parse(localStorage.getItem('kk-save')).marker === 'einzelspieler'), 'Einzelspieler-Spielstand bleibt unberührt');
     await host.click('#pauseBtn', { force: true }).catch(() => {});
     await host.evaluate(() => toMenu());
