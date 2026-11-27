@@ -159,10 +159,14 @@ function hostRoom(){
     if(e.type==='unavailable-id'){netStatus('Code schon vergeben, neuer Code wird erstellt …');setTimeout(hostRoom,300);return;}
     if(e.type==='network'||e.type==='server-error'||e.type==='socket-error')netStatus('Keine Verbindung zum Vermittlungsserver. Prüfe das Internet.');
   });
-  peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{peer.reconnect();}catch(e){}},2000);});
+  peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{if(peer.disconnected)peer.reconnect();}catch(e){}},2000);});
   peer.on('connection',conn=>hostAccept(conn));
-  clearTimeout(NET.expireTimer);
-  NET.expireTimer=setTimeout(()=>{if(!NET.joined&&NET.role==='host'){closeNet();netStatus('Der Raum ist abgelaufen. Erstelle einen neuen.');$('#netCode').textContent='–';}},NET_CFG.roomTTL);
+  armExpire(NET_CFG.roomTTL);
+}
+// the room runs out after 10 minutes without a guest; the clock stops while the host's app is in the background
+function armExpire(ms){
+  clearTimeout(NET.expireTimer);NET.ttlEnd=Date.now()+ms;NET.ttlLeft=null;
+  NET.expireTimer=setTimeout(()=>{if(!NET.joined&&NET.role==='host'){closeNet();netStatus('Der Raum ist abgelaufen. Erstelle einen neuen.');$('#netCode').textContent='–';}},ms);
 }
 // send a last message („room full“, „other version“) and leave the closing to the other side, which closes as soon
 // as it has read it. Closing ourselves shortly after sending tore down the whole connection while the message could
@@ -292,7 +296,7 @@ function joinRoom(raw){
     if(e.type==='peer-unavailable'){if(NET.started){leaveMultiplayer('Dein Gegner hat das Spiel verlassen.');return;}netStatus('Kein Raum mit diesem Code gefunden.');return;}
     if(e.type==='network'||e.type==='server-error'||e.type==='socket-error')netStatus('Keine Verbindung zum Vermittlungsserver. Prüfe das Internet.');
   });
-  peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{peer.reconnect();}catch(e){}},2000);});
+  peer.on('disconnected',()=>{if(NET.peer===peer&&!peer.destroyed)setTimeout(()=>{try{if(peer.disconnected)peer.reconnect();}catch(e){}},2000);});
   // a join that gets lost on the way (busy device, bad network) used to leave „Verbinde …“ on screen for ever:
   // without an answer from the room after 15 s the guest tries again, four times, then says so. Earlier attempts
   // stay open: a busy host may answer late, and that answer is taken from whichever attempt it arrives on.
@@ -448,6 +452,11 @@ function netSendAct(a){if(ACTS.includes(a))send({t:'act',a});}
 function connectionLost(){
   if(!NET.started){
     if(NET.role==='host'){NET.conn=null;NET.joined=false;$('#netStartBtn').disabled=true;netStatus('Dein Gegner ist weg. Warte auf ihn …');}
+    else if(NET.role==='guest'&&NET.joined&&NET.peer&&!NET.peer.destroyed){
+      // still waiting for the start (e.g. the app was in the background): knock again with our token
+      netStatus('Verbindung unterbrochen, verbinde neu …');NET.conn=null;
+      const p=NET.peer;setTimeout(()=>{if(NET.peer===p&&!NET.started){if(sigOpen(p))guestConnect();else{try{if(p.disconnected)p.reconnect();}catch(e){}p.once('open',guestConnect);}}},500);
+    }
     else netStatus('Die Verbindung ist abgebrochen.');
     return;
   }
@@ -492,6 +501,48 @@ boom=function(x,z,size){_boom(x,z,size);if(MP==='host')NET.pendingEv.push(['b',r
 const _sfx=sfx;
 sfx=function(kind,x,z){_sfx(kind,x,z);if(MP==='host'&&kind!=='boom'&&NET.pendingEv.length<180)NET.pendingEv.push(['f',kind,r2(x===undefined?0:x),r2(z===undefined?0:z)]);};
 
+/* ---------- Coming back to the app ---------- */
+// On the iPhone a short trip to another app (sharing the code via WhatsApp is enough) freezes the page: timers stop,
+// and iOS may drop the connection to the signalling server without PeerJS noticing. So when the app is back in
+// front, both sides check that connection at once and log in again under the same id: the room and its code stay
+// valid. The host sees „Raum ist wieder bereit“, the guest knocks again straight away instead of waiting for a timer.
+function sigOpen(p){
+  if(!p||p.destroyed||p.disconnected||!p.open)return false;
+  try{const ws=p.socket&&p.socket._socket;return !ws||ws.readyState===1;}catch(e){return true;}
+}
+NET.hiddenAt=0;NET.resumes=0;
+// log in to the signalling server again under the same id. If a login is already under way (PeerJS reconnects by
+// itself after a drop), wait for it instead of breaking it off; without an answer after 8 s try again, three times.
+function relogin(p,n){
+  if(NET.peer!==p||p.destroyed||sigOpen(p))return;
+  try{
+    if(p.disconnected)p.reconnect();
+    else if(p.open||n>0){p.disconnect();p.reconnect();}   // looks open but the socket is gone, or the last try hung
+  }catch(e){}
+  if(n<3)setTimeout(()=>relogin(p,n+1),8000);
+}
+function netHidden(){
+  if(!NET.role)return;
+  NET.hiddenAt=performance.now();
+  if(NET.role==='host'&&!NET.joined&&NET.ttlEnd){NET.ttlLeft=Math.max(0,NET.ttlEnd-Date.now());clearTimeout(NET.expireTimer);}
+}
+function netResume(){
+  if(!NET.role||!NET.peer||NET.peer.destroyed)return;
+  const p=NET.peer;NET.hiddenAt=0;NET.resumes++;
+  // the room's clock went on standing still in the background; afterwards it has at least two more minutes
+  if(NET.role==='host'&&!NET.joined&&NET.ttlLeft!=null)armExpire(Math.max(NET.ttlLeft,120000));
+  const fresh=sigOpen(p);
+  if(!fresh)relogin(p,0);
+  const when=f=>{if(fresh)f();else p.once('open',()=>{if(NET.peer===p)f();});};
+  if(NET.role==='host'&&!NET.joined&&!NET.started)when(()=>netStatus('Raum ist wieder bereit. Warte auf deinen Gegner …'));
+  if(NET.role==='guest'&&(!NET.conn||!NET.conn.open||NET.lostAt))when(()=>{if(NET.peer===p&&!p.destroyed)guestConnect();});
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)netHidden();else netResume();});
+window.addEventListener('pageshow',e=>{if(e.persisted)netResume();});
+window.addEventListener('online',()=>netResume());
+// the text that goes out with „Teilen“: the code plus a link that opens the game and joins the room at once
+function netShareText(){return 'Spiel mit mir Kistenkrawall! Raumcode: '+prettyCode(NET.code||'')+'\n'+location.origin+location.pathname+'?raum='+prettyCode(NET.code||'');}
+
 /* ---------- Menu ---------- */
 (function(){
   const show=id=>{for(const p of ['#netChoose','#netHostBox','#netJoinBox'])$(p).hidden=p!==id;};
@@ -502,15 +553,19 @@ sfx=function(kind,x,z){_sfx(kind,x,z);if(MP==='host'&&kind!=='boom'&&NET.pending
   $('#netJoinGo').addEventListener('click',()=>joinRoom($('#netCodeIn').value));
   $('#netCodeIn').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom($('#netCodeIn').value);});
   $('#netStartBtn').addEventListener('click',hostStart);
+  // copies the invitation (code and link), ready to paste into a message
   $('#netCopy').addEventListener('click',()=>{
-    const t=$('#netCode').textContent;
-    navigator.clipboard&&navigator.clipboard.writeText(t).then(()=>netStatus('Code kopiert. Warte auf deinen Gegner …'),()=>netStatus('Kopieren ging nicht, lies den Code einfach vor.'));
+    if(!NET.code)return;
+    navigator.clipboard&&navigator.clipboard.writeText(netShareText()).then(()=>netStatus('Einladung mit Code und Link kopiert. Warte auf deinen Gegner …'),()=>netStatus('Kopieren ging nicht, lies den Code einfach vor.'));
   });
   if(navigator.share)$('#netShare').hidden=false;
-  $('#netShare').addEventListener('click',()=>{navigator.share({title:'Kistenkrawall',text:'Spiel mit mir Kistenkrawall! Raumcode: '+$('#netCode').textContent,url:location.origin+location.pathname}).catch(()=>{});});
+  // „Teilen“ opens the share sheet (WhatsApp, Messages …); the room survives the trip to the other app (see above)
+  $('#netShare').addEventListener('click',()=>{if(!NET.code)return;navigator.share({title:'Kistenkrawall',text:netShareText()}).then(()=>netResume(),()=>netResume());});
   $('#netLeave').addEventListener('click',()=>leaveMultiplayer());
-  // after a reload onto the host's map, join the same room again
+  // after a reload onto the host's map, join the same room again; a shared link (…?raum=ABCD-EF23) joins at once
   let code=null;try{code=sessionStorage.getItem('kk-rejoin');sessionStorage.removeItem('kk-rejoin');}catch(e){}
+  {const m=/[?&]raum=([A-Za-z0-9-]{8,9})/.exec(location.search);
+   if(m&&!code){code=cleanCode(m[1]);try{const u=new URL(location.href);u.searchParams.delete('raum');history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(e){}}}
   if(code&&validCode(code)){$('#panelStart').hidden=true;$('#panelNet').hidden=false;show('#netJoinBox');$('#netCodeIn').value=prettyCode(code);setTimeout(()=>joinRoom(code),300);}
 })();
 

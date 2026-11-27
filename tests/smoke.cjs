@@ -843,14 +843,26 @@ async function main() {
       '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-features=IntensiveWakeUpThrottling'] });
     // Loading is slow here: the pages already open keep rendering in software and share one graphics process with
     // the page being loaded. Measured: 6 s for the first page, 31 s for the second, 126 s for the third.
-    const mkPage = async name => { const c = await mpBrowser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
-      p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q, { waitUntil: 'domcontentloaded', timeout: 300000 }); await p.waitForSelector('#playBtn', { state: 'visible', timeout: 300000 }); return p; };
-    const host = await mkPage('Host'), guest = await mkPage('Gast');
+    const mkPage = async (name, extra) => { const c = await mpBrowser.newContext({ viewport: { width: 640, height: 360 } }); const p = await c.newPage(); p.setDefaultTimeout(60000);
+      p.on('pageerror', e => errors.push(name + ': ' + e.message)); await p.goto(base + q + (extra || ''), { waitUntil: 'domcontentloaded', timeout: 300000 }); await p.waitForSelector(extra && /raum=/.test(extra) ? '#netJoinBox' : '#playBtn', { state: 'visible', timeout: 300000 }); return p; };   // a join link opens the multiplayer screen straight away
+    const host = await mkPage('Host');
     await host.evaluate(() => localStorage.setItem('kk-save', '{"format":1,"marker":"einzelspieler"}'));
     await host.click('#netBtn', { force: true }); await host.click('#netHostBtn', { force: true });
     await host.waitForFunction(() => /Warte/.test(document.querySelector('#netStatus').textContent));
     const code = await host.textContent('#netCode');
     check(/^[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/.test(code), 'Raumcode gut lesbar, ohne 0/O/1/I/L: ' + code);
+    check(await host.evaluate(c => { const t = netShareText(); return t.includes(c) && t.includes('?raum=' + c) && !!document.querySelector('#netShare') && !!document.querySelector('#netCopy'); }, code),
+      'Teilen und Kopieren: Einladung mit Raumcode und Beitrittslink');
+    // the host's app goes to the background (e.g. to share the code) and iOS drops the connection to the signalling
+    // server: back in front, the host logs in again under the same id, the room stays and its clock stood still
+    await host.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange'));
+      window.__ttl = NET.ttlLeft; try { NET.peer.socket._socket.close(); } catch (e) {} });
+    await host.waitForTimeout(2500);
+    await host.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); document.dispatchEvent(new Event('visibilitychange')); });
+    await host.waitForFunction(() => /wieder bereit/.test(document.querySelector('#netStatus').textContent) && NET.peer && NET.peer.open, null, { timeout: 20000 }).catch(() => {});
+    { const r = await host.evaluate(c => ({ st: document.querySelector('#netStatus').textContent, open: !!(NET.peer && NET.peer.open), id: NET.peer && NET.peer.id, ttl: window.__ttl, left: NET.ttlEnd - Date.now(), resumes: NET.resumes }), code);
+      check(/wieder bereit/.test(r.st) && r.open && r.id === 'kistenkrawall-' + code.replace('-', '') && r.ttl > 5 * 60000 && r.left > 5 * 60000 && r.resumes === 1,
+        'App kurz im Hintergrund: Raum und Code bleiben, Host meldet sich neu an, „Raum ist wieder bereit“, Ablaufzeit steht still (' + JSON.stringify(r) + ')'); }
     const join = async (p, c) => { await p.click('#netBtn', { force: true }); await p.click('#netJoinBtn', { force: true }); await p.fill('#netCodeIn', c); await p.click('#netJoinGo', { force: true }); };
     const third = await mkPage('Dritter');
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'andere-version');
@@ -860,9 +872,21 @@ async function main() {
       const why = /aktualisier/.test(st) ? '' : ' (angezeigt: ' + st + '; ' + await third.evaluate(() => JSON.stringify({ peerOpen: !!(NET.peer && NET.peer.open), id: NET.peer && NET.peer.id, disc: !!(NET.peer && NET.peer.disconnected), conn: !!NET.conn, connOpen: !!(NET.conn && NET.conn.open), role: NET.role, stats: NET.stats })) + '; Host: ' + await host.evaluate(() => JSON.stringify({ peerOpen: !!(NET.peer && NET.peer.open), disc: !!(NET.peer && NET.peer.disconnected), id: NET.peer && NET.peer.id, stats: NET.stats })) + ')';
       check(/aktualisier/.test(st), 'andere Spielversion: Hinweis „bitte aktualisieren“' + why); }
     await third.evaluate(() => document.querySelector('meta[name="kk-version"]').content = 'aaa111');
-    await join(guest, code);
+    // the guest opens the shared link (…?raum=CODE) and joins without typing anything
+    const guest = await mkPage('Gast', '&raum=' + code);
     await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled);
-    ok('Gast ist dem Raum beigetreten');
+    check(await guest.evaluate(() => NET.role === 'guest' && NET.joined && !/raum=/.test(location.search)), 'Gast ist über den Beitrittslink dem Raum beigetreten');
+    // the guest's app goes to the background while waiting for the start and loses both connections: back in
+    // front it knocks again at once with its token and is let in again
+    await guest.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange'));
+      try { NET.peer.socket._socket.close(); } catch (e) {} netDebug.drop(); });
+    await guest.waitForTimeout(2000);
+    await guest.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); document.dispatchEvent(new Event('visibilitychange')); });
+    await guest.waitForFunction(() => NET.conn && NET.conn.open && /Verbunden/.test(document.querySelector('#netStatus').textContent), null, { timeout: 30000 }).catch(() => {});
+    await host.waitForFunction(() => !document.querySelector('#netStartBtn').disabled, null, { timeout: 30000 }).catch(() => {});
+    { const r = await guest.evaluate(() => ({ st: document.querySelector('#netStatus').textContent, open: !!(NET.conn && NET.conn.open), resumes: NET.resumes }));
+      check(r.open && /Verbunden/.test(r.st) && r.resumes === 1 && await host.evaluate(() => NET.joined && !document.querySelector('#netStartBtn').disabled),
+        'Gast kurz im Hintergrund vor dem Start: verbindet sich sofort neu und ist wieder im Raum (' + JSON.stringify(r) + ')'); }
     await third.fill('#netCodeIn', code); await third.click('#netJoinGo', { force: true });
     await third.waitForFunction(() => /voll/.test(document.querySelector('#netStatus').textContent)).catch(() => {});
     { const t = await third.textContent('#netStatus'); check(/voll/.test(t), 'ein weiterer Beitritt wird abgelehnt (' + t + ')'); }
