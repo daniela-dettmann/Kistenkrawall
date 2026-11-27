@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 27. November 2026 · Live-Version auf `main`: `b2a882e` (PR #47: Mehrspieler, Raum übersteht den Hintergrund)
+Stand: 27. November 2026 · Live-Version auf `main`: `521bfb0` (PR #48: Mehrspieler, Verbindungsdetails)
 
 ## Links
 
