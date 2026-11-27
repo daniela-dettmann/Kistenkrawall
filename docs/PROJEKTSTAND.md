@@ -1,6 +1,6 @@
 # Kistenkrawall – Projektstand
 
-Stand: 27. November 2026 · Live-Version auf `main`: `2f38772` (PR #46: Weihnachtsmarkt hübscher, immer Abend)
+Stand: 27. November 2026 · Live-Version auf `main`: `b2a882e` (PR #47: Mehrspieler, Raum übersteht den Hintergrund)
 
 ## Links
 
