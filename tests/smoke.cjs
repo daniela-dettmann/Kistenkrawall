@@ -318,6 +318,11 @@ async function main() {
         title: navigator.mediaSession.metadata && navigator.mediaSession.metadata.title, state: navigator.mediaSession.playbackState }; });
     check(r.riff === 'RIFF' && r.rate === 22050 && r.size > 150000 && r.peak > 1000 && r.playing && r.loop && r.title === 'Kistenkrawall – Bauruhe' && r.state === 'playing',
       'Musiktest: Stück als Tondatei gerechnet, spielt in Schleife, Titel für Sperrbildschirm und Dynamic Island (' + JSON.stringify(r) + ')'); }
+  { const r = await page.evaluate(async () => { MUSIKTEST.cache.angriff = await MUSIKTEST.render('angriff', 2); await MUSIKTEST.switchTo('angriff', 'ohne Tippen');
+      return { want: MUSIKTEST.want, playing: !MUSIKTEST.audio.paused, src: MUSIKTEST.audio.src === MUSIKTEST.cache.angriff.url, title: navigator.mediaSession.metadata.title,
+        log: MUSIKTEST.events.some(e => /Wechsel zu Angriffswelle \(ohne Tippen\): geklappt/.test(e)), pressed: document.querySelector('#tAngriff').getAttribute('aria-pressed') }; });
+    check(r.want === 'angriff' && r.playing && r.src && r.title === 'Kistenkrawall – Angriffswelle' && r.log && r.pressed === 'true',
+      'Musiktest: Wechsel ohne Tippen auf ein vorbereitetes Stück, Titel wechselt mit, Ablauf wird mitgeschrieben (' + JSON.stringify(r) + ')'); }
   await page.evaluate(() => MUSIKTEST.audio.pause());
   await page.goto(base);
   await page.waitForSelector('#playBtn', { state: 'visible' });
