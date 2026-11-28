@@ -55,7 +55,8 @@ const PRECACHE = [
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
   './icons/favicon-16.png',
-  './tonstudio.html'
+  './tonstudio.html',
+  './musiktest.html'
 ];
 
 self.addEventListener('install', event => {

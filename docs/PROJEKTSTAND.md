@@ -1,11 +1,12 @@
 # Kistenkrawall – Projektstand
 
-Stand: 27. November 2026 · Live-Version auf `main`: `b2a882e` (PR #47: Mehrspieler, Raum übersteht den Hintergrund)
+Stand: 27. November 2026 · Live-Version auf `main`: `521bfb0` (PR #48: Mehrspieler, Verbindungsdetails)
 
 ## Links
 
 - **Spiel:** https://daniela-dettmann.github.io/Kistenkrawall/
 - **Tonstudio (im Spiel):** https://daniela-dettmann.github.io/Kistenkrawall/tonstudio.html
+- **Musiktest (iPhone-Hintergrund):** https://daniela-dettmann.github.io/Kistenkrawall/musiktest.html
 - **Tonstudio (Claude-Artifact):** https://claude.ai/artifact/EyDV8ZfZRF1kVqB9HL2NFP
 - **Repository:** https://github.com/daniela-dettmann/Kistenkrawall
 - **Weihnachtsedition außerhalb der Saison ansehen:** `…/Kistenkrawall/?weihnachten` (`?normal` erzwingt die normale Version)
@@ -62,6 +63,7 @@ Stand: 27. November 2026 · Live-Version auf `main`: `b2a882e` (PR #47: Mehrspie
 | #46 | Weihnachtsmarkt hübscher (Danielas Wahl: alle acht Vorschläge aus den Probebildern): Lichterketten vom Baumstern zu acht Laternenmasten rund um den Platz; Laternen mit warmem Licht; Buden mit Tannengirlande, warmen Lämpchen, roter Schleife, Stern über dem Schild, Eckenlaternen und warm leuchtendem Inneren; Lichterketten über den Gassen von Dachkante zu Dachkante; Kopfsteinpflaster mit etwas Schnee am Rand und an den Buden, keine Schneehügel mehr auf dem Platz; schönere Buden (feinere Holzmaserung, Schnee nur auf der oberen Dachhälfte, Giebelbretter, unterschiedliche Höhen und Dachneigungen); bunte Fachwerkhäuser mit Streben, Tür, Giebelfenster und abends beleuchteten Fenstern, die jetzt zum Markt schauen (vorher nach außen), dazu ein Kirchturm im Norden; auf Danielas Wunsch ist auf dem Markt immer Abend (die Tageszeit lässt sich dort nicht wählen). Lichthöfe um Laternen und Lämpchen erscheinen erst ab der Dämmerung | gemergt |
 | #47 | Auftrag „Mehrspieler zuverlässig machen und Musik im Hintergrund“, Teil 2: iPhone-Hintergrund und Wiederverbinden. Kommt die App zurück in den Vordergrund (oder die Seite aus dem Zwischenspeicher, oder das Netz zurück), prüfen Host und Gast sofort die Verbindung zum Vermittlungsserver und melden sich unter derselben Kennung neu an; der Raum und sein Code bleiben gültig, der Host sieht „Raum ist wieder bereit“. Die 10 Minuten Ablaufzeit stehen still, solange die App im Hintergrund ist, danach bleiben mindestens 2 Minuten. Ein Gast, der vor dem Start die Verbindung verliert, klopft sofort wieder an (mit seinem Token) statt „Verbindung abgebrochen“ stehen zu lassen. „Teilen“ (Teilen-Menü von iOS) und „Kopieren“ geben eine Einladung mit Raumcode und Beitrittslink (`?raum=ABCD-EF23`) weiter; wer den Link öffnet, tritt sofort bei. Im Warte-Bildschirm pausiert nichts (geprüft: die automatische Pause greift nur in einer laufenden Runde) | gemergt |
 | #48 | Auftrag „Mehrspieler zuverlässig machen“, Teil 3: Diagnose-Anzeige. Im Mehrspieler-Bildschirm (Host und Gast) eine einklappbare Zeile „Verbindungsdetails“ mit fünf Schritten und Häkchen: Vermittlungsserver erreicht, Gegenüber gefunden, Verbindung steht, Art der Verbindung (direkt im WLAN, direkt übers Internet, über TURN; aus dem Kandidatenpaar, das der Browser gewählt hat), Spiel läuft. Verständliche Meldungen bei Fehlern („Vermittlungsserver nicht erreichbar“, „Kein Raum mit diesem Code“, „Keine Antwort vom Raum“, „Direktverbindung dauert …“, „Direktverbindung gescheitert …“). „Details kopieren“ (auch in der Meldung „Verbindung verloren“) legt ein kurzes Protokoll in die Zwischenablage: Zeiten, Schritte, ICE-Zustände, Kandidatentypen, Zähler, Fehler, Gerät, Browser, installiert oder nicht, Version; ohne IP-Adressen (werden sicherheitshalber ersetzt), ohne Raumcode und ohne Kennungen. Dazu robusteres Wiederverbinden: Host und Gast wechseln auf die neuere Verbindung derselben Gegenseite, wenn eine ältere noch offen aussieht; ein Gast, der vor dem Start getrennt wurde, gilt nicht mehr als im Raum; zwei gleichzeitige Auslöser ergeben nur einen Verbindungsversuch | gemergt |
+| #49 | Auftrag „Mehrspieler zuverlässig machen und Musik im Hintergrund“, Teil 4 (erster Schritt): Musik-Testseite `musiktest.html`, verlinkt unter Einstellungen › Ton. Sie rechnet ein Stück (Bauruhe, Angriffswelle oder Titelmusik) einmal als Tondatei vor und spielt es über ein `<audio>`-Element in Schleife, mit Titel „Kistenkrawall – …“ für Sperrbildschirm und Dynamic Island (Media Session, Abspielen/Pause/Stopp). So lässt sich auf dem iPhone prüfen, ob die Musik im Hintergrund weiterläuft, bevor das Spiel umgebaut wird. Das Spiel selbst ist unverändert | gemergt |
 
 ## Was umgesetzt ist
 
@@ -100,6 +102,7 @@ Stand: 27. November 2026 · Live-Version auf `main`: `b2a882e` (PR #47: Mehrspie
   - Sieg-Fanfare und Niederlage-Posaune
 - Im Pausenmenü ist die Musik leiser, bei viel Geballer wird sie etwas zurückgenommen.
 - Tonstudio: alle Musikstücke und Effekte zum Anhören, mit Taktanzeige und Übergangstest Bauruhe ↔ Angriff.
+- Musiktest (#49, `musiktest.html`, Einstellungen › Ton): Testseite für das iPhone. iOS hält Web Audio im Hintergrund an; die Seite rechnet deshalb ein Stück vorab als Tondatei (WAV, 22 kHz, etwa 3,6 MB für die Bauruhe) und spielt es über ein `<audio>`-Element mit Media Session (Titel, Abspielen/Pause). Mit Prüfliste zum Abhaken. Das Spiel nutzt das noch nicht; der Umbau folgt nach Danielas Test.
 
 ### Stabilität
 - Code aufgeteilt in Stil und einzelne Skripte (Welt, Einheiten, Kampf, KI, Steuerung, HUD, Audio, Musik, Spielstand, Updates, Weihnachten).
@@ -316,6 +319,7 @@ Bei jedem Pull Request startet GitHub das Spiel in einem echten Browser (vier Te
 - Wüste: Kartenwahl, Kisten nie in der Pyramide (800 Abwurfstellen, Wind an Fallschirmkisten, Sandsturm auf liegende Kisten von allen vier Seiten), Sandsturm verweht Kisten im Freien, Wegfindung für Blechling und Panzer beider Teams, Tunnel durch die Pyramide in beide Richtungen auch für Panzer, Pyramide hält Schüsse auf und der Mörser schießt darüber, Obelisken, Sphinx, Kamele, Sandsturm mit Vorwarnung, Sandschleier und KI in Deckung, Spielstand mit Wüste, Weihnachtsedition ohne Schnee mit Lichterketten und Mützen
 - Wetter: Wetterwahl Regen (Streifen, nass, Pfützen), Gewitter mit Blitzeinschlag (Baum angekohlt), Schneesturm (waagerecht, Nebel, Wind), Klar; Zufall: Wetter kommt und geht zufällig, in der Bauruhe wie in der Welle; Wind versetzt Fallschirmkisten etwas, nie ins Wasser
 - Tonstudio und Update-Hinweis
+- Musiktest (#49): kurzes Stück als Tondatei gerechnet (Kopf, 22 kHz, hörbar), spielt in Schleife, Titel und Zustand in der Media Session; Link unter Einstellungen › Ton
 
 Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikkarte, drei Browserseiten gleichzeitig). Er läuft deshalb nur lokal vor dem Push; mit `KK_MP_TEST=1` lässt er sich auch auf GitHub erzwingen.
 
@@ -348,6 +352,7 @@ Der Mehrspieler-Teil ist auf GitHub zu langsam und wackelig (Grafik ohne Grafikk
 | `vendor/`, `fonts/`, `icons/` | three.js, PeerJS, Schriften, App-Icons |
 | `sw.js`, `manifest.webmanifest` | Offline-Speicher und App-Einstellungen |
 | `tonstudio.html` | Tonstudio |
+| `musiktest.html` | Testseite: Musik im Hintergrund auf dem iPhone |
 | `tests/smoke.cjs` | Automatischer Browser-Test |
 | `.github/workflows/pages.yml` | Testen und Veröffentlichen |
 | `docs/PROJEKTSTAND.md` | Dieser Projektstand (wird nach jedem Merge auch in Google Drive aktualisiert) |
