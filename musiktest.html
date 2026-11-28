@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kistenkrawall Musiktest</title>
+<meta name="theme-color" content="#13201b">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Test page for Teil 4: does the music keep playing in the background on the iPhone, and does it show in the
+   Dynamic Island and on the lock screen? One column, same dark look as the game and the sound studio. */
+:root{--bg:#13201b;--panel:#1b2d26;--line:rgba(245,241,227,.12);--ink:#f5f1e3;--muted:#a7b8ad;--orange:#ff8a1f;--teal:#1fb5a8;--crate:#d39a52;
+  --display:'Bowlby One SC','Arial Black',Impact,sans-serif;--body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;color-scheme:dark}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--body);margin:0}
+main{max-width:620px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-size:clamp(28px,8vw,40px);line-height:.95;margin:0}
+h1 span{color:var(--crate)}
+p,li{color:var(--muted);font-size:15px;line-height:1.5;margin:0}
+ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.card{background:var(--panel);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+button{font:inherit;font-weight:700;font-size:16px;border-radius:12px;padding:12px 16px;border:2px solid var(--line);background:transparent;color:var(--ink);flex:1 1 150px;cursor:pointer}
+button.go{background:var(--orange);border-color:var(--orange);color:#1d1408}
+button[aria-pressed=true]{border-color:var(--teal);color:var(--teal)}
+#status{color:var(--ink);font-size:15px;min-height:1.5em}
+#facts{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;color:var(--muted)}
+a{color:var(--orange)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Musik<span>test</span></h1>
+  <p>Hier prüfen wir, ob die Musik weiterläuft, wenn du die App wegwischst oder das iPhone sperrst, und ob sie oben in der Dynamic Island und auf dem Sperrbildschirm erscheint. Das Spiel selbst ist auf dieser Seite nicht dabei.</p>
+  <div class="card">
+    <div class="row"><button class="go" id="start">Musik starten</button><button id="stop">Stopp</button></div>
+    <div class="row"><button id="tRuhe" aria-pressed="true">Bauruhe</button><button id="tAngriff" aria-pressed="false">Angriffswelle</button><button id="tMenu" aria-pressed="false">Titelmusik</button></div>
+    <p id="status" role="status" aria-live="polite">Tippe auf „Musik starten“.</p>
+  </div>
+  <div class="card">
+    <p><b>So testest du es</b> (am besten einmal als installierte App vom Home-Bildschirm und einmal in Safari):</p>
+    <ol>
+      <li>„Musik starten“ tippen und warten, bis die Musik läuft.</li>
+      <li>Nach oben wischen, sodass die App im Hintergrund ist: Läuft die Musik weiter? Siehst du sie oben in der Dynamic Island?</li>
+      <li>Das iPhone sperren: Läuft sie weiter? Steht „Kistenkrawall“ auf dem Sperrbildschirm, mit Abspielen und Pause?</li>
+      <li>Auf dem Sperrbildschirm Pause und wieder Abspielen tippen: Klappt das?</li>
+      <li>Zurück in die App, ein anderes Stück wählen: Wechselt der Titel in der Dynamic Island?</li>
+      <li>Auch mit eingeschaltetem Stromsparmodus und mit dem Stummschalter einmal ausprobieren.</li>
+    </ol>
+    <p>Schick mir für jeden Punkt kurz „ja“ oder „nein“, dazu, ob du es als App oder in Safari getestet hast, und die Zeilen unten.</p>
+  </div>
+  <div class="card"><p id="facts"></p></div>
+  <p><a href="./">Zurück zum Spiel</a></p>
+</main>
+<script src="js/music.js"></script>
+<script>
+'use strict';
+// The game's music is played live with Web Audio, which iOS stops in the background. Here one piece is rendered
+// beforehand into a sound file (OfflineAudioContext, then WAV) and played by an <audio> element with the Media
+// Session API: that is what iOS can keep playing and show in the Dynamic Island.
+const $=s=>document.querySelector(s);
+const NAMES={ruhe:'Bauruhe',angriff:'Angriffswelle',menu:'Titelmusik'};
+const RATE=22050,cache={};
+let want='ruhe',audio=null,renderMs=0;
+const facts=extra=>{
+  const app=(matchMedia('(display-mode: standalone)').matches||navigator.standalone)?'installierte App':'Browser';
+  $('#facts').textContent=['Musiktest · '+app+' · '+(navigator.userAgent.match(/iPhone OS [\d_]+|Android [\d.]+|Mac OS X [\d_]+|Windows NT [\d.]+/)||['?'])[0].replace(/_/g,'.'),
+    'Media Session: '+('mediaSession' in navigator?'ja':'nein')+' · audioSession: '+('audioSession' in navigator?'ja':'nein'),
+    'Stück: '+NAMES[want]+(cache[want]?' · '+(cache[want].size/1048576).toFixed(1)+' MB, '+cache[want].secs.toFixed(0)+' s, gerechnet in '+renderMs+' ms':''),
+    'Wiedergabe: '+(audio?(audio.paused?'pausiert':'läuft')+' · '+audio.currentTime.toFixed(0)+' s':'–')].concat(extra||[]).join('\n');
+};
+// render one loop of a piece: intro plus two loops, keep the second loop (it already holds the echo of the first)
+async function render(name,limit){   // limit: seconds, only for the automatic test
+  if(cache[name]&&!limit)return cache[name];
+  const tr=MUSIC.tracks[name],sd=60/tr.bpm/4,st=tr.steps||16,dur=secs=>secs.reduce((a,s)=>a+tr.sections[s].bars.length*st*sd,0);
+  const intro=dur(tr.intro||[]),loop=limit?Math.min(limit,dur(tr.loop)):dur(tr.loop),t0=performance.now();
+  const ctx=new OfflineAudioContext(2,Math.ceil((0.05+intro+2*loop+0.5)*RATE),RATE);
+  const m=MUSIC.create(ctx,ctx.destination);m.renderUntil(name,0.05+intro+2*loop);
+  const buf=await ctx.startRendering();renderMs=Math.round(performance.now()-t0);
+  const from=Math.round((0.05+intro+loop)*RATE),n=Math.round(loop*RATE);
+  const c={url:URL.createObjectURL(wav(buf,from,n)),size:44+n*4,secs:loop};
+  if(!limit)cache[name]=c;
+  return c;
+}
+function wav(buf,from,n){
+  const out=new DataView(new ArrayBuffer(44+n*4)),w=(o,s)=>{for(let i=0;i<s.length;i++)out.setUint8(o+i,s.charCodeAt(i));};
+  w(0,'RIFF');out.setUint32(4,36+n*4,true);w(8,'WAVE');w(12,'fmt ');out.setUint32(16,16,true);out.setUint16(20,1,true);out.setUint16(22,2,true);
+  out.setUint32(24,RATE,true);out.setUint32(28,RATE*4,true);out.setUint16(32,4,true);out.setUint16(34,16,true);w(36,'data');out.setUint32(40,n*4,true);
+  const L=buf.getChannelData(0),R=buf.getChannelData(1);
+  for(let i=0;i<n;i++){const l=Math.max(-1,Math.min(1,L[from+i]*1.6)),r=Math.max(-1,Math.min(1,R[from+i]*1.6));out.setInt16(44+i*4,l*32767,true);out.setInt16(46+i*4,r*32767,true);}
+  return new Blob([out.buffer],{type:'audio/wav'});
+}
+function session(){
+  if(!('mediaSession' in navigator))return;
+  navigator.mediaSession.metadata=new MediaMetadata({title:'Kistenkrawall – '+NAMES[want],artist:'Kistenkrawall',album:'Kistenkrawall',
+    artwork:[{src:'icons/icon-192.png',sizes:'192x192',type:'image/png'},{src:'icons/icon-512.png',sizes:'512x512',type:'image/png'}]});
+  navigator.mediaSession.setActionHandler('play',()=>{audio&&audio.play();});
+  navigator.mediaSession.setActionHandler('pause',()=>{audio&&audio.pause();});
+  try{navigator.mediaSession.setActionHandler('stop',()=>{audio&&audio.pause();});}catch(e){}
+}
+function makeAudio(){
+  audio=new Audio();audio.loop=true;audio.preload='auto';audio.setAttribute('playsinline','');
+  for(const ev of ['play','pause','playing'])audio.addEventListener(ev,()=>{facts();if('mediaSession' in navigator)navigator.mediaSession.playbackState=audio.paused?'paused':'playing';});
+}
+async function start(){
+  try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
+  if(!audio){makeAudio();
+    // unlock the element inside the tap itself: iOS only lets an element play later if it was started by a tap
+    audio.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=';audio.play().catch(()=>{});}
+  $('#status').textContent='Musik wird vorbereitet …';
+  try{
+    const c=await render(want);
+    audio.src=c.url;await audio.play();session();
+    $('#status').textContent='Läuft: '+NAMES[want]+'. Jetzt die App wegwischen oder das iPhone sperren.';
+  }catch(e){$('#status').textContent='Abspielen ging nicht: '+(e&&e.message||e);}
+  facts();
+}
+$('#start').addEventListener('click',start);
+$('#stop').addEventListener('click',()=>{if(audio)audio.pause();$('#status').textContent='Gestoppt.';facts();});
+for(const [id,name] of [['#tRuhe','ruhe'],['#tAngriff','angriff'],['#tMenu','menu']])$(id).addEventListener('click',()=>{
+  want=name;for(const b of document.querySelectorAll('[aria-pressed]'))b.setAttribute('aria-pressed',b===$(id)?'true':'false');
+  if(audio&&!audio.paused)start();else facts();});
+document.addEventListener('visibilitychange',()=>facts(['Zuletzt: Seite '+(document.hidden?'im Hintergrund':'wieder im Vordergrund')+', Musik '+(audio&&!audio.paused?'läuft':'aus')]));
+setInterval(()=>facts(),2000);
+facts();
+window.MUSIKTEST={render,session,play:async c=>{if(!audio)makeAudio();audio.src=c.url;await audio.play();session();facts();},get audio(){return audio;},get want(){return want;}};   // for tests
+</script>
+</body>
+</html>

@@ -51,6 +51,7 @@ Kein Build-Tool nötig: Die Dateien werden genau so ausgeliefert, wie sie im Rep
 | `icons/` | App-Icon (`icon.svg`) und alle PNG-Größen |
 | `sw.js`, `manifest.webmanifest` | Offline-Speicher und App-Einstellungen |
 | `tonstudio.html` | Alle Töne zum Durchhören |
+| `musiktest.html` | Testseite: läuft die Musik im Hintergrund weiter (iPhone)? |
 | `tests/smoke.cjs` | Automatischer Test im echten Browser |
 
 Die `js/`-Dateien sind normale Skripte, die in der Reihenfolge aus `index.html` geladen werden und sich einen gemeinsamen Gültigkeitsbereich teilen. Eine neue Datei muss deshalb an der richtigen Stelle in `index.html` und zusätzlich in `sw.js` (Liste `PRECACHE`) eingetragen werden. Fehlt der Eintrag in `sw.js`, schlägt der Test fehl.

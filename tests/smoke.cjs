@@ -50,7 +50,7 @@ function staticChecks() {
   const pre = [...sw.match(/const PRECACHE = \[([\s\S]*?)\];/)[1].matchAll(/'\.\/([^']*)'/g)].map(m => m[1]).filter(Boolean);
   for (const f of pre) if (!fs.existsSync(path.join(ROOT, f))) bad('sw.js speichert ' + f + ', aber die Datei fehlt');
   const refs = new Set();
-  for (const page of ['index.html', 'tonstudio.html', 'fonts/fonts.css', 'manifest.webmanifest']) {
+  for (const page of ['index.html', 'tonstudio.html', 'musiktest.html', 'fonts/fonts.css', 'manifest.webmanifest']) {
     const txt = fs.readFileSync(path.join(ROOT, page), 'utf8'), dir = path.dirname(page);
     for (const m of txt.matchAll(/(?:src|href)="([^"#:]+)"|url\(([^):]+)\)|"src":\s*"([^"]+)"/g)) {
       const ref = (m[1] || m[2] || m[3]).replace(/^\.\//, '');
@@ -304,6 +304,24 @@ async function main() {
   await page.click('#play-angriff', { force: true });
   await page.waitForTimeout(300);
   check(await page.evaluate(() => music.playing === null), 'Musik: Stopp funktioniert');
+  }
+
+  if (part(2)) {   // music test page for the iPhone (Teil 4): one piece as a sound file in an <audio> element
+  console.log('Musiktest');
+  await page.goto(base + 'musiktest.html');
+  check(await page.evaluate(() => /Media Session: ja/.test(document.querySelector('#facts').textContent) && document.querySelectorAll('[aria-pressed]').length === 3),
+    'Musiktest-Seite lädt: drei Stücke, Angaben zum Gerät');
+  { const r = await page.evaluate(async () => { const c = await MUSIKTEST.render('ruhe', 2); const b = await (await fetch(c.url)).arrayBuffer(), h = new DataView(b);
+      await MUSIKTEST.play(c); await new Promise(f => setTimeout(f, 600));
+      let peak = 0; for (let i = 44; i < b.byteLength; i += 2) peak = Math.max(peak, Math.abs(h.getInt16(i, true)));
+      return { riff: String.fromCharCode(...new Uint8Array(b, 0, 4)), rate: h.getUint32(24, true), size: b.byteLength, peak, playing: !MUSIKTEST.audio.paused, loop: MUSIKTEST.audio.loop,
+        title: navigator.mediaSession.metadata && navigator.mediaSession.metadata.title, state: navigator.mediaSession.playbackState }; });
+    check(r.riff === 'RIFF' && r.rate === 22050 && r.size > 150000 && r.peak > 1000 && r.playing && r.loop && r.title === 'Kistenkrawall – Bauruhe' && r.state === 'playing',
+      'Musiktest: Stück als Tondatei gerechnet, spielt in Schleife, Titel für Sperrbildschirm und Dynamic Island (' + JSON.stringify(r) + ')'); }
+  await page.evaluate(() => MUSIKTEST.audio.pause());
+  await page.goto(base);
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  check(await page.evaluate(() => { const a = document.querySelector('.pane[data-s="ton"] a[href="musiktest.html"]'); return !!a; }), 'Einstellungen › Ton verlinkt den Musiktest');
   }
 
   if (part(2)) {   // Weihnachtsedition
