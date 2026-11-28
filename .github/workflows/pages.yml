@@ -33,7 +33,7 @@ jobs:
       - name: Seite zusammenstellen
         run: |
           mkdir _site
-          cp -r index.html tonstudio.html sw.js manifest.webmanifest .nojekyll css js fonts icons vendor _site/
+          cp -r index.html tonstudio.html musiktest.html sw.js manifest.webmanifest .nojekyll css js fonts icons vendor _site/
 
       - uses: actions/setup-node@v4
         with:
@@ -66,7 +66,7 @@ jobs:
       - name: Seite zusammenstellen
         run: |
           mkdir _site
-          cp -r index.html tonstudio.html sw.js manifest.webmanifest .nojekyll css js fonts icons vendor _site/
+          cp -r index.html tonstudio.html musiktest.html sw.js manifest.webmanifest .nojekyll css js fonts icons vendor _site/
           # every deploy gets its own version: fresh offline cache, version shown in the
           # start menu, and version.json lets installed apps notice that an update exists
           V="${GITHUB_SHA::12}"
