@@ -36,19 +36,19 @@ a{color:var(--orange)}
   <div class="card">
     <div class="row"><button class="go" id="start">Musik starten</button><button id="stop">Stopp</button></div>
     <div class="row"><button id="tRuhe" aria-pressed="true">Bauruhe</button><button id="tAngriff" aria-pressed="false">Angriffswelle</button><button id="tMenu" aria-pressed="false">Titelmusik</button></div>
+    <div class="row"><button id="auto">Automatisch wechseln in 15 s</button></div>
     <p id="status" role="status" aria-live="polite">Tippe auf „Musik starten“.</p>
   </div>
   <div class="card">
-    <p><b>So testest du es</b> (am besten einmal als installierte App vom Home-Bildschirm und einmal in Safari):</p>
+    <p><b>So testest du es</b> (als App vom Home-Bildschirm):</p>
     <ol>
-      <li>„Musik starten“ tippen und warten, bis die Musik läuft.</li>
-      <li>Nach oben wischen, sodass die App im Hintergrund ist: Läuft die Musik weiter? Siehst du sie oben in der Dynamic Island?</li>
-      <li>Das iPhone sperren: Läuft sie weiter? Steht „Kistenkrawall“ auf dem Sperrbildschirm, mit Abspielen und Pause?</li>
-      <li>Auf dem Sperrbildschirm Pause und wieder Abspielen tippen: Klappt das?</li>
-      <li>Zurück in die App, ein anderes Stück wählen: Wechselt der Titel in der Dynamic Island?</li>
-      <li>Auch mit eingeschaltetem Stromsparmodus und mit dem Stummschalter einmal ausprobieren.</li>
+      <li>„Musik starten“ tippen und warten, bis die Musik läuft. Danach rechnet die Seite die anderen beiden Stücke im Hintergrund (unten steht, wann sie fertig sind).</li>
+      <li>Wenn alle drei fertig sind: ein anderes Stück antippen. Wechselt die Musik sofort? Wechselt der Titel in der Dynamic Island?</li>
+      <li>„Automatisch wechseln in 15 s“ tippen und gleich die App wegwischen. Wechselt das Stück nach 15 Sekunden auch im Hintergrund?</li>
+      <li>Noch einmal „Automatisch wechseln in 15 s“ und dann das iPhone sperren. Wechselt es auch bei gesperrtem iPhone, und ändert sich der Titel auf dem Sperrbildschirm?</li>
+      <li>Auf dem Sperrbildschirm Pause und wieder Abspielen: Klappt das noch?</li>
     </ol>
-    <p>Schick mir für jeden Punkt kurz „ja“ oder „nein“, dazu, ob du es als App oder in Safari getestet hast, und die Zeilen unten.</p>
+    <p>Schick mir für jeden Punkt kurz „ja“ oder „nein“ und, wenn es geht, einen Screenshot der grauen Zeilen unten. Dort steht jeder Wechsel mit Uhrzeit, und ob das iPhone ihn erlaubt hat.</p>
   </div>
   <div class="card"><p id="facts"></p></div>
   <p><a href="./">Zurück zum Spiel</a></p>
@@ -60,15 +60,18 @@ a{color:var(--orange)}
 // beforehand into a sound file (OfflineAudioContext, then WAV) and played by an <audio> element with the Media
 // Session API: that is what iOS can keep playing and show in the Dynamic Island.
 const $=s=>document.querySelector(s);
-const NAMES={ruhe:'Bauruhe',angriff:'Angriffswelle',menu:'Titelmusik'};
-const RATE=22050,cache={};
-let want='ruhe',audio=null,renderMs=0;
-const facts=extra=>{
+const NAMES={ruhe:'Bauruhe',angriff:'Angriffswelle',menu:'Titelmusik'},ORDER=['ruhe','angriff','menu'];
+const RATE=22050,cache={},renderMs={},events=[];
+let want='ruhe',audio=null,busy=null,autoT=0,autoLeft=0;
+const log=m=>{const d=new Date(),t=[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  events.push(t+' '+m+(document.hidden?' (im Hintergrund)':''));if(events.length>12)events.shift();facts();};
+const facts=()=>{
   const app=(matchMedia('(display-mode: standalone)').matches||navigator.standalone)?'installierte App':'Browser';
-  $('#facts').textContent=['Musiktest · '+app+' · '+(navigator.userAgent.match(/iPhone OS [\d_]+|Android [\d.]+|Mac OS X [\d_]+|Windows NT [\d.]+/)||['?'])[0].replace(/_/g,'.'),
+  $('#facts').textContent=['Musiktest 2 · '+app+' · '+(navigator.userAgent.match(/iPhone OS [\d_]+|Android [\d.]+|Mac OS X [\d_]+|Windows NT [\d.]+/)||['?'])[0].replace(/_/g,'.'),
     'Media Session: '+('mediaSession' in navigator?'ja':'nein')+' · audioSession: '+('audioSession' in navigator?'ja':'nein'),
-    'Stück: '+NAMES[want]+(cache[want]?' · '+(cache[want].size/1048576).toFixed(1)+' MB, '+cache[want].secs.toFixed(0)+' s, gerechnet in '+renderMs+' ms':''),
-    'Wiedergabe: '+(audio?(audio.paused?'pausiert':'läuft')+' · '+audio.currentTime.toFixed(0)+' s':'–')].concat(extra||[]).join('\n');
+    'Fertig gerechnet: '+(ORDER.filter(n=>cache[n]).map(n=>NAMES[n]+(renderMs[n]?' ('+(renderMs[n]/1000).toFixed(1)+' s)':'')).join(', ')||'noch keins'),
+    'Wiedergabe: '+(audio?(audio.paused?'pausiert':'läuft')+' · '+NAMES[want]+' · '+audio.currentTime.toFixed(0)+' s':'–'),
+    'Ablauf:'].concat(events).join('\n');
 };
 // render one loop of a piece: intro plus two loops, keep the second loop (it already holds the echo of the first)
 async function render(name,limit){   // limit: seconds, only for the automatic test
@@ -77,11 +80,16 @@ async function render(name,limit){   // limit: seconds, only for the automatic t
   const intro=dur(tr.intro||[]),loop=limit?Math.min(limit,dur(tr.loop)):dur(tr.loop),t0=performance.now();
   const ctx=new OfflineAudioContext(2,Math.ceil((0.05+intro+2*loop+0.5)*RATE),RATE);
   const m=MUSIC.create(ctx,ctx.destination);m.renderUntil(name,0.05+intro+2*loop);
-  const buf=await ctx.startRendering();renderMs=Math.round(performance.now()-t0);
+  const buf=await ctx.startRendering();
   const from=Math.round((0.05+intro+loop)*RATE),n=Math.round(loop*RATE);
   const c={url:URL.createObjectURL(wav(buf,from,n)),size:44+n*4,secs:loop};
-  if(!limit)cache[name]=c;
+  if(!limit){cache[name]=c;renderMs[name]=Math.round(performance.now()-t0);}
   return c;
+}
+// one piece after the other, so the phone is not busy with all three at once
+function renderAll(){
+  if(busy)return busy;
+  return busy=(async()=>{for(const n of ORDER)if(!cache[n]){await render(n);log(NAMES[n]+' fertig gerechnet');}})();
 }
 function wav(buf,from,n){
   const out=new DataView(new ArrayBuffer(44+n*4)),w=(o,s)=>{for(let i=0;i<s.length;i++)out.setUint8(o+i,s.charCodeAt(i));};
@@ -101,30 +109,46 @@ function session(){
 }
 function makeAudio(){
   audio=new Audio();audio.loop=true;audio.preload='auto';audio.setAttribute('playsinline','');
-  for(const ev of ['play','pause','playing'])audio.addEventListener(ev,()=>{facts();if('mediaSession' in navigator)navigator.mediaSession.playbackState=audio.paused?'paused':'playing';});
+  for(const ev of ['play','pause'])audio.addEventListener(ev,()=>{log(ev==='play'?'Wiedergabe läuft':'Wiedergabe pausiert');if('mediaSession' in navigator)navigator.mediaSession.playbackState=audio.paused?'paused':'playing';});
+  audio.addEventListener('error',()=>log('Fehler beim Laden der Tondatei'));
+}
+const pressed=()=>{for(const b of document.querySelectorAll('[aria-pressed]'))b.setAttribute('aria-pressed',b.dataset.t===want?'true':'false');};
+// switch the element to another piece; how: 'Tippen' or 'ohne Tippen'
+async function switchTo(name,how){
+  want=name;pressed();
+  if(!audio)return;
+  if(!cache[name]){log(NAMES[name]+' ist noch nicht fertig, warte …');$('#status').textContent='Wird vorbereitet …';await renderAll();if(want!==name)return;}
+  audio.src=cache[name].url;session();
+  try{await audio.play();log('Wechsel zu '+NAMES[name]+' ('+how+'): geklappt');$('#status').textContent='Läuft: '+NAMES[name]+'.';}
+  catch(e){log('Wechsel zu '+NAMES[name]+' ('+how+'): abgelehnt, '+(e&&e.name||e));$('#status').textContent='Das iPhone hat das Abspielen abgelehnt.';}
 }
 async function start(){
   try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   if(!audio){makeAudio();
     // unlock the element inside the tap itself: iOS only lets an element play later if it was started by a tap
     audio.src='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=';audio.play().catch(()=>{});}
+  if(cache[want]){switchTo(want,'Tippen');return;}
   $('#status').textContent='Musik wird vorbereitet …';
-  try{
-    const c=await render(want);
-    audio.src=c.url;await audio.play();session();
-    $('#status').textContent='Läuft: '+NAMES[want]+'. Jetzt die App wegwischen oder das iPhone sperren.';
-  }catch(e){$('#status').textContent='Abspielen ging nicht: '+(e&&e.message||e);}
-  facts();
+  try{await render(want);log(NAMES[want]+' fertig gerechnet');await switchTo(want,'Tippen');
+    $('#status').textContent='Läuft: '+NAMES[want]+'. Die anderen Stücke werden jetzt im Hintergrund vorbereitet.';
+    renderAll();}
+  catch(e){$('#status').textContent='Abspielen ging nicht: '+(e&&e.message||e);log('Fehler: '+(e&&e.message||e));}
 }
 $('#start').addEventListener('click',start);
-$('#stop').addEventListener('click',()=>{if(audio)audio.pause();$('#status').textContent='Gestoppt.';facts();});
-for(const [id,name] of [['#tRuhe','ruhe'],['#tAngriff','angriff'],['#tMenu','menu']])$(id).addEventListener('click',()=>{
-  want=name;for(const b of document.querySelectorAll('[aria-pressed]'))b.setAttribute('aria-pressed',b===$(id)?'true':'false');
-  if(audio&&!audio.paused)start();else facts();});
-document.addEventListener('visibilitychange',()=>facts(['Zuletzt: Seite '+(document.hidden?'im Hintergrund':'wieder im Vordergrund')+', Musik '+(audio&&!audio.paused?'läuft':'aus')]));
-setInterval(()=>facts(),2000);
+$('#stop').addEventListener('click',()=>{if(audio)audio.pause();clearInterval(autoT);autoT=0;$('#status').textContent='Gestoppt.';});
+for(const [id,name] of [['#tRuhe','ruhe'],['#tAngriff','angriff'],['#tMenu','menu']]){$(id).dataset.t=name;$(id).addEventListener('click',()=>{
+  if(audio&&!audio.paused)switchTo(name,'Tippen');else{want=name;pressed();facts();}});}
+// the game changes the music without a tap (wave start, victory): try that, also with the app in the background
+$('#auto').addEventListener('click',()=>{
+  if(!audio||audio.paused){$('#status').textContent='Erst „Musik starten“, dann diesen Knopf.';return;}
+  clearInterval(autoT);autoLeft=15;log('Automatischer Wechsel in 15 s');
+  autoT=setInterval(()=>{if(--autoLeft>0){if(!document.hidden)$('#status').textContent='Wechsel in '+autoLeft+' s – jetzt wegwischen oder sperren.';return;}
+    clearInterval(autoT);autoT=0;switchTo(ORDER[(ORDER.indexOf(want)+1)%ORDER.length],'ohne Tippen');},1000);
+});
+document.addEventListener('visibilitychange',()=>log(document.hidden?'App weggewischt, Musik '+(audio&&!audio.paused?'läuft':'aus'):'App wieder im Vordergrund, Musik '+(audio&&!audio.paused?'läuft':'aus')));
+setInterval(()=>{if(!document.hidden)facts();},2000);
 facts();
-window.MUSIKTEST={render,session,play:async c=>{if(!audio)makeAudio();audio.src=c.url;await audio.play();session();facts();},get audio(){return audio;},get want(){return want;}};   // for tests
+window.MUSIKTEST={render,session,switchTo,events,cache,play:async c=>{if(!audio)makeAudio();audio.src=c.url;await audio.play();session();facts();},get audio(){return audio;},get want(){return want;}};   // for tests
 </script>
 </body>
 </html>
