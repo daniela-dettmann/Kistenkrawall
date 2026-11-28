@@ -1,14 +1,14 @@
 # Kistenkrawall – Übergabe
 
-Stand: 27. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
+Stand: 28. November 2026. Diese Datei sagt, wo das Projekt gerade steht und was als Nächstes zu tun ist. Den vollständigen Überblick gibt `docs/PROJEKTSTAND.md`.
 
 ## Wo wir stehen
 
 | | Stand |
 | --- | --- |
-| Live auf GitHub Pages | `521bfb0` (PR #48, Mehrspieler: Verbindungsdetails) |
-| `main` | `521bfb0` |
-| Offener Pull Request | keiner. Laufender Auftrag „Mehrspieler zuverlässig machen und Musik im Hintergrund“ (Drive: `Kistenkrawall-Auftrag-Mehrspieler-Hintergrundmusik.md`), mit Daniela abgestimmt: Teil 2 erledigt (#47: Wiederverbinden nach dem Hintergrund, Einladung mit Link). Teil 3 erledigt (#48: Verbindungsdetails, robusteres Wiederverbinden). Musik-Testseite (Teil 4, erster Schritt) in #49; danach testet Daniela sie auf dem iPhone (als App und in Safari) und schickt die Antworten zur Prüfliste, erst dann der Umbau im Spiel. Teil 1 (TURN): Anbieter Cloudflare, Daniela richtet Konto und Worker nach `Kistenkrawall-Anleitung-Cloudflare-TURN.md` (Drive) ein und schickt nur die Worker-Adresse. Teil 4 (Musik im Hintergrund): erst eine kleine Testseite, Daniela prüft auf dem iPhone, dann der Umbau. Am Ende: Checkliste für den Test mit zwei echten Geräten. Offen bei Daniela außerdem: „Require status checks“ für `main`; FPS auf dem iPhone |
+| Live auf GitHub Pages | `d1b13b0` (PR #49, Musiktest-Seite) |
+| `main` | `d1b13b0` |
+| Offener Pull Request | keiner. Laufender Auftrag „Mehrspieler zuverlässig machen und Musik im Hintergrund“ (Drive: `Kistenkrawall-Auftrag-Mehrspieler-Hintergrundmusik.md`), mit Daniela abgestimmt: Teil 2 erledigt (#47: Wiederverbinden nach dem Hintergrund, Einladung mit Link). Teil 3 erledigt (#48: Verbindungsdetails, robusteres Wiederverbinden). Musik-Testseite (Teil 4, erster Schritt) live seit #49 (`musiktest.html`, Einstellungen › Ton); jetzt testet Daniela sie auf dem iPhone (als App und in Safari) und schickt die Antworten zur Prüfliste, erst dann der Umbau im Spiel. Teil 1 (TURN): Anbieter Cloudflare, Daniela richtet Konto und Worker nach `Kistenkrawall-Anleitung-Cloudflare-TURN.md` (Drive) ein und schickt nur die Worker-Adresse. Teil 4 (Musik im Hintergrund): erst eine kleine Testseite, Daniela prüft auf dem iPhone, dann der Umbau. Am Ende: Checkliste für den Test mit zwei echten Geräten. Offen bei Daniela außerdem: „Require status checks“ für `main`; FPS auf dem iPhone |
 
 Der Mehrspieler-Test läuft nur noch lokal. Auf GitHub läuft nur der schnelle Test (`CI=true`; `KK_MP_TEST=1` erzwingt den Mehrspieler-Teil).
 
